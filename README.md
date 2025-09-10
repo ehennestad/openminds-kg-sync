@@ -15,13 +15,6 @@ Provides methods for authenticating with EBRAINS services and upload and downloa
 
 ## Requirements and installation
 It is recommended to use **MATLAB R2019b** or later.
-The following MathWorks products are required:
-- M
-- A
-- T
-- L
-- A
-- B
 
 Users or developers who clone the repository using git can use [MatBox](https://github.com/ehennestad/MatBox) to quickly install this project's [requirements](./requirements.txt) (if any):
 
