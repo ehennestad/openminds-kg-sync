@@ -12,7 +12,7 @@ matlab_toolbox:
   toolbox_summary: Sync openMINDS metadata to and from EBRAINS KG
   toolbox_description: |
     Provides methods for authenticating with EBRAINS services and upload and download metadata to the EBRAINS Knowledge Graph using openMINDS metadata types
-  dependencies: null
+  dependencies: MATLAB
 
 # Publishing options
 codecov:
