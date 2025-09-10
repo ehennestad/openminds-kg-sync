@@ -1,19 +1,19 @@
 # Developer Notes
 
-This document provides guidance for developing and maintaining the {{ cookiecutter.toolbox_name }} toolbox.
+This document provides guidance for developing and maintaining the openMINDS_KG_Sync toolbox.
 
 ## 📁 Project Structure
 
 ```
-{{ cookiecutter.repo_name }}/
-├── {{ "%-47s" % ("src/" + cookiecutter.namespace_name + "/") }}# Main toolbox source code
-│   ├── +{{ "%-42s" % (cookiecutter.namespace_name + "/") }}# MATLAB package namespace
+openminds-kg-sync/
+├── src/omkgsync/                                  # Main toolbox source code
+│   ├── +omkgsync/                                 # MATLAB package namespace
 │   ├── Contents.m                                 # Toolbox contents listing
 │   └── gettingStarted.m                           # Getting started guide
 ├── tests/                                         # Unit tests and test utilities
-│   ├── +{{ "%-42s" % (cookiecutter.namespace_name + "/") }}# Namespace for unit tests and test utilites
+│   ├── +omkgsync/                                 # Namespace for unit tests and test utilites
 ├── tools/                                         # Development and build tools
-│   ├── +{{ "%-42s" % (cookiecutter.namespace_name + "tools/") }}# Toolbox utilities
+│   ├── +omkgsynctools/                            # Toolbox utilities
 │   └── MLToolboxInfo.json                         # Toolbox metadata
 └── docs/                                          # Documentation
     ├── buildDocs.m                                # Documentation builder
@@ -27,15 +27,15 @@ This document provides guidance for developing and maintaining the {{ cookiecutt
 
 ```matlab
 % Add the toolbox to your MATLAB path
-addpath(genpath('src/{{ cookiecutter.namespace_name }}'));
+addpath(genpath('src/omkgsync'));
 
 % Verify installation
-{{ cookiecutter.namespace_name }}.toolboxversion()
+omkgsync.toolboxversion()
 ```
 
 ### 2. Writing Functions
 
-**Location**: Place your main functions in `src/{{ cookiecutter.namespace_name }}/+{{ cookiecutter.namespace_name }}/`
+**Location**: Place your main functions in `src/omkgsync/+omkgsync/`
 
 **Naming Convention**: Use camelCase for function names and PascalCase for class names
 
@@ -45,8 +45,8 @@ function output = myFunction(input, options)
 % MYFUNCTION Brief description of what the function does
 %
 % Syntax:
-%   output = {{ cookiecutter.namespace_name }}.myFunction(input)
-%   output = {{ cookiecutter.namespace_name }}.myFunction(input, options)
+%   output = omkgsync.myFunction(input)
+%   output = omkgsync.myFunction(input, options)
 %
 % Description:
 %   Detailed description of the function's purpose and behavior.
@@ -69,16 +69,16 @@ function output = myFunction(input, options)
 %
 % Examples:
 %   % Basic usage
-%   result = {{ cookiecutter.namespace_name }}.myFunction(data);
+%   result = omkgsync.myFunction(data);
 %
 %   % With options
 %   opts.field1 = value;
-%   result = {{ cookiecutter.namespace_name }}.myFunction(data, opts);
+%   result = omkgsync.myFunction(data, opts);
 %
 % See also: RELATEDFUNCTION1, RELATEDFUNCTION2
 %
-% {{ cookiecutter.toolbox_name }}
-% Copyright (c) {{ cookiecutter.author_name }}, {{ cookiecutter.author_company }}
+% openMINDS_KG_Sync
+% Copyright (c) Eivind Hennestad, University of Oslo / Neural Systems
 
 arguments
     input {mustBeNumeric}
@@ -110,7 +110,7 @@ end
 
 function setupOnce(testCase)
 % Setup for the entire test suite
-addpath(fullfile(fileparts(mfilename('fullpath')), '..', 'src', '{{ cookiecutter.namespace_name }}'));
+addpath(fullfile(fileparts(mfilename('fullpath')), '..', 'src', 'omkgsync'));
 end
 
 function setup(testCase)
@@ -121,7 +121,7 @@ end
 function testBasicFunctionality(testCase)
 % Test basic functionality
 input = testCase.TestData.sampleData;
-result = {{ cookiecutter.namespace_name }}.myFunction(input);
+result = omkgsync.myFunction(input);
 verifySize(testCase, result, size(input));
 end
 
@@ -129,13 +129,13 @@ function testWithOptions(testCase)
 % Test with optional parameters
 input = testCase.TestData.sampleData;
 options.field1 = 2;
-result = {{ cookiecutter.namespace_name }}.myFunction(input, options);
+result = omkgsync.myFunction(input, options);
 verifyClass(testCase, result, 'double');
 end
 
 function testErrorHandling(testCase)
 % Test error conditions
-verifyError(testCase, @() {{ cookiecutter.namespace_name }}.myFunction('invalid'), ...
+verifyError(testCase, @() omkgsync.myFunction('invalid'), ...
     'MATLAB:validators:mustBeNumeric');
 end
 ```
@@ -169,10 +169,10 @@ Todo
 
 ```matlab
 % Package the toolbox
-{{ cookiecutter.namespace_name }}tools.packageToolbox()
+omkgsynctools.packageToolbox()
 
 % Install locally for testing
-{{ cookiecutter.namespace_name }}tools.installMatBox()
+omkgsynctools.installMatBox()
 ```
 
 ## 📝 Coding Standards
@@ -203,7 +203,7 @@ end
 
 % Provide meaningful error messages
 if size(input, 2) ~= 3
-    error('{{ cookiecutter.namespace_name | upper }}:invalidInput', ...
+    error('OMKGSYNC:invalidInput', ...
         'Input must have exactly 3 columns, got %d', size(input, 2));
 end
 ```
@@ -214,15 +214,15 @@ end
 
 ```matlab
 % Check code quality
-checkcode('src/{{ cookiecutter.namespace_name }}/')
+checkcode('src/omkgsync/')
 
 % Profile performance
 profile on
-{{ cookiecutter.namespace_name }}.myFunction(data);
+omkgsync.myFunction(data);
 profile viewer
 
 % Dependency analysis
-[fList, pList] = matlab.codetools.requiredFilesAndProducts('src/{{ cookiecutter.namespace_name }}');
+[fList, pList] = matlab.codetools.requiredFilesAndProducts('src/omkgsync');
 ```
 
 ### Git Workflow
@@ -243,7 +243,7 @@ git push origin feature/new-functionality
 
 - **MATLAB Version Compatibility**: Toolbox packaging using [MatBox](https://github.com/ehennestad/MatBox) requires R2023a+.
 
-- **Path Management**: Always use relative paths and the `{{ cookiecutter.namespace_name }}tools.projectdir()` function
+- **Path Management**: Always use relative paths and the `omkgsynctools.projectdir()` function
 - **Testing**: Run tests before committing changes
 - **Documentation**: Update documentation when adding new features
 - **Versioning**: Follow semantic versioning (MAJOR.MINOR.PATCH)
@@ -262,4 +262,4 @@ git push origin feature/new-functionality
 - Check existing issues in the repository
 - Review the documentation in `docs/`
 - Consult the MATLAB documentation
-- Contact the maintainers: {{ cookiecutter.author_email }}
+- Contact the maintainers: eivihe@uio.no
