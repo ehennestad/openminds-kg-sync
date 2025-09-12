@@ -4,9 +4,9 @@ function rootDir = toolboxdir()
     %   ROOT_DIR = TOOLBOXDIR() returns the root directory of the toolbox.
     %
     %   Example:
-    %       rootDir = omkgsync.toolboxdir()
+    %       rootDir = omkg.toolboxdir()
     %
-    %   See also omkgsync.toolboxversion
+    %   See also omkg.toolboxversion
 
     % Get the location of this function
     functionPath = mfilename('fullpath');

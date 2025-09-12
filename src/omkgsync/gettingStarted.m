@@ -4,29 +4,29 @@ function gettingStarted()
     %   GETTINGSTARTED() opens the getting started guide for the toolbox.
     %
     %   Example:
-    %       omkgsync.gettingStarted()
+    %       omkg.gettingStarted()
     %
-    %   See also omkgsync.toolboxdir, omkgsync.toolboxversion
+    %   See also omkg.toolboxdir, omkg.toolboxversion
 
     % Display welcome message
     fprintf('Welcome to openMINDS_KG_Sync!\n\n');
     fprintf('Sync openMINDS metadata to and from EBRAINS KG\n\n');
     
     % Display version information
-    fprintf('Version: %s\n', omkgsync.toolboxversion());
+    fprintf('Version: %s\n', omkg.toolboxversion());
     
     % Display directory information
-    fprintf('Toolbox directory: %s\n\n', omkgsync.toolboxdir());
+    fprintf('Toolbox directory: %s\n\n', omkg.toolboxdir());
     
     % Display available functions
     fprintf('Available functions:\n');
-    fprintf('  - omkgsync.toolboxdir\n');
-    fprintf('  - omkgsync.toolboxversion\n');
-    fprintf('  - omkgsync.gettingStarted\n\n');
+    fprintf('  - omkg.toolboxdir\n');
+    fprintf('  - omkg.toolboxversion\n');
+    fprintf('  - omkg.gettingStarted\n\n');
     
     % Display examples
     fprintf('Examples:\n');
-    examplesDir = fullfile(omkgsync.toolboxdir(), 'code', 'examples');
+    examplesDir = fullfile(omkg.toolboxdir(), 'code', 'examples');
     if exist(examplesDir, 'dir')
         exampleFiles = dir(fullfile(examplesDir, '*.m'));
         if ~isempty(exampleFiles)
@@ -42,7 +42,7 @@ function gettingStarted()
     
     % Display documentation
     fprintf('\nDocumentation:\n');
-    docsDir = fullfile(omkgsync.toolboxdir(), 'docs');
+    docsDir = fullfile(omkg.toolboxdir(), 'docs');
     if exist(docsDir, 'dir')
         fprintf('  Documentation is available in the docs directory:\n');
         fprintf('  %s\n', docsDir);

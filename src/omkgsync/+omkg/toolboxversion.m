@@ -4,9 +4,9 @@ function versionStr = toolboxversion()
     %   VERSION = TOOLBOXVERSION() returns the version of the toolbox.
     %
     %   Example:
-    %       version = omkgsync.toolboxversion()
+    %       version = omkg.toolboxversion()
     %
-    %   See also omkgsync.toolboxdir
+    %   See also omkg.toolboxdir
 
     rootPath = fileparts(fileparts(mfilename('fullpath')));
     contentsFile = fullfile(rootPath, 'Contents.m');
