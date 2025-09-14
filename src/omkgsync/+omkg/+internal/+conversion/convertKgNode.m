@@ -68,8 +68,9 @@ function omNode = convertKgNode(kgNode, omReferenceNode)
                     else
                         currentPropertyValue = createUnresolvedNode(currentPropertyValue, omDummyNode.(currentPropertyName));
                     end
-                catch
-                    keyboard
+                catch ME
+                    % TODO: Improve error handling for property conversion
+                    rethrow(ME);
                 end
 
             elseif isEmbeddedNode(currentPropertyValue)
@@ -91,7 +92,7 @@ function omNode = convertKgNode(kgNode, omReferenceNode)
 
     if ~isempty(omReferenceNode)
         if isa(omReferenceNode, class(omDummyNode))
-            keyboard % Todo: check:
+            % TODO: Verify this branch is working correctly
             omReferenceNode.set(propertyNames, propertyValues) 
         else
             error('OMKG:ConvertKgNode:ReferenceNodeWrongType', ...
@@ -122,7 +123,7 @@ end
 
 function unresolvedNodes = createUnresolvedNode(node, expectedObject)
     numNodes = numel(node);
-    unresolvedNodes = cell(1, numNodes); % todo, init ccorrect type
+    unresolvedNodes = cell(1, numNodes); % todo, init correct type
     for iNode = 1:numNodes
         thisNode = node(iNode);
 

@@ -2,7 +2,7 @@ function omNode = downloadMetadata(kgIdentifier, options)
 % downloadMetadata - Downloads metadata from KG given a KG identifier
 %
 % Syntax:
-%   metadataInstance = omkg.downloadMetadata(identifier, options)
+%   metadataInstance = omkg.sync.downloadMetadata(identifier, options)
 %
 % Input Arguments:
 %   identifier (1,1) string - The unique identifier for the metadata
@@ -21,6 +21,10 @@ function omNode = downloadMetadata(kgIdentifier, options)
         options.Verbose (1,1) logical = false
         options.ReferenceNode {mustBeA(options.ReferenceNode, ["double", "openminds.abstract.Schema"])} = [] 
     end
+
+    % Todo: 
+    % - Apply server arg to client.
+    % - Expose more args to pass to api client endpoints?
 
     omkg.internal.checkEnvironment()
 
@@ -50,8 +54,8 @@ function omNode = downloadMetadata(kgIdentifier, options)
                     'Please wait while downloading %d new metadata instances...\n'], ...
                     orderStr(i), numel(linkedIRIs));
             end
-            
-            kgNodes = ebrains.kg.api.downloadInstancesBulk(linkedIRIs);
+            kgNodes = options.Client.getInstancesBulk(linkedIRIs);
+            %kgNodes = ebrains.kg.api.downloadInstancesBulk(linkedIRIs);
 
             newNodes = omkg.internal.conversion.convertKgNode(kgNodes);
 

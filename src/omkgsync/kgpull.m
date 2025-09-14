@@ -10,5 +10,5 @@ function omInstance = kgpull(identifier, options)
     omkg.internal.checkEnvironment()
 
     nvPairs = namedargs2cell(options);
-    omInstance = omkg.downloadMetadata(identifier, nvPairs{:});
+    omInstance = omkg.sync.downloadMetadata(identifier, nvPairs{:});
 end

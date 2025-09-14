@@ -1,4 +1,17 @@
 classdef KGMetadataStore < openminds.interface.MetadataStore
+% KGMetadataStore - Metadata store implementation for EBRAINS Knowledge Graph
+%
+% This class handles saving openMINDS instances to the EBRAINS KG with
+% intelligent handling of linked vs embedded properties:
+%
+% LINKED PROPERTIES:
+%   - Saved as separate instances in KG
+%   - Referenced by ID only in parent instance
+%
+% EMBEDDED PROPERTIES: 
+%   - Serialized inline within parent instance
+%   - Not saved as separate KG instances
+
 
     properties (Access = private)
         InstanceClient = ebrains.kg.api.InstancesClient()
@@ -30,28 +43,23 @@ classdef KGMetadataStore < openminds.interface.MetadataStore
                 return
             end
 
-            % Work through properties and save linked instances recursively.
-            propNames = properties(instance);
-            for i = 1:numel(propNames)
-                currentPropertyName = propNames{i};
-                currentPropertyValue = instance.(currentPropertyName);
-                
-                if openminds.utility.isControlledInstance(currentPropertyValue)
+            linkedTypes = instance.getLinkedTypes();
+            embeddedTypes = instance.getEmbeddedTypes();
+
+            % Recursively save linked types 
+            for i = 1:numel(linkedTypes)
+                currentValue = linkedTypes{i};
+                if openminds.utility.isControlledInstance(currentValue)
                     % Check that the id is part of the KG 2 OM map?
                     continue
                 end
+                currentValue.save(obj)
+            end
 
-                if openminds.utility.isInstance(currentPropertyValue)
-                    if isLinked() % Todo
-                        currentPropertyValue.save(obj)
-                    elseif isEmbedded() % Todo
-                        currentPropertyValue.save(obj, 'IsEmbedded', true)
-                    elseif openminds.utility.isMixedInstance(currentPropertyValue) % Should not be necessary...
-                        currentPropertyValue.save(obj)
-                    end
-                else
-                    continue
-                end
+            % Recursively save embedded types 
+            for i = 1:numel(embeddedTypes)
+                currentValue = embeddedTypes{i};
+                currentValue.save(obj, 'IsEmbedded', true)
             end
 
             if options.IsEmbedded
@@ -62,23 +70,59 @@ classdef KGMetadataStore < openminds.interface.MetadataStore
                 % Save instance
                 jsonDoc = instance.serialize("Serializer", obj.Serializer);
     
-                if isKgIdentifier(instanceID)
+                if obj.isKgIdentifier(instanceID)
                     if options.SaveMode == "update"
-                        resp = obj.InstanceClient.updateInstance(instanceID, jsonDoc, "returnPayload", false);
+                        obj.InstanceClient.updateInstance(instanceID, jsonDoc, "returnPayload", false);
                     elseif options.SaveMode == "replace"
-                        resp = obj.InstanceClient.replaceInstance(instanceID, jsonDoc, "returnPayload", false);
+                        obj.InstanceClient.replaceInstance(instanceID, jsonDoc, "returnPayload", false);
                     else
-                        error("Internal error. Unsupported save mode %s", options.SaveMode)
+                        error("OMKG:KGMetadataStore:UnsupportedSaveMode", ...
+                            "Unsupported save mode: %s", options.SaveMode)
                     end
-                                
-                    % Assert id is the same as before
+                    id = instanceID; % Return the existing ID
 
-                else
-                    % Todo: Determine space to save to.
-                    resp = obj.InstanceClient.createNewInstance(jsonDoc, "returnPayload", false);
-                    id = resp.id; % TODO
+                else % Create new instance
+
+                    % Assume a blank node identifier with a valid uuid
+                    % portion. Using existing uuid to ensure idempotency
+                    uuid = obj.getUuidFromInstance(instance);
+
+                    % Todo: determine space from preferences OR options
+                    space = omkg.getpref("DefaultSpace");
+
+                    resp = obj.InstanceClient.createNewInstanceWithId(...
+                        uuid, jsonDoc, "space", space, "returnPayload", true);
+                    id = resp.data.x_id;
+                    
+                    % Update the local instance with the new KG ID
+                    instance.id = id;
                 end
             end
+        end
+    end
+    
+    methods (Access = private)
+        function isKg = isKgIdentifier(~, identifier)
+            % Check if identifier is a KG identifier (contains KG URL pattern)
+            if isempty(identifier) || ~ischar(identifier) && ~isstring(identifier)
+                isKg = false;
+            else
+                kgPrefix = omkg.constants.KgInstanceIRIPrefix;
+                isKg = startsWith(string(identifier), kgPrefix);
+            end
+        end
+
+        function tf = isBlankNodeIdentifier(~, identifier)
+            tf = startsWith(identifier, '_:');
+        end
+
+        function uuid = getUuidFromInstance(obj, instance)
+            if obj.isBlankNodeIdentifier(instance.id)
+                uuid = extractAfter('_:', instance.id);
+            else
+                error('Unsupported instance identifier.')
+            end
+            omkg.validator.mustBeValidUUID(uuid)
         end
     end
 end

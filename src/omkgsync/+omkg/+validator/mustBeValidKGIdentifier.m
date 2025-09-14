@@ -11,19 +11,13 @@ function mustBeValidKGIdentifier(identifier)
     end
 
     % If identifier starts with the KG instance prefix, strip it
-    if startsWith(identifier, omkg.constant.KgInstanceIRIPrefix)
+    if startsWith(identifier, omkg.constants.KgInstanceIRIPrefix)
         identifier = omkg.util.getIdentifierUUID(identifier);
     end
 
-    % UUID regex: 8-4-4-4-12 hex digits (RFC 4122 format)
-    uuidPattern = "^[0-9a-fA-F]{8}-" + ...
-                  "[0-9a-fA-F]{4}-" + ...
-                  "[0-9a-fA-F]{4}-" + ...
-                  "[0-9a-fA-F]{4}-" + ...
-                  "[0-9a-fA-F]{12}$";
-
-    if ~contains(identifier, regexpPattern(uuidPattern))
-        error("OMKGSYNC:validator:InvalidUUID", ...
-              "Identifier must be a valid UUID. Got: %s", identifier);
+    try
+        omkg.validator.mustBeValidUUID(identifier)
+    catch ME
+       rethrow(ME) 
     end
 end

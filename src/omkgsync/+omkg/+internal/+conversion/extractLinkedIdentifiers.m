@@ -15,7 +15,7 @@ function linkedIdentifiers = extractLinkedIdentifiers(metadataNode, linkedIdenti
                     linkedIdentifiers(end+1) = {currentValue.id}; %#ok<AGROW>
                 end
             elseif openminds.utility.isMixedInstance(currentValue)
-                keyboard
+                % TODO: Handle mixed instances
             elseif isstruct(currentValue) && isfield(currentValue, 'id') % TODO: This should not be a struct!
                 linkedIdentifiers = [linkedIdentifiers, string({currentValue.id})]; %#ok<AGROW>
             end

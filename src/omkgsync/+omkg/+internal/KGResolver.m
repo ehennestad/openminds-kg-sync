@@ -23,7 +23,7 @@ classdef KGResolver < openminds.internal.resolver.AbstractLinkResolver
                 instance = openminds.instanceFromIRI(openMindsIdentifier);
             else
                 nvPairs = namedargs2cell(options);
-                instance = omkg.downloadMetadata(identifier, nvPairs{:}, 'ReferenceNode', instance);
+                instance = omkg.sync.downloadMetadata(identifier, nvPairs{:}, 'ReferenceNode', instance);
             end
         end
 
