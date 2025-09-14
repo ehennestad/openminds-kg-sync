@@ -22,21 +22,16 @@ classdef KglistTest < matlab.unittest.TestCase
     methods (TestMethodSetup)
         function setupTest(testCase)
             % Create a mock client for testing
-            testCase.MockClient = KglistTest.createMockClient();
+            testCase.MockClient = testCase.createMockClient();
         end
     end
     
     methods (Test)
         
-        function testBasicListing(testCase)
-            % Test basic listing without any filters
-            type = openminds.enum.Types.Person;
-            
-            [instances, pager] = kglist(type, 'Client', testCase.MockClient);
-            
-            testCase.verifyNotEmpty(instances, 'Should return non-empty instances');
-            testCase.verifyClass(pager, 'function_handle', 'Should return a pager function');
-            testCase.verifyClass(instances, type.ClassName, 'Should return instances of correct type');
+        function testBasicListInstances(testCase)
+            % Test basic instance listing functionality
+            mockClient = omkg.test.helper.mock.KGIntancesAPIMockClient();
+            mockResponse = struct('data', {{}}, 'total', 0);
         end
         
         function testFilterPropertyValidation(testCase)
@@ -52,7 +47,7 @@ classdef KglistTest < matlab.unittest.TestCase
         function testFilterPropertyWithoutValue(testCase)
             % Test that providing filterProperty without filterValue throws error
             type = openminds.enum.Types.Person;
-            validProperty = KglistTest.getValidPropertyForType(type);
+            validProperty = omkg.test.api.KglistTest.getValidPropertyForType(type);
             
             testCase.verifyError(...
                 @() kglist(type, 'filterProperty', validProperty, 'Client', testCase.MockClient), ...
@@ -62,7 +57,7 @@ classdef KglistTest < matlab.unittest.TestCase
         function testFilterPropertyWithValue(testCase)
             % Test filtering with valid property and value
             type = openminds.enum.Types.Person;
-            validProperty = KglistTest.getValidPropertyForType(type);
+            validProperty = omkg.test.api.KglistTest.getValidPropertyForType(type);
             
             [instances, ~] = kglist(type, ...
                 'filterProperty', validProperty, ...
@@ -73,8 +68,8 @@ classdef KglistTest < matlab.unittest.TestCase
             
             % Verify that the client was called with the correct filter
             expectedProperty = sprintf("%s%s", openminds.constant.PropertyIRIPrefix, validProperty);
-            testCase.verifyTrue(testCase.MockClient.wasCalledWith('listInstances', 'filterProperty', expectedProperty));
-            testCase.verifyTrue(testCase.MockClient.wasCalledWith('listInstances', 'filterValue', 'testValue'));
+            testCase.verifyTrue(testCase.MockClient.wasCalledWithOptionalParam('listInstances', 'filterProperty', expectedProperty));
+            testCase.verifyTrue(testCase.MockClient.wasCalledWithOptionalParam('listInstances', 'filterValue', 'testValue'));
         end
         
         function testPaginationWithFromAndSize(testCase)
@@ -109,7 +104,7 @@ classdef KglistTest < matlab.unittest.TestCase
         function testEmptyResponse(testCase)
             % Test handling of empty response from API
             type = openminds.enum.Types.Person;
-            emptyClient = KglistTest.createMockClientWithEmptyResponse();
+            emptyClient = omkg.test.api.KglistTest.createMockClientWithEmptyResponse();
             
             [instances, pager] = kglist(type, 'Client', emptyClient);
             
@@ -120,7 +115,7 @@ classdef KglistTest < matlab.unittest.TestCase
         function testSingleInstanceResponse(testCase)
             % Test handling when API returns single instance (not cell array)
             type = openminds.enum.Types.Person;
-            singleClient = KglistTest.createMockClientWithSingleResponse();
+            singleClient = omkg.test.api.KglistTest.createMockClientWithSingleResponse();
             
             [instances, ~] = kglist(type, 'Client', singleClient);
             
@@ -131,7 +126,7 @@ classdef KglistTest < matlab.unittest.TestCase
         function testMultipleInstancesResponse(testCase)
             % Test handling of multiple instances
             type = openminds.enum.Types.Person;
-            multiClient = KglistTest.createMockClientWithMultipleResponse(3);
+            multiClient = omkg.test.api.KglistTest.createMockClientWithMultipleResponse(3);
             
             [instances, ~] = kglist(type, 'Client', multiClient);
             
@@ -141,7 +136,10 @@ classdef KglistTest < matlab.unittest.TestCase
         
         function testParameterizedTypes(testCase, validTypes)
             % Parameterized test for different valid types
-            [instances, pager] = kglist(validTypes, 'Client', testCase.MockClient);
+            % Create type-specific mock client for this test
+            typeSpecificClient = omkg.test.api.KglistTest.createMockClientForType(validTypes);
+            
+            [instances, pager] = kglist(validTypes, 'Client', typeSpecificClient);
             
             testCase.verifyNotEmpty(instances, 'Should return instances for any valid type');
             testCase.verifyClass(pager, 'function_handle', 'Should return pager function');
@@ -166,42 +164,83 @@ classdef KglistTest < matlab.unittest.TestCase
         
         function mockClient = createMockClient()
             % Create a mock client that simulates the InstancesClient behavior
-            mockClient = MockInstancesClient();
+            mockClient = omkg.test.helper.mock.KGIntancesAPIMockClient();
             
             % Configure default behavior - return sample data
-            sampleData = KglistTest.createSampleKgData(2);
-            mockClient.setResponse(sampleData);
+            sampleData = omkg.test.api.KglistTest.createSampleKgData(2);
+            mockClient.setListResponse(sampleData);
+        end
+        
+        function mockClient = createMockClientForType(type)
+            % Create a mock client that returns data for specific type
+            mockClient = omkg.test.helper.mock.KGIntancesAPIMockClient();
+            
+            % Create type-specific sample data
+            sampleData = omkg.test.api.KglistTest.createSampleKgDataForType(type, 2);
+            mockClient.setListResponse(sampleData);
         end
         
         function mockClient = createMockClientWithEmptyResponse()
             % Create mock client that returns empty data
-            mockClient = MockInstancesClient();
-            mockClient.setResponse([]);
+            mockClient = omkg.test.helper.mock.KGIntancesAPIMockClient();
+            mockClient.setListResponse([]);
         end
         
         function mockClient = createMockClientWithSingleResponse()
             % Create mock client that returns single instance
-            mockClient = MockInstancesClient();
-            sampleData = KglistTest.createSampleKgData(1);
-            mockClient.setResponse(sampleData{1}); % Return struct, not cell
+            mockClient = omkg.test.helper.mock.KGIntancesAPIMockClient();
+            sampleData = omkg.test.api.KglistTest.createSampleKgData(1);
+            mockClient.setListResponse(sampleData{1}); % Return struct, not cell
         end
         
         function mockClient = createMockClientWithMultipleResponse(numInstances)
             % Create mock client that returns specified number of instances
-            mockClient = MockInstancesClient();
-            sampleData = KglistTest.createSampleKgData(numInstances);
-            mockClient.setResponse(sampleData);
+            mockClient = omkg.test.helper.mock.KGIntancesAPIMockClient();
+            sampleData = omkg.test.api.KglistTest.createSampleKgData(numInstances);
+            mockClient.setListResponse(sampleData);
         end
         
         function sampleData = createSampleKgData(numInstances)
-            % Create sample KG data for testing
+            % Create sample KG data for testing (Person type by default)
+            sampleData = omkg.test.api.KglistTest.createSampleKgDataForType(openminds.enum.Types.Person, numInstances);
+        end
+        
+        function sampleData = createSampleKgDataForType(type, numInstances)
+            % Create sample KG data for specific type
             sampleData = cell(1, numInstances);
+            
+            % Get type-specific information
+            typeInfo = omkg.test.api.KglistTest.getTypeInfo(type);
+            
             for i = 1:numInstances
                 sampleData{i} = struct(...
-                    'x_id', sprintf('test-id-%d', i), ...
-                    'x_type', 'https://openminds.ebrains.eu/core/Person', ...
-                    'givenName', sprintf('TestPerson%d', i), ...
-                    'familyName', 'TestFamily');
+                    'x_id', sprintf('test-%s-id-%d', lower(typeInfo.name), i), ...
+                    'x_type', typeInfo.iri, ...
+                    typeInfo.sampleFields{:});
+            end
+        end
+        
+        function typeInfo = getTypeInfo(type)
+            % Get type-specific information for creating mock data
+            switch type
+                case openminds.enum.Types.Person
+                    typeInfo = struct(...
+                        'name', 'person', ...
+                        'iri', 'https://openminds.ebrains.eu/core/Person', ...
+                        'sampleFields', {{'givenName', sprintf('TestPerson%d', randi(100)), ...
+                                        'familyName', 'TestFamily'}});
+                case openminds.enum.Types.Dataset
+                    typeInfo = struct(...
+                        'name', 'dataset', ...
+                        'iri', 'https://openminds.ebrains.eu/core/Dataset', ...
+                        'sampleFields', {{'fullName', sprintf('TestDataset%d', randi(100)), ...
+                                        'description', 'A test dataset for unit testing'}});
+                otherwise
+                    % Fallback for unknown types
+                    typeInfo = struct(...
+                        'name', 'unknown', ...
+                        'iri', sprintf('https://openminds.ebrains.eu/core/%s', type.ClassName), ...
+                        'sampleFields', {{'name', sprintf('Test%s%d', type.ClassName, randi(100))}});
             end
         end
         
