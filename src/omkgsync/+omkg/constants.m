@@ -13,7 +13,7 @@ classdef constants
         KgNamespaceIRI = ebrains.common.constant.KgNamespaceIRI()
         KgInstanceIRIPrefix = ebrains.common.constant.KgInstanceIRIPrefix()
         
-        % OpenMINDS-specific constants  
+        % OpenMINDS-specific constants
         OpenMINDSNamespaceIRI = "https://openminds.ebrains.eu/"
         OpenMINDSInstanceIRIPrefix = "https://openminds.ebrains.eu/instances/"
     end

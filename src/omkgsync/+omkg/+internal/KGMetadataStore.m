@@ -8,10 +8,9 @@ classdef KGMetadataStore < openminds.interface.MetadataStore
 %   - Saved as separate instances in KG
 %   - Referenced by ID only in parent instance
 %
-% EMBEDDED PROPERTIES: 
+% EMBEDDED PROPERTIES:
 %   - Serialized inline within parent instance
 %   - Not saved as separate KG instances
-
 
     properties (Access = private)
         InstanceClient = ebrains.kg.api.InstancesClient()
@@ -25,7 +24,7 @@ classdef KGMetadataStore < openminds.interface.MetadataStore
                 propValues.InstanceClient = ebrains.kg.api.InstancesClient()
             end
             
-            obj.set(propValues)            
+            obj.set(propValues)
         end
     end
 
@@ -46,7 +45,7 @@ classdef KGMetadataStore < openminds.interface.MetadataStore
             linkedTypes = instance.getLinkedTypes();
             embeddedTypes = instance.getEmbeddedTypes();
 
-            % Recursively save linked types 
+            % Recursively save linked types
             for i = 1:numel(linkedTypes)
                 currentValue = linkedTypes{i};
                 if openminds.utility.isControlledInstance(currentValue)
@@ -56,7 +55,7 @@ classdef KGMetadataStore < openminds.interface.MetadataStore
                 currentValue.save(obj)
             end
 
-            % Recursively save embedded types 
+            % Recursively save embedded types
             for i = 1:numel(embeddedTypes)
                 currentValue = embeddedTypes{i};
                 currentValue.save(obj, 'IsEmbedded', true)

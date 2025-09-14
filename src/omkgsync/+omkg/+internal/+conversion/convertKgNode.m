@@ -14,7 +14,7 @@ function omNode = convertKgNode(kgNode, omReferenceNode)
 
     arguments
         kgNode (1,:) {mustBeA(kgNode, ["struct", "cell"])} % Metadata node/instance returned from the instances api endpoint
-        omReferenceNode {mustBeA(omReferenceNode, ["double", "openminds.abstract.Schema"])} = [] 
+        omReferenceNode {mustBeA(omReferenceNode, ["double", "openminds.abstract.Schema"])} = []
     end
 
     % Loop through each node if a list is provided
@@ -75,7 +75,6 @@ function omNode = convertKgNode(kgNode, omReferenceNode)
 
             elseif isEmbeddedNode(currentPropertyValue)
                 currentPropertyValue = omkg.internal.conversion.convertKgNode(currentPropertyValue);
-
             end
         elseif ischar(currentPropertyValue)
             currentPropertyValue = string(currentPropertyValue);
@@ -93,7 +92,7 @@ function omNode = convertKgNode(kgNode, omReferenceNode)
     if ~isempty(omReferenceNode)
         if isa(omReferenceNode, class(omDummyNode))
             % TODO: Verify this branch is working correctly
-            omReferenceNode.set(propertyNames, propertyValues) 
+            omReferenceNode.set(propertyNames, propertyValues)
         else
             error('OMKG:ConvertKgNode:ReferenceNodeWrongType', ...
                 ['Expected reference node to be of type "%s", but it was ', ...
@@ -105,7 +104,6 @@ function omNode = convertKgNode(kgNode, omReferenceNode)
         omNode = openminds.fromTypeName(type, identifier, nvPairs(:));
     end
 end
-
 
 function nodes = resolveAsControlledInstances(nodes, identfierMap)
     newNodes = cell(1, numel(nodes));

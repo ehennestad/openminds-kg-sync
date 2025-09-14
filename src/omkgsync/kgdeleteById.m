@@ -7,7 +7,7 @@ function kgdeleteById(id, kgOptions, options)
 %   kgdeleteById(id, Name, Value)
 %
 % Input Arguments:
-%   - id (string) - 
+%   - id (string) -
 %     The identifier of the knowledge graph instance to delete.
 %
 %  - options (name-value pairs) -
@@ -16,7 +16,7 @@ function kgdeleteById(id, kgOptions, options)
 %    - Server (ebrains.kg.enum.KGServer) -
 %      The server to connect to. Can be "prod" (default) or "preprod".
 %
-%    - Client (ebrains.kg.api.InstancesClient) - 
+%    - Client (ebrains.kg.api.InstancesClient) -
 %      An instance of the client for making API calls (default is a new client).
 %
 % Output Arguments:

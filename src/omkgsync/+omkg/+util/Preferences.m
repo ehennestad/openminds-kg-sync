@@ -6,7 +6,6 @@ classdef Preferences < matlab.mixin.CustomDisplay & handle
 %       DefaultServer       (string)  : Which KG Server to interact with.
 %                                       Options: "preprod" (default) or "prod"
 
-
     properties (SetObservable)
         DefaultServer (1,1) ebrains.kg.enum.KGServer = "preprod"
         DefaultSpace (1,1) string = "myspace"

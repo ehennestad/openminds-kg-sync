@@ -19,10 +19,10 @@ function omNode = downloadMetadata(kgIdentifier, options)
         options.Server (1,1) ebrains.kg.enum.KGServer = omkg.getpref("DefaultServer")
         options.Client ebrains.kg.api.InstancesClient = ebrains.kg.api.InstancesClient()
         options.Verbose (1,1) logical = false
-        options.ReferenceNode {mustBeA(options.ReferenceNode, ["double", "openminds.abstract.Schema"])} = [] 
+        options.ReferenceNode {mustBeA(options.ReferenceNode, ["double", "openminds.abstract.Schema"])} = []
     end
 
-    % Todo: 
+    % Todo:
     % - Apply server arg to client.
     % - Expose more args to pass to api client endpoints?
 
@@ -55,7 +55,7 @@ function omNode = downloadMetadata(kgIdentifier, options)
                     orderStr(i), numel(linkedIRIs));
             end
             kgNodes = options.Client.getInstancesBulk(linkedIRIs);
-            %kgNodes = ebrains.kg.api.downloadInstancesBulk(linkedIRIs);
+            % kgNodes = ebrains.kg.api.downloadInstancesBulk(linkedIRIs);
 
             newNodes = omkg.internal.conversion.convertKgNode(kgNodes);
 

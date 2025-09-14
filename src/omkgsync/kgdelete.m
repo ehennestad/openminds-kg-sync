@@ -5,10 +5,10 @@ function kgdelete(openmindsInstance, options)
 %   kgdelete(openmindsInstance, options)
 %
 % Input Arguments:
-%   - openmindsInstance (1,:) openminds.abstract.Schema - 
+%   - openmindsInstance (1,:) openminds.abstract.Schema -
 %     The schema instance to be deleted from the knowledge graph.
-%   - options.Client ebrains.kg.api.InstancesClient - 
-%     The client used to interact with the knowledge graph API. Default is a 
+%   - options.Client ebrains.kg.api.InstancesClient -
+%     The client used to interact with the knowledge graph API. Default is a
 %     new instance of ebrains.kg.api.InstancesClient.
 %
 % Output Arguments:
@@ -21,4 +21,3 @@ function kgdelete(openmindsInstance, options)
 
     options.Client.deleteInstance(openmindsInstance.id)
 end
-

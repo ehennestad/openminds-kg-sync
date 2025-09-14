@@ -1,8 +1,8 @@
 classdef KGSerializer < openminds.internal.serializer.JsonLdSerializer
     
-    % Todo: 
-    % 
-    % When saving, 
+    % Todo:
+    %
+    % When saving,
     % - recursive should be true/inf, and links should be followed to the end
     % - leaf nodes need to be saved first (lnked nodes must exist in KG).
 

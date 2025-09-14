@@ -2,8 +2,8 @@ function omNodes = replaceControlledInstanceIds(omNodes, kg2OmIdentifierMap)
 % replaceControlledInstanceIds - Replace controlled instance IDs in nodes
 %
 % Syntax:
-%   omNodes = replaceControlledInstanceIds(omNodes, kg2OmIdentifierMap) 
-%   Replace the controlled instance IDs of the specified nodes using a 
+%   omNodes = replaceControlledInstanceIds(omNodes, kg2OmIdentifierMap)
+%   Replace the controlled instance IDs of the specified nodes using a
 %   mapping from a key-value identifier map. If a KG IRI / @id has a
 %   corresponding openMINDS identifier, the KG IRI is replaced by the
 %   openMINDS IRI to enable resolving metadata instances from a local

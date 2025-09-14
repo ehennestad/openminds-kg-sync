@@ -1,5 +1,2 @@
 classdef controlledInstanceRegistry < handle
-    
-
-
 end

@@ -18,6 +18,6 @@ function mustBeValidKGIdentifier(identifier)
     try
         omkg.validator.mustBeValidUUID(identifier)
     catch ME
-       rethrow(ME) 
+       rethrow(ME)
     end
 end
