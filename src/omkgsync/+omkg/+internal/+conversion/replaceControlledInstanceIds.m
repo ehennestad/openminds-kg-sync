@@ -46,7 +46,7 @@ function omNodes = replaceControlledInstanceIds(omNodes, kg2OmIdentifierMap)
         end
         omNodes{i} = thisNode;
     end
-    try
+    try % todo: should use utility function
         omNodes = [omNodes{:}];
     end
 end

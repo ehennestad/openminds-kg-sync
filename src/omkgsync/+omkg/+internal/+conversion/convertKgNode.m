@@ -149,7 +149,7 @@ function tf = isEmbeddedNode(node)
 end
 
 function tf = isControlledInstance(node)
-    tf = false;
+    tf = false; %todo
     % isstruct(node) && isfield()
 end
 

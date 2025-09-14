@@ -36,7 +36,7 @@ classdef KGIntancesAPIMockClient < ebrains.kg.api.InstancesClient
     end
     
     methods
-        function obj = omkg.test.helper.mock.KGIntancesAPIMockClient()
+        function obj = KGIntancesAPIMockClient()
             % Initialize with empty responses
             obj.clearResponses();
         end

@@ -101,7 +101,7 @@ classdef Preferences < matlab.mixin.CustomDisplay & handle
 
     methods (Access = private)
         
-        function addListeners(obj)
+        function addListeners(~)
         %createListeners Create listeners for some preferences
         end
 

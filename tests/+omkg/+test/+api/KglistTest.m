@@ -32,6 +32,7 @@ classdef KglistTest < matlab.unittest.TestCase
             % Test basic instance listing functionality
             mockClient = omkg.test.helper.mock.KGIntancesAPIMockClient();
             mockResponse = struct('data', {{}}, 'total', 0);
+            % todo: finish this
         end
         
         function testFilterPropertyValidation(testCase)
@@ -236,6 +237,7 @@ classdef KglistTest < matlab.unittest.TestCase
                         'sampleFields', {{'fullName', sprintf('TestDataset%d', randi(100)), ...
                                         'description', 'A test dataset for unit testing'}});
                 otherwise
+                    % Todo: this is invalid
                     % Fallback for unknown types
                     typeInfo = struct(...
                         'name', 'unknown', ...
