@@ -12,8 +12,15 @@ classdef KGMetadataStore < openminds.interface.MetadataStore
 %   - Serialized inline within parent instance
 %   - Not saved as separate KG instances
 
+    properties (SetAccess = private)
+        DefaultServer (1,1) ebrains.kg.enum.KGServer
+        DefaultSpace (1,1) string
+    end
+
     properties (Access = private)
         InstanceClient = ebrains.kg.api.InstancesClient()
+        SpaceConfiguration omkg.util.SpaceConfiguration
+        Verbose (1,1) logical = true
     end
 
     methods
@@ -22,8 +29,11 @@ classdef KGMetadataStore < openminds.interface.MetadataStore
             arguments
                 propValues.Serializer = omkg.internal.KGSerializer()
                 propValues.InstanceClient = ebrains.kg.api.InstancesClient()
+                propValues.DefaultServer (1,1) ebrains.kg.enum.KGServer
+                propValues.DefaultSpace (1,1) string
+                propValues.SpaceConfiguration = omkg.util.SpaceConfiguration.loadDefault()
+                propValues.Verbose (1,1) logical = true
             end
-            
             obj.set(propValues)
         end
     end
@@ -62,6 +72,7 @@ classdef KGMetadataStore < openminds.interface.MetadataStore
             end
 
             if options.IsEmbedded
+                id = instance.id;
                 % Embedded instances are not saved on their own.
             else
                 instanceID = instance.id;
@@ -70,10 +81,12 @@ classdef KGMetadataStore < openminds.interface.MetadataStore
                 jsonDoc = instance.serialize("Serializer", obj.Serializer);
     
                 if obj.isKgIdentifier(instanceID)
+                    uuid = omkg.util.getIdentifierUUID(instanceID);
+
                     if options.SaveMode == "update"
-                        obj.InstanceClient.updateInstance(instanceID, jsonDoc, "returnPayload", false);
+                        obj.InstanceClient.updateInstance(uuid, jsonDoc, "returnPayload", false);
                     elseif options.SaveMode == "replace"
-                        obj.InstanceClient.replaceInstance(instanceID, jsonDoc, "returnPayload", false);
+                        obj.InstanceClient.replaceInstance(uuid, jsonDoc, "returnPayload", false);
                     else
                         error("OMKG:KGMetadataStore:UnsupportedSaveMode", ...
                             "Unsupported save mode: %s", options.SaveMode)
@@ -83,16 +96,29 @@ classdef KGMetadataStore < openminds.interface.MetadataStore
                 else % Create new instance
 
                     % Assume a blank node identifier with a valid uuid
-                    % portion. Using existing uuid to ensure idempotency
-                    uuid = obj.getUuidFromInstance(instance);
+                    % portion. Using existing uuid to ensure idempotency if
+                    % possible.
+                    try
+                        uuid = obj.getUuidFromInstance(instance);
+                    catch
+                        uuid = matlab.lang.internal.uuid();
+                    end
 
-                    % Todo: determine space from preferences OR options
-                    space = omkg.getpref("DefaultSpace");
+                    % Determine space to save to
+                    if obj.DefaultSpace == "auto"
+                        space = obj.resolveSpace(instance);
+                    else
+                        space = obj.DefaultSpace;
+                    end
 
                     resp = obj.InstanceClient.createNewInstanceWithId(...
                         uuid, jsonDoc, "space", space, "returnPayload", true);
                     id = resp.data.x_id;
                     
+                    if obj.Verbose
+                        fprintf('Saved instance "%s" of type "%s" to space "%s".\n', string(instance), class(instance), space)
+                    end
+
                     % Update the local instance with the new KG ID
                     instance.id = id;
                 end
@@ -122,6 +148,11 @@ classdef KGMetadataStore < openminds.interface.MetadataStore
                 error('Unsupported instance identifier.')
             end
             omkg.validator.mustBeValidUUID(uuid)
+        end
+    
+        function space = resolveSpace(obj, instance)
+            type = openminds.enum.Types.fromClassName(class(instance));
+            space = obj.SpaceConfiguration.getSpace(type);
         end
     end
 end

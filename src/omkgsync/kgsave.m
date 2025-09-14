@@ -60,16 +60,13 @@ function ids = kgsave(openmindsInstance, kgOptions, options)
         return
     end
     
-    % Set default space preference if provided
-    if isfield(kgOptions, 'space') && ~isempty(kgOptions.space)
-        omkg.setpref('DefaultSpace', kgOptions.space);
-    end
-    
     % Configure metadata store with provided options
     serializer = omkg.internal.KGSerializer();
     metadataStore = omkg.internal.KGMetadataStore( ...
         'Serializer', serializer, ...
-        'InstanceClient', options.Client);
+        'InstanceClient', options.Client, ...
+        'DefaultServer', kgOptions.Server, ...
+        'DefaultSpace', kgOptions.space);
     
     % Save instances and collect IDs
     numInstances = numel(openmindsInstance);
@@ -79,13 +76,18 @@ function ids = kgsave(openmindsInstance, kgOptions, options)
         try
             % Convert SaveMode enum to string for KGMetadataStore
             saveModeStr = string(options.SaveMode.Name);
-            id = openmindsInstance(i).save(metadataStore, 'SaveMode', saveModeStr);
-            ids(i) = id;
+            openmindsInstance(i).save(metadataStore)%, 'SaveMode', saveModeStr);
+            %id = openmindsInstance(i).save(metadataStore, 'SaveMode', saveModeStr);
+            %ids(i) = id;
         catch ME
             % Add context to error and re-throw
             error('OMKG:kgsave:SaveFailed', ...
                 'Failed to save instance %d of %d: %s', ...
                 i, numInstances, ME.message);
         end
+    end
+
+    if ~nargout
+        clear ids
     end
 end

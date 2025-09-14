@@ -18,6 +18,10 @@ function kgdelete(openmindsInstance, options)
         openmindsInstance (1,:) openminds.abstract.Schema
         options.Client ebrains.kg.api.InstancesClient = ebrains.kg.api.InstancesClient()
     end
+    % Todo: ensure instance id is a valid kg identifier
+    instanceId = openmindsInstance.id;
+    omkg.validator.mustBeValidKGIdentifier(instanceId)
+    uuid = omkg.util.getIdentifierUUID(instanceId);
 
-    options.Client.deleteInstance(openmindsInstance.id)
+    options.Client.deleteInstance(uuid);
 end
