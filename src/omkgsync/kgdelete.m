@@ -54,9 +54,10 @@ function kgdelete(target, kgOptions, options)
 
     % Handle array inputs
     if numel(target) > 1
+        if ~iscell(target); target = num2cell(target); end % Normalize to cell array
         for i = 1:numel(target)
             nvPairs = [namedargs2cell(kgOptions), namedargs2cell(options)];
-            kgdelete(target(i), nvPairs{:});
+            kgdelete(target{i}, nvPairs{:});
         end
         return
     end

@@ -25,6 +25,15 @@ function mustBeInstanceOrIdentifier(target)
             % Validate each instance ID is a valid KG identifier
             omkg.validator.mustBeValidKGIdentifier(target(i).id)
         end
+    elseif isa(target, 'cell')
+        for i = 1:numel(target)
+            currentTarget = target{i};
+            assert(openminds.utility.isInstance(currentTarget))
+            % Validate each instance ID is a valid KG identifier
+            omkg.validator.mustBeValidKGIdentifier(currentTarget.id)
+        end
+
+
     elseif isstring(target) || ischar(target)
         % For strings (scalar or array), validate each is a valid KG identifier
         target = string(target);
