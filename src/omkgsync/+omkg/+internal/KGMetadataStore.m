@@ -84,9 +84,9 @@ classdef KGMetadataStore < openminds.interface.MetadataStore
                     uuid = omkg.util.getIdentifierUUID(instanceID);
 
                     if options.SaveMode == "update"
-                        obj.InstanceClient.updateInstance(uuid, jsonDoc, "returnPayload", false);
+                        obj.InstanceClient.updateInstance(uuid, jsonDoc, "returnPayload", false, "Server", obj.DefaultServer);
                     elseif options.SaveMode == "replace"
-                        obj.InstanceClient.replaceInstance(uuid, jsonDoc, "returnPayload", false);
+                        obj.InstanceClient.replaceInstance(uuid, jsonDoc, "returnPayload", false, "Server", obj.DefaultServer);
                     else
                         error("OMKG:KGMetadataStore:UnsupportedSaveMode", ...
                             "Unsupported save mode: %s", options.SaveMode)
@@ -111,8 +111,10 @@ classdef KGMetadataStore < openminds.interface.MetadataStore
                         space = obj.DefaultSpace;
                     end
 
-                    resp = obj.InstanceClient.createNewInstanceWithId(...
-                        uuid, jsonDoc, "space", space, "returnPayload", true);
+                    resp = obj.InstanceClient.createNewInstanceWithId(uuid, jsonDoc, ...
+                        "space", space, ...
+                        "returnPayload", true, ...
+                        "Server", obj.DefaultServer);
                     id = resp.data.x_id;
                     
                     if obj.Verbose
