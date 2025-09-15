@@ -61,7 +61,7 @@ disp(person) % Display the Person instance
 ```
 
 ```matlabTextOutput
-  Person (_:77756fff-ec0f-49ad-885f-0c911e8eb4a1) with properties:
+  Person (_:2b625824-7742-4104-afe3-9c006c9f2858) with properties:
 
            affiliation: [1x0 Affiliation] (Affiliation)
          alternateName: [1x0 string]
@@ -85,7 +85,7 @@ disp(organization) % Display the Organization instance
 ```
 
 ```matlabTextOutput
-  Organization (_:82ad5787-f4f5-4527-bdb4-97f1532e7542) with properties:
+  Organization (_:e566de06-c6a8-4093-b3de-108c39b9cdf4) with properties:
 
           affiliation: [1x0 Affiliation] (Affiliation)
     digitalIdentifier: [1x0 DigitalIdentifier] (Any of: GRIDID, RORID, RRID )
@@ -154,9 +154,10 @@ end
 ```
 
 ```matlabTextOutput
-✓ Found 2 Person instances:
-1. Jane Doe (ID: 2d65e694-b7e6-445f-b49f-02723e476e74)
-  2. Jane Doe (ID: 997dc90f-d3d7-4b21-b643-2002d35f7c2e)
+✓ Found 3 Person instances:
+1. Jane Doe (ID: 75ec86a9-5b28-4c74-b54a-6d460bd6e973)
+  2. Jane Doe (ID: 15c3df1f-a538-4c0b-9462-691e744623db)
+  3. Jane Doe (ID: 997dc90f-d3d7-4b21-b643-2002d35f7c2e)
 ```
 # Step 5: Retrieve Existing Metadata
 
@@ -169,7 +170,7 @@ disp(retrievedInstance)
 ```
 
 ```matlabTextOutput
-  Person (https://kg.ebrains.eu/api/instances/2d65e694-b7e6-445f-b49f-02723e476e74) with properties:
+  Person (https://kg.ebrains.eu/api/instances/75ec86a9-5b28-4c74-b54a-6d460bd6e973) with properties:
 
            affiliation: <external reference> (Affiliation)
          alternateName: [1x0 string]
@@ -190,20 +191,7 @@ Finally, let's learn how to update and delete metadata.
 
 ```matlab
 contactInfo = person.contactInformation;
-contactInfo.email = "jane.doe.updated@example.com"
-```
-
-```matlabTextOutput
-contactInfo = 
-  ContactInformation (https://kg.ebrains.eu/api/instances/b925574a-978d-4a98-9dc2-1ef60ddf0949) with properties:
-
-    email: "jane.doe.updated@example.com"
-
-  Required Properties: email
-
-```
-
-```matlab
+contactInfo.email = "jane.doe.updated@example.com";
 kgsave(contactInfo)
 ```
 
@@ -213,36 +201,25 @@ The `kgsave` function automatically detects if an instance already has an ID and
 **Deleting metadata:**
 
 
-Note: Deletion is not recursive, so we need to delete instances one\-by\-one:
+Note: Deletion is not recursive, so we need to delete all the instances:
 
 ```matlab
-kgdelete(person)
+% Provide a cell array of instances to delete:
+kgdelete( {person, contactInfo, organization} );
 ```
 
 ```matlabTextOutput
-Deleted instance of type 'openminds.core.actors.Person' with id: https://kg.ebrains.eu/api/instances/2d65e694-b7e6-445f-b49f-02723e476e74
+Deleted instance of type 'openminds.core.actors.Person' with id: https://kg.ebrains.eu/api/instances/75ec86a9-5b28-4c74-b54a-6d460bd6e973
+Deleted instance of type 'openminds.core.actors.ContactInformation' with id: https://kg.ebrains.eu/api/instances/e771b03d-6359-49b0-9bc5-6b6d51fd25d7
+Deleted instance of type 'openminds.core.actors.Organization' with id: https://kg.ebrains.eu/api/instances/3026e1c8-020c-4142-8c35-1f8e55808b9c
 ```
+
+It is also possible to delete instances one\-by\-one:
 
 ```matlab
-kgdelete(contactInfo)
-```
-
-```matlabTextOutput
-Deleted instance of type 'openminds.core.actors.ContactInformation' with id: https://kg.ebrains.eu/api/instances/b925574a-978d-4a98-9dc2-1ef60ddf0949
-```
-
-```matlab
-kgdelete(organization)
-```
-
-```matlabTextOutput
-Deleted instance of type 'openminds.core.actors.Organization' with id: https://kg.ebrains.eu/api/instances/49495bce-0ee8-426b-8209-68a28d75828f
-```
-
-```matlab
-
-% Alternatively, provide a cell array of instances :
-% kgdelete( {person, contactInfo, organization} );
+% kgdelete(person)
+% kgdelete(contactInfo)
+% kgdelete(organization)
 ```
 
 Important: Deletion is permanent! Always double\-check before deleting.
