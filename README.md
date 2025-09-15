@@ -25,9 +25,7 @@ matbox.installRequirements(path/to/toolboxRootDir)
 
 ## Getting started
 
-```matlab
-< add some code examples here >
-```
+See the [Getting Started](https://github.com/ehennestad/openminds-kg-sync/blob/dev/docs/GettingStarted.md) tutorial
 
 ## Contributing
 Please see the [Contributing guidelines](.github/CONTRIBUTING.md) and the [Developer notes](.github/DeveloperNotes.md)
