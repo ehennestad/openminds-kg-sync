@@ -34,7 +34,7 @@ function omNode = downloadMetadata(kgIdentifier, options)
     controlledTermKgIds = controlledTermUuidMap.keys();
     
     % Download instance
-    kgNode = options.Client.getInstance(uuid);
+    kgNode = options.Client.getInstance(uuid, "Server", options.Server);
     
     kgIRI = ebrains.kg.internal.getNodeKeywords(kgNode, "@id");
     rootNode = omkg.internal.conversion.convertKgNode(kgNode);
@@ -54,7 +54,8 @@ function omNode = downloadMetadata(kgIdentifier, options)
                     'Please wait while downloading %d new metadata instances...\n'], ...
                     orderStr(i), numel(linkedIRIs));
             end
-            kgNodes = options.Client.getInstancesBulk(linkedIRIs);
+            kgNodes = options.Client.getInstancesBulk(linkedIRIs, ...
+                "Server", options.Server);
             % kgNodes = ebrains.kg.api.downloadInstancesBulk(linkedIRIs);
 
             newNodes = omkg.internal.conversion.convertKgNode(kgNodes);
