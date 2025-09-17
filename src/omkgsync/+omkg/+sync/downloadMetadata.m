@@ -37,7 +37,7 @@ function omNode = downloadMetadata(kgIdentifier, options)
     kgNode = options.Client.getInstance(uuid, "Server", options.Server);
     
     kgIRI = ebrains.kg.internal.getNodeKeywords(kgNode, "@id");
-    rootNode = omkg.internal.conversion.convertKgNode(kgNode);
+    rootNode = omkg.internal.conversion.convertKgNode(kgNode, options.ReferenceNode);
     
     allNodes = {rootNode};
     resolvedIRIs = kgIRI;
@@ -56,13 +56,15 @@ function omNode = downloadMetadata(kgIdentifier, options)
             end
             kgNodes = options.Client.getInstancesBulk(linkedIRIs, ...
                 "Server", options.Server);
-            % kgNodes = ebrains.kg.api.downloadInstancesBulk(linkedIRIs);
 
             newNodes = omkg.internal.conversion.convertKgNode(kgNodes);
 
             if ~iscell(newNodes)
                 newNodes = num2cell(newNodes);
             end
+
+            % Reconstruct list of IRIs as response is not same order as request
+            linkedIRIs = cellfun(@(c) c.id, newNodes);
 
             allNodes = [allNodes, newNodes]; %#ok<AGROW>
             rootNode = newNodes;
