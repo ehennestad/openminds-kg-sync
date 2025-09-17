@@ -21,6 +21,7 @@ classdef KGMetadataStore < openminds.interface.MetadataStore
         InstanceClient = ebrains.kg.api.InstancesClient()
         SpaceConfiguration omkg.util.SpaceConfiguration
         Verbose (1,1) logical = true
+        PayloadLogFolder (1,1) string = missing % todo: Expose in constructor?
     end
 
     methods
@@ -79,14 +80,29 @@ classdef KGMetadataStore < openminds.interface.MetadataStore
                 
                 % Save instance
                 jsonDoc = instance.serialize("Serializer", obj.Serializer);
-    
+
                 if obj.isKgIdentifier(instanceID)
                     uuid = omkg.util.getIdentifierUUID(instanceID);
+    
+                    if ~ismissing(obj.PayloadLogFolder)
+                        filename = "kg_payload_" + uuid + ".jsonld";
+                        savePath = fullfile(obj.PayloadLogFolder, filename);
+                        fid = fopen(savePath, "wt");
+                        fileCleanup = onCleanup(@() fclose(fid));
+                        fwrite(fid, jsonDoc)
+                    end
 
                     if options.SaveMode == "update"
                         obj.InstanceClient.updateInstance(uuid, jsonDoc, "returnPayload", false, "Server", obj.DefaultServer);
+                        if obj.Verbose
+                            fprintf('Updated instance "%s" of type "%s".\n', string(instance), class(instance))
+                        end
+                        
                     elseif options.SaveMode == "replace"
                         obj.InstanceClient.replaceInstance(uuid, jsonDoc, "returnPayload", false, "Server", obj.DefaultServer);
+                        if obj.Verbose
+                            fprintf('Replaced instance "%s" of type "%s".\n', string(instance), class(instance))
+                        end
                     else
                         error("OMKG:KGMetadataStore:UnsupportedSaveMode", ...
                             "Unsupported save mode: %s", options.SaveMode)
