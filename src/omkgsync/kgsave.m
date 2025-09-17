@@ -49,6 +49,7 @@ function ids = kgsave(openmindsInstance, kgOptions, options)
         kgOptions.Server (1,1) ebrains.kg.enum.KGServer = omkg.getpref("DefaultServer")
         options.Client ebrains.kg.api.InstancesClient = ebrains.kg.api.InstancesClient()
         options.SaveMode (1,1) omkg.enum.SaveMode = omkg.enum.SaveMode.Update
+        options.MetadataStore omkg.internal.KGMetadataStore
     end
     
     % Check environment compatibility
@@ -61,13 +62,17 @@ function ids = kgsave(openmindsInstance, kgOptions, options)
     end
     
     % Configure metadata store with provided options
-    serializer = omkg.internal.KGSerializer();
-    metadataStore = omkg.internal.KGMetadataStore( ...
-        'Serializer', serializer, ...
-        'InstanceClient', options.Client, ...
-        'DefaultServer', kgOptions.Server, ...
-        'DefaultSpace', kgOptions.space);
-    
+    if ~isfield(options, 'MetadataStore')
+        serializer = omkg.internal.KGSerializer();
+        metadataStore = omkg.internal.KGMetadataStore( ...
+            'Serializer', serializer, ...
+            'InstanceClient', options.Client, ...
+            'DefaultServer', kgOptions.Server, ...
+            'DefaultSpace', kgOptions.space);
+    else
+        metadataStore = options.MetadataStore;
+    end
+        
     % Save instances and collect IDs
     numInstances = numel(openmindsInstance);
     ids = strings(1, numInstances);
