@@ -102,8 +102,17 @@ function omNode = convertKgNode(kgNode, omReferenceNode, options)
         end
         omNode = omReferenceNode;
     else
-        nvPairs = [propertyNames; propertyValues];
-        omNode = openminds.fromTypeName(type, identifier, nvPairs(:));
+        try
+            nvPairs = [propertyNames; propertyValues];
+            omNode = openminds.fromTypeName(type, identifier, nvPairs(:));
+        catch MECause
+            ME = MException(...
+                'OMKG:ConvertKGNode:ConversionFailed', ...
+                'Failed to create instance with identifier "%s".', ...
+                identifier);
+            ME = ME.addCause(MECause);
+            throw(ME)
+        end
     end
 end
 
