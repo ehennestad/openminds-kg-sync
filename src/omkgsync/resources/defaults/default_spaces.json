@@ -1,0 +1,131 @@
+{
+  "core": {
+    "default": "dataset",
+    "common": [
+      "Affiliation",
+      "Comment",
+      "Configuration",
+      "Consortium",
+      "Funding",
+      "GRIDID",
+      "HANDLE",
+      "HardwareSystem",
+      "IdentifiersDotOrgID",
+      "ORCID",
+      "Organization",
+      "Person",
+      "Project",
+      "Query",
+      "RORID",
+      "TermSuggestion",
+      "WebResource",
+      "RRID",
+      "AccountInformation"
+    ],
+    "files": [
+      "ContentTypePattern",
+      "File",
+      "FileBundle",
+      "FilePathPattern",
+      "FileRepositoryStructure",
+      "Hash"
+    ],
+    "dataset": [
+      "Contribution",
+      "Copyright",
+      "DOI",
+      "Dataset",
+      "DatasetVersion",
+      "FileArchive",
+      "FileRepository",
+      "ISBN",
+      "ISSN",
+      "NumericalParameter",
+      "ParameterSet",
+      "PropertyValueList",
+      "Protocol",
+      "ExperimentalActivity",
+      "ProtocolExecution",
+      "QuantitativeValue",
+      "QuantitativeValueRange",
+      "QuantitativeValueArray",
+      "ResearchProductGroup",
+      "ServiceLink",
+      "StringParameter",
+      "Subject",
+      "SubjectGroup",
+      "SubjectGroupState",
+      "SubjectState",
+      "TissueSample",
+      "TissueSampleCollection",
+      "TissueSampleCollectionState",
+      "TissueSampleState",
+      "BehavioralProtocol",
+      "Stimulation",
+      "Strain",
+      "Setup"
+    ],
+    "model": [
+      "Model",
+      "ModelVersion"
+    ],
+    "software": [
+      "SWHID",
+      "Software",
+      "SoftwareVersion"
+    ],
+    "restricted": [
+      "ContactInformation"
+    ],
+    "metadatamodel": [
+      "MetaDataModel",
+      "MetaDataModelVersion"
+    ],
+    "controlled": [
+      "License",
+      "ContentType"
+    ],
+    "webservice": [
+      "WebService",
+      "WebServiceVersion"
+    ]
+  },
+  "computation": { "default": "computation" },
+  "controlledTerms": { "default": "controlled" },
+  "SANDS": {
+    "default": null,
+    "spatial": [
+      "AnatomicalEntity",
+      "Annotation",
+      "CustomAnatomicalEntity",
+      "CustomAnnotation",
+      "CustomCoordinateSpace",
+      "Image",
+      "QualitativeRelationAssessment",
+      "QuantitativeRelationAssessment"
+    ],
+    "atlas": [
+      "AnatomicalTargetPosition",
+      "AtlasAnnotation",
+      "BrainAtlas",
+      "BrainAtlasVersion",
+      "Circle",
+      "ColorMap",
+      "CommonCoordinateSpace",
+      "CommonCoordinateSpaceVersion",
+      "CoordinatePoint",
+      "Ellipse",
+      "ParcellationEntity",
+      "ParcellationTerminology",
+      "ParcellationTerminologyVersion",
+      "ParcellationEntityVersion",
+      "Rectangle",
+      "SingleColor"
+    ]
+  },
+  "publications": { "default": "livepapers" },
+  "ephys": { "default": "in-depth" },
+  "chemicals": { "default": "in-depth" },
+  "specimenPrep": { "default": "in-depth" },
+  "stimulation": { "default": "in-depth" }
+}
