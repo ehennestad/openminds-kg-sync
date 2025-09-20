@@ -81,7 +81,7 @@ function ids = kgsave(openmindsInstance, kgOptions, options)
         try
             % Convert SaveMode enum to string for KGMetadataStore
             saveModeStr = string(options.SaveMode.Name);
-            openmindsInstance(i).save(metadataStore)%, 'SaveMode', saveModeStr);
+            ids(i) = openmindsInstance(i).save(metadataStore); %, 'SaveMode', saveModeStr);
             %id = openmindsInstance(i).save(metadataStore, 'SaveMode', saveModeStr);
             %ids(i) = id;
         catch ME
