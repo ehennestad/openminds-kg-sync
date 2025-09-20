@@ -53,8 +53,8 @@ classdef KGMetadataStore < openminds.interface.MetadataStore
                 return
             end
 
-            linkedTypes = instance.getLinkedTypes();
-            embeddedTypes = instance.getEmbeddedTypes();
+            linkedTypes = instance.getLinkedInstances();
+            embeddedTypes = instance.getEmbeddedInstances();
 
             % Recursively save linked types
             for i = 1:numel(linkedTypes)
@@ -63,13 +63,13 @@ classdef KGMetadataStore < openminds.interface.MetadataStore
                     % Check that the id is part of the KG 2 OM map?
                     continue
                 end
-                currentValue.save(obj)
+                currentValue.save(obj);
             end
 
             % Recursively save embedded types
             for i = 1:numel(embeddedTypes)
                 currentValue = embeddedTypes{i};
-                currentValue.save(obj, 'IsEmbedded', true)
+                currentValue.save(obj, 'IsEmbedded', true);
             end
 
             if options.IsEmbedded
@@ -134,13 +134,20 @@ classdef KGMetadataStore < openminds.interface.MetadataStore
                     id = resp.data.x_id;
                     
                     if obj.Verbose
-                        fprintf('Saved instance "%s" of type "%s" to space "%s".\n', string(instance), class(instance), space)
+                        fprintf('Saved instance "%s" of type "%s" to space "%s" with id "%s".\n', string(instance), class(instance), space, id)
                     end
 
+                    % Todo: consider if this should be done here. MetadataStore 
+                    % must have access to set id of instance 
                     % Update the local instance with the new KG ID
-                    instance.id = id;
+                    % instance.id = id;
                 end
             end
+        end
+
+        function instances = load(~, ~) %#ok<STOUT>
+            error('load is not implemented for KG Metadata Stores.')
+            %Todo: load space?
         end
     end
     
