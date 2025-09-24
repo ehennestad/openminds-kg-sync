@@ -9,6 +9,12 @@ classdef KgdeleteTest < matlab.unittest.TestCase
         KGPrefixedID = omkg.constants.KgInstanceIRIPrefix + "/" + "12345678-1234-5678-9012-123456789012";
     end
 
+    methods (TestClassSetup)
+        function setupOnce(testCase) %#ok<MANU>
+            omkg.internal.checkEnvironment()
+        end
+    end
+
     methods (Test)
         function testDeleteByIdentifierString(testCase)
             % Test deleting by KG identifier string
