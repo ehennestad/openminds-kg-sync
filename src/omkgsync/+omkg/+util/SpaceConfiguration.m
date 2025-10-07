@@ -259,7 +259,7 @@ classdef SpaceConfiguration
                         classList = cellfun(@char, classList, 'UniformOutput', false);
                     end
                     
-                    if iscellstr(classList) || iscell(classList)
+                    if iscellstr(classList) || iscell(classList) || isstring(classList)
                         keep = ~strcmp(classList, className);
                         if any(~keep)
                             obj.Data.(groupName).(spaceName) = classList(keep);
