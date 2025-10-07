@@ -50,18 +50,18 @@ function omNode = convertKgNode(kgNode, omReferenceNode, options)
 
     [identifier, type] = ebrains.kg.internal.getNodeKeywords(kgNode, "@id", "@type");
     
-    omNode = omkg.internal.conversion.filterProperties(kgNode);
-    omNode = omkg.internal.conversion.removeNamespaceIRIFromPropertyNames(omNode);
+    processedKgNode = omkg.internal.conversion.filterProperties(kgNode);
+    processedKgNode = omkg.internal.conversion.removeNamespaceIRIFromPropertyNames(processedKgNode);
     
     omDummyNode = openminds.fromTypeName(type, identifier); % create a dummy to get some info about the class we will create
 
-    propertyNames = fieldnames(omNode)';
+    propertyNames = fieldnames(processedKgNode)';
     propertyValues = cell(size(propertyNames));
     toKeep = true(size(propertyNames));
 
     for i = 1:numel(propertyNames)
         currentPropertyName = propertyNames{i};
-        currentPropertyValue = omNode.(currentPropertyName);
+        currentPropertyValue = processedKgNode.(currentPropertyName);
 
         if ~isprop(omDummyNode, currentPropertyName)
             showUnsupportedPropertyWarning(class(omDummyNode), currentPropertyName)
