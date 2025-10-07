@@ -109,7 +109,7 @@ classdef PreferencesTest < matlab.unittest.TestCase
         function testPreferencesDisplay(testCase)
             % Test that preferences object displays correctly
             
-            prefs = omkg.getpref();
+            prefs = omkg.getpref(); %#ok<NASGU>
             
             % Capture display output
             displayText = evalc('disp(prefs)');
