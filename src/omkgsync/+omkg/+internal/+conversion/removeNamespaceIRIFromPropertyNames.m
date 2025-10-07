@@ -1,5 +1,5 @@
-function metadataNode = removeContextPrefix(metadataNode)
-% removeContextPrefix - Remove the openminds IRI context prefix from the property names
+function metadataNode = removeNamespaceIRIFromPropertyNames(metadataNode)
+% removeNamespaceIRIFromPropertyNames - Remove the openminds namespace IRI prefix from property names
     arguments
         metadataNode (1,1) struct
     end

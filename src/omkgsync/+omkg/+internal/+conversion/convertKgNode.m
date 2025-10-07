@@ -51,7 +51,7 @@ function omNode = convertKgNode(kgNode, omReferenceNode, options)
     [identifier, type] = ebrains.kg.internal.getNodeKeywords(kgNode, "@id", "@type");
     
     omNode = omkg.internal.conversion.filterProperties(kgNode);
-    omNode = omkg.internal.conversion.removeContextPrefix(omNode);
+    omNode = omkg.internal.conversion.removeNamespaceIRIFromPropertyNames(omNode);
     
     omDummyNode = openminds.fromTypeName(type, identifier); % create a dummy to get some info about the class we will create
 
