@@ -36,7 +36,7 @@ function omNode = downloadMetadata(kgIdentifier, options)
     % Download instance
     kgNode = options.Client.getInstance(uuid, "Server", options.Server);
     
-    kgIRI = ebrains.kg.internal.getNodeKeywords(kgNode, "@id");
+    kgIRI = omkg.internal.conversion.getNodeKeywords(kgNode, "@id");
     rootNode = omkg.internal.conversion.convertKgNode(kgNode, options.ReferenceNode);
     
     [allNodes, newNodes] = deal({rootNode});

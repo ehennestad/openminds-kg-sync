@@ -48,7 +48,7 @@ function omNode = convertKgNode(kgNode, omReferenceNode, options)
         controlledInstanceMap = omkg.internal.conversion.getIdentifierMapping();
     end
 
-    [identifier, type] = ebrains.kg.internal.getNodeKeywords(kgNode, "@id", "@type");
+    [identifier, type] = omkg.internal.conversion.getNodeKeywords(kgNode, "@id", "@type");
     
     processedKgNode = omkg.internal.conversion.filterProperties(kgNode);
     processedKgNode = omkg.internal.conversion.removeNamespaceIRIFromPropertyNames(processedKgNode);
@@ -129,7 +129,7 @@ function omNode = convertKgNode(kgNode, omReferenceNode, options)
                     identifier);
             else
                 % Todo: will not work for nested embedded instances.
-                [parentIdentifier, parentType] = ebrains.kg.internal.getNodeKeywords(options.ParentNode, "@id", "@type");
+                [parentIdentifier, parentType] = omkg.internal.conversion.getNodeKeywords(options.ParentNode, "@id", "@type");
                 errorMessage = sprintf(...
                     ['Failed to create embedded instance for type "%s" with ', ...
                     'identifier "%s".'], ...
