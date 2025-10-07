@@ -50,6 +50,7 @@ function ids = kgsave(openmindsInstance, kgOptions, options)
         options.Client ebrains.kg.api.InstancesClient = ebrains.kg.api.InstancesClient()
         options.SaveMode (1,1) omkg.enum.SaveMode = omkg.enum.SaveMode.Update
         options.MetadataStore omkg.internal.KGMetadataStore
+        options.Verbose (1,1) logical = true
     end
     
     % Check environment compatibility
@@ -68,7 +69,8 @@ function ids = kgsave(openmindsInstance, kgOptions, options)
             'Serializer', serializer, ...
             'InstanceClient', options.Client, ...
             'DefaultServer', kgOptions.Server, ...
-            'DefaultSpace', kgOptions.space);
+            'DefaultSpace', kgOptions.space, ...
+            'Verbose', options.Verbose);
     else
         metadataStore = options.MetadataStore;
     end

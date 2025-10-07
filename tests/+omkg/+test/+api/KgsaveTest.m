@@ -86,7 +86,7 @@ classdef KgsaveTest < matlab.unittest.TestCase
             % Test basic saving of a single openMINDS instance
             instance = testCase.TestInstances(1);
             
-            ids = kgsave(instance, 'Client', testCase.MockClient);
+            ids = kgsave(instance, 'Client', testCase.MockClient, 'Verbose', false);
             
             testCase.verifyClass(ids, 'string', ...
                 'Expected string array of IDs');
@@ -104,7 +104,7 @@ classdef KgsaveTest < matlab.unittest.TestCase
             % Test saving multiple instances
             instances = testCase.TestInstances(1:instanceCounts);
             
-            ids = kgsave(instances, 'Client', testCase.MockClient);
+            ids = kgsave(instances, 'Client', testCase.MockClient, 'Verbose', false);
             
             testCase.verifyClass(ids, 'string', ...
                 'Expected string array of IDs');
@@ -124,7 +124,8 @@ classdef KgsaveTest < matlab.unittest.TestCase
             
             ids = kgsave(instance, ...
                 'Client', testCase.MockClient, ...
-                'SaveMode', omkg.enum.SaveMode.Update);
+                'SaveMode', omkg.enum.SaveMode.Update, ...
+                'Verbose', false);
             
             testCase.verifyNotEmpty(ids, 'Expected successful save with Update mode');
         end
@@ -135,7 +136,8 @@ classdef KgsaveTest < matlab.unittest.TestCase
             
             ids = kgsave(instance, ...
                 'Client', testCase.MockClient, ...
-                'SaveMode', omkg.enum.SaveMode.Replace);
+                'SaveMode', omkg.enum.SaveMode.Replace, ...
+                'Verbose', false);
             
             testCase.verifyNotEmpty(ids, 'Expected successful save with Replace mode');
         end
@@ -149,7 +151,8 @@ classdef KgsaveTest < matlab.unittest.TestCase
             ids = kgsave(instance, ...
                 'space', customSpace, ...
                 'Server', customServer, ...
-                'Client', testCase.MockClient);
+                'Client', testCase.MockClient, ...
+                'Verbose', false);
             
             testCase.verifyNotEmpty(ids, 'Expected successful save with custom options');
         end
@@ -158,7 +161,7 @@ classdef KgsaveTest < matlab.unittest.TestCase
             % Test behavior with empty instance array
             emptyInstances = openminds.core.actors.Person.empty();
             
-            ids = kgsave(emptyInstances, 'Client', testCase.MockClient);
+            ids = kgsave(emptyInstances, 'Client', testCase.MockClient, 'Verbose', false);
             
             testCase.verifyEmpty(ids, 'Expected empty result for empty input');
             testCase.verifyEmpty(testCase.MockClient.getLastCallFor('createNewInstanceWithId'), ...
@@ -185,7 +188,7 @@ classdef KgsaveTest < matlab.unittest.TestCase
             testCase.MockClient.setError('createNewInstanceWithId', ...
                 MException('MOCK:APIError', 'Simulated API error'));
             
-            testCase.verifyError(@() kgsave(instance, 'Client', testCase.MockClient), ...
+            testCase.verifyError(@() kgsave(instance, 'Client', testCase.MockClient, 'Verbose', false), ...
                 'OMKG:kgsave:SaveFailed', ...
                 'Expected SaveFailed error when API fails');
         end
@@ -198,7 +201,7 @@ classdef KgsaveTest < matlab.unittest.TestCase
             testCase.MockClient.setError('createNewInstanceWithId', ...
                 MException('MOCK:APIError', 'Simulated API error for batch'));
             
-            testCase.verifyError(@() kgsave(instances, 'Client', testCase.MockClient), ...
+            testCase.verifyError(@() kgsave(instances, 'Client', testCase.MockClient, 'Verbose', false), ...
                 'OMKG:kgsave:SaveFailed', ...
                 'Expected SaveFailed error when API fails during batch');
         end
@@ -207,7 +210,7 @@ classdef KgsaveTest < matlab.unittest.TestCase
             % Test input validation for invalid instance types
             invalidInstance = struct('notAnInstance', true);
             
-            testCase.verifyError(@() kgsave(invalidInstance), ...
+            testCase.verifyError(@() kgsave(invalidInstance, 'Verbose', false), ...
                 'MATLAB:validation:UnableToConvert', ...
                 'Expected validation error for invalid instance type');
         end
@@ -216,7 +219,7 @@ classdef KgsaveTest < matlab.unittest.TestCase
             % Test validation of SaveMode parameter
             instance = testCase.TestInstances(1);
             
-            testCase.verifyError(@() kgsave(instance, 'SaveMode', "invalid"), ...
+            testCase.verifyError(@() kgsave(instance, 'SaveMode', "invalid", 'Verbose', false), ...
                 'MATLAB:validation:UnableToConvert', ...
                 'Expected validation error for invalid SaveMode');
         end
@@ -225,7 +228,7 @@ classdef KgsaveTest < matlab.unittest.TestCase
             % Test validation of space parameter
             instance = testCase.TestInstances(1);
             
-            testCase.verifyError(@() kgsave(instance, 'space', 123), ...
+            testCase.verifyError(@() kgsave(instance, 'space', 123, 'Verbose', false), ...
                 'OMKG:kgsave:SaveFailed', ...
                 'Expected validation error for non-string space');
         end
@@ -234,7 +237,7 @@ classdef KgsaveTest < matlab.unittest.TestCase
             % Test validation of Server parameter  
             instance = testCase.TestInstances(1);
             
-            testCase.verifyError(@() kgsave(instance, 'Server', "invalid"), ...
+            testCase.verifyError(@() kgsave(instance, 'Server', "invalid", 'Verbose', false), ...
                 'MATLAB:validation:UnableToConvert', ...
                 'Expected validation error for invalid Server enum');
         end
@@ -270,7 +273,7 @@ classdef KgsaveTest < matlab.unittest.TestCase
             
             % This would require mocking omkg.internal.checkEnvironment
             % For now, just verify normal operation doesn't fail
-            ids = kgsave(instance, 'Client', testCase.MockClient);
+            ids = kgsave(instance, 'Client', testCase.MockClient, 'Verbose', false);
             testCase.verifyNotEmpty(ids, 'Expected save to succeed with environment check');
         end
         
@@ -279,7 +282,7 @@ classdef KgsaveTest < matlab.unittest.TestCase
             instance = testCase.TestInstances(1);
             
             % Save without specifying space/server - should use defaults
-            ids = kgsave(instance, 'Client', testCase.MockClient);
+            ids = kgsave(instance, 'Client', testCase.MockClient, 'Verbose', false);
 
             testCase.verifyTrue(....
                 testCase.MockClient.wasCalledWithRequiredParam("createNewInstanceWithId", ...
@@ -296,7 +299,7 @@ classdef KgsaveTest < matlab.unittest.TestCase
             largeInstanceCount = 10;
             instances = repmat(testCase.TestInstances(1), 1, largeInstanceCount);
             
-            ids = kgsave(instances, 'Client', testCase.MockClient);
+            ids = kgsave(instances, 'Client', testCase.MockClient, 'Verbose', false);
             
             testCase.verifySize(ids, [1, largeInstanceCount], ...
                 'Expected ID for each instance in large array');
