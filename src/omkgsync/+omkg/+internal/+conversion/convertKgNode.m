@@ -175,11 +175,6 @@ function tf = isEmbeddedNode(node)
     end
 end
 
-function tf = isControlledInstance(node)
-    tf = false; %todo
-    % isstruct(node) && isfield()
-end
-
 function showUnsupportedPropertyWarning(typeName, propertyName)
     warning(...
         ['A downloaded instance of type "%s" includes a property ', ...
