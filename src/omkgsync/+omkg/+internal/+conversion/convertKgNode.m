@@ -15,7 +15,7 @@ function omNode = convertKgNode(kgNode, omReferenceNode, options)
     arguments
         kgNode (1,:) {mustBeA(kgNode, ["struct", "cell"])} % Metadata node/instance returned from the instances api endpoint
         omReferenceNode {mustBeA(omReferenceNode, ["double", "openminds.abstract.Schema"])} = []
-        options.ParentNode
+        options.ParentNode = [];
     end
 
     % Loop through each node if a list is provided
@@ -23,7 +23,7 @@ function omNode = convertKgNode(kgNode, omReferenceNode, options)
         omNode = cell(1, numel(kgNode));
         if ~iscell(kgNode); kgNode = num2cell(kgNode); end
         for i = 1:numel(kgNode)
-            omNode{i} = omkg.internal.conversion.convertKgNode(kgNode{i});
+            omNode{i} = omkg.internal.conversion.convertKgNode(kgNode{i}, "ParentNode", options.ParentNode);
         end
         
         omNode = omkg.util.concatTypesIfHomogeneous(omNode);
@@ -108,10 +108,22 @@ function omNode = convertKgNode(kgNode, omReferenceNode, options)
             nvPairs = [propertyNames; propertyValues];
             omNode = openminds.fromTypeName(type, identifier, nvPairs(:));
         catch MECause
-            ME = MException(...
-                'OMKG:ConvertKGNode:ConversionFailed', ...
-                'Failed to create instance with identifier "%s".', ...
-                identifier);
+            errorId = 'OMKG:ConvertKGNode:ConversionFailed';
+            
+            if isempty(options.ParentNode)
+                errorMessage = sprintf(...
+                    'Failed to create instance with identifier "%s".', ...
+                    identifier);
+            else
+                % Todo: will not work for nested embedded instances.
+                [parentIdentifier, parentType] = ebrains.kg.internal.getNodeKeywords(options.ParentNode, "@id", "@type");
+                errorMessage = sprintf(...
+                    ['Failed to create embedded instance for type "%s" with ', ...
+                    'identifier "%s".'], ...
+                    parentType{1}, parentIdentifier);
+            end
+
+            ME = MException(errorId, errorMessage);
             ME = ME.addCause(MECause);
             throw(ME)
         end
