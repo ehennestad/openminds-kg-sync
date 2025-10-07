@@ -3,10 +3,23 @@ function omNode = convertKgNode(kgNode, omReferenceNode, options)
 %
 % Syntax:
 %   omNode = omkg.internal.conversion.convertKgNode(kgNode)
+%   omNode = omkg.internal.conversion.convertKgNode(kgNode, omReferenceNode)
+%   omNode = omkg.internal.conversion.convertKgNode(kgNode, omReferenceNode, options)
 %
 % Input Arguments:
-%   kgNode (1,:) - Struct or cell array of metadata nodes/instances returned from the
-%       instances api endpoint.
+%   - kgNode (1,:) - Struct or cell array of metadata nodes/instances returned 
+%       from the instances API endpoint (jsonld converted to struct by 
+%       jsondecode).
+%   - omReferenceNode (openminds.abstract.Schema) - Optional reference node for 
+%       setting properties. If not provided, a new openMINDS node will be 
+%       created. Used if we are resolving a node instead of creating a new
+%       one.
+%
+% Name-Value Arguments (options):
+%  Specify options using name-value arguments as Name1=Value1,...,NameN=ValueN, 
+%  where Name is the argument name and Value is the corresponding value.
+%
+%  - ParentNode (Type) - Default: []. Parent node for the converted instance or linked node.
 %
 % Output Arguments:
 %   omNode - Converted openMINDS node or an array of openMINDS nodes if
