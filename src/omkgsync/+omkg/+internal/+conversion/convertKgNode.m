@@ -60,7 +60,9 @@ function omNode = convertKgNode(kgNode, omReferenceNode, options)
         if isstruct(currentPropertyValue) || iscell(currentPropertyValue)
             if isLinkedNode(currentPropertyValue)
                 try
-                    if all(isKey(controlledInstanceMap, {currentPropertyValue.x_id}))
+                    if all(isKey(controlledInstanceMap, {currentPropertyValue.x_id})) 
+                        % Todo: check and resolve one by one. What if some are
+                        % resolvable and others are not.
                         currentPropertyValue = resolveAsControlledInstances(currentPropertyValue, controlledInstanceMap);
                     else
                         currentPropertyValue = createUnresolvedNode(currentPropertyValue, omDummyNode.(currentPropertyName));
@@ -139,10 +141,6 @@ function unresolvedNodes = createUnresolvedNode(node, expectedObject)
         if openminds.utility.isMixedInstance( expectedObject )
             unresolvedNodes{iNode} = feval(class(expectedObject), thisNode);
         else
-            % % if isa(expectedType, 'openminds.abstract.ControlledTerm')
-            % %     % Todo: resolve using kg to OMI controlled instance map
-            % % else
-            % % end
             unresolvedNodes{iNode} = feval(class(expectedObject), 'id', thisNode.x_id);
         end
     end
