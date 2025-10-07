@@ -39,12 +39,12 @@ function omNode = downloadMetadata(kgIdentifier, options)
     kgIRI = ebrains.kg.internal.getNodeKeywords(kgNode, "@id");
     rootNode = omkg.internal.conversion.convertKgNode(kgNode, options.ReferenceNode);
     
-    allNodes = {rootNode};
+    [allNodes, newNodes] = deal({rootNode});
     resolvedIRIs = kgIRI;
 
     for i = 1:options.NumLinksToResolve
         
-        linkedIRIs = omkg.internal.conversion.extractLinkedIdentifiers(rootNode);
+        linkedIRIs = omkg.internal.conversion.extractLinkedIdentifiers(newNodes);
         linkedIRIs = setdiff(linkedIRIs, controlledTermKgIds);
         linkedIRIs = setdiff(linkedIRIs, resolvedIRIs);
         
@@ -67,7 +67,6 @@ function omNode = downloadMetadata(kgIdentifier, options)
             linkedIRIs = cellfun(@(c) c.id, newNodes);
 
             allNodes = [allNodes, newNodes]; %#ok<AGROW>
-            rootNode = newNodes;
             resolvedIRIs = [resolvedIRIs, linkedIRIs]; %#ok<AGROW>
         else
             % No more links to resolve
