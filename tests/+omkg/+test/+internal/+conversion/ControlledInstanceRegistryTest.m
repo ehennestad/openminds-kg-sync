@@ -110,10 +110,11 @@ classdef ControlledInstanceRegistryTest < matlab.unittest.TestCase
             registry = omkg.internal.conversion.controlledInstanceRegistry.instance('ApiClient', mockClient);
             
             omId = "https://openminds.ebrains.eu/controlledTerms/NonExistent";
-            kgId = registry.getKgId(omId);
             
-            testCase.verifyEqual(kgId, "", ...
-                'Should return empty string for non-existent ID');
+            testCase.verifyError(...
+                @() registry.getKgId(omId), ...
+                'OMKG:ControlledInstanceRegistry:IdNotFound')
+
         end
         
         function testGetOpenMindsIdFound(testCase)
@@ -136,10 +137,9 @@ classdef ControlledInstanceRegistryTest < matlab.unittest.TestCase
             registry = omkg.internal.conversion.controlledInstanceRegistry.instance('ApiClient', mockClient);
             
             kgId = "00000000-0000-0000-0000-000000000000";
-            omId = registry.getOpenMindsId(kgId);
-            
-            testCase.verifyEqual(omId, "", ...
-                'Should return empty string for non-existent ID');
+            testCase.verifyError(...
+                @() registry.getOpenMindsId(kgId), ...
+                'OMKG:ControlledInstanceRegistry:IdNotFound')
         end
         
         function testBidirectionalLookup(testCase)
@@ -357,12 +357,12 @@ classdef ControlledInstanceRegistryTest < matlab.unittest.TestCase
             registry = omkg.internal.conversion.controlledInstanceRegistry.instance('ApiClient', mockClient);
             
             % Test with various invalid formats
-            testCase.verifyEqual(registry.getKgId(""), "", ...
-                'Should handle empty string');
-            testCase.verifyEqual(registry.getKgId("invalid"), "", ...
-                'Should handle invalid format');
-            testCase.verifyEqual(registry.getOpenMindsId("not-a-uuid"), "", ...
-                'Should handle invalid UUID');
+            testCase.verifyError(...
+                @() registry.getKgId(""), ...
+                'OMKG:ControlledInstanceRegistry:IdNotFound')
+            testCase.verifyError( ...
+                @() registry.getKgId("invalid"), ...
+                'OMKG:ControlledInstanceRegistry:IdNotFound')
         end
     end
     
