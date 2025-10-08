@@ -52,7 +52,7 @@ function omNode = downloadMetadata(kgIdentifier, options)
             if options.Verbose
                 fprintf(['Following links of %s order. ', ...
                     'Please wait while downloading %d new metadata instances...\n'], ...
-                    orderStr(i), numel(linkedIRIs));
+                    omkg.util.getOrdinalString(i), numel(linkedIRIs));
             end
             kgNodes = options.Client.getInstancesBulk(linkedIRIs, ...
                 "Server", options.Server);
@@ -79,16 +79,4 @@ function omNode = downloadMetadata(kgIdentifier, options)
 
     omkg.internal.resolveLinks(allNodes{1}, resolvedIRIs(2:end), allNodes(2:end))
     omNode = allNodes{1};
-end
-
-function result = orderStr(val)
-    if val == 1
-        result = sprintf('%dst', val); %1st
-    elseif val == 2
-        result = sprintf('%dnd', val); %2nd
-    elseif val == 3
-        result = sprintf('%drd', val); %3rd
-    else
-        result = sprintf('%dth', val); %nth
-    end
 end
