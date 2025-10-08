@@ -19,8 +19,8 @@ function identifierMap = getControlledTermIdMap(typeName, identifiers, options)
 %   identifierMap  - A mapping of identifiers to their respective controlled term IDs.
 
     arguments
-        typeName (1,1) string = "https://openminds.ebrains.eu/controlledTerms/ActionStatusType"
-        identifiers (1,:) string = string.missing
+        typeName (1,1) string
+        identifiers (1,:) string = string.empty
         options.ApiClient = ebrains.kg.api.InstancesClient()
     end
 
