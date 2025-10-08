@@ -46,7 +46,5 @@ function omNodes = replaceControlledInstanceIds(omNodes, kg2OmIdentifierMap)
         end
         omNodes{i} = thisNode;
     end
-    try % todo: should use utility function
-        omNodes = [omNodes{:}];
-    end
+    omNodes = omkg.util.concatTypesIfHomogeneous(omNodes);
 end

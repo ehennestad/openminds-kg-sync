@@ -49,6 +49,8 @@ function ids = kgsave(openmindsInstance, kgOptions, options)
         kgOptions.Server (1,1) ebrains.kg.enum.KGServer = omkg.getpref("DefaultServer")
         options.Client ebrains.kg.api.InstancesClient = ebrains.kg.api.InstancesClient()
         options.SaveMode (1,1) omkg.enum.SaveMode = omkg.enum.SaveMode.Update
+        options.MetadataStore omkg.internal.KGMetadataStore
+        options.Verbose (1,1) logical = true
     end
     
     % Check environment compatibility
@@ -60,17 +62,19 @@ function ids = kgsave(openmindsInstance, kgOptions, options)
         return
     end
     
-    % Set default space preference if provided
-    if isfield(kgOptions, 'space') && ~isempty(kgOptions.space)
-        omkg.setpref('DefaultSpace', kgOptions.space);
-    end
-    
     % Configure metadata store with provided options
-    serializer = omkg.internal.KGSerializer();
-    metadataStore = omkg.internal.KGMetadataStore( ...
-        'Serializer', serializer, ...
-        'InstanceClient', options.Client);
-    
+    if ~isfield(options, 'MetadataStore')
+        serializer = omkg.internal.KGSerializer();
+        metadataStore = omkg.internal.KGMetadataStore( ...
+            'Serializer', serializer, ...
+            'InstanceClient', options.Client, ...
+            'DefaultServer', kgOptions.Server, ...
+            'DefaultSpace', kgOptions.space, ...
+            'Verbose', options.Verbose);
+    else
+        metadataStore = options.MetadataStore;
+    end
+        
     % Save instances and collect IDs
     numInstances = numel(openmindsInstance);
     ids = strings(1, numInstances);
@@ -78,14 +82,19 @@ function ids = kgsave(openmindsInstance, kgOptions, options)
     for i = 1:numInstances
         try
             % Convert SaveMode enum to string for KGMetadataStore
-            saveModeStr = string(options.SaveMode.Name);
-            id = openmindsInstance(i).save(metadataStore, 'SaveMode', saveModeStr);
-            ids(i) = id;
+            % Todo: saveModeStr = string(options.SaveMode.Name);
+            ids(i) = openmindsInstance(i).save(metadataStore); %, 'SaveMode', saveModeStr);
+            %id = openmindsInstance(i).save(metadataStore, 'SaveMode', saveModeStr);
+            %ids(i) = id;
         catch ME
             % Add context to error and re-throw
             error('OMKG:kgsave:SaveFailed', ...
                 'Failed to save instance %d of %d: %s', ...
                 i, numInstances, ME.message);
         end
+    end
+
+    if ~nargout
+        clear ids
     end
 end

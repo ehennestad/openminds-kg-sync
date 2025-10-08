@@ -23,7 +23,15 @@ classdef KGResolver < openminds.internal.resolver.AbstractLinkResolver
                 instance = openminds.instanceFromIRI(openMindsIdentifier);
             else
                 nvPairs = namedargs2cell(options);
-                instance = omkg.sync.downloadMetadata(identifier, nvPairs{:}, 'ReferenceNode', instance);
+                if isa(instance, 'openminds.internal.MixedTypeReference')
+                    % No node to update, we need to create a new typed instance
+                    referenceNode = [];
+                else
+                    % Pass instance as reference node, instance will be
+                    % updated/populated with resolved values.
+                    referenceNode = instance;
+                end
+                instance = omkg.sync.downloadMetadata(identifier, nvPairs{:}, 'ReferenceNode', referenceNode);
             end
         end
 

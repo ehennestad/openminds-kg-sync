@@ -95,6 +95,7 @@ classdef DownloadMetadataTest < matlab.unittest.TestCase
                 testCase.verifyNotEmpty(result, 'Should return non-empty result');
                 
             catch ME
+                % Todo: This is a very unspecific check. Should be improved
                 if contains(ME.message, 'openminds') || contains(ME.message, 'ebrains')
                     warning('OMKGSYNC:TestSkipped', 'Test skipped due to missing dependencies: %s', ME.message);
                 else
