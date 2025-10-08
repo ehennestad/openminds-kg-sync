@@ -22,25 +22,30 @@ function typeNames = getControlledTypes(options)
         "space", "controlled", ...
         "stage", "RELEASED", ...
         "withProperties", false);
-    numel(typeData)
+    
     typeNames = processTypeResponse(typeData);
 end
-
 
 
 function result = processTypeResponse(typeData)
 % processTypeResponse - Extract the type name, but only for controlled term types
 %
 %   Returns a string array with names (@type IRI) of controlled term types
+
+    TYPE_NAMESPACE_IRI = "https://openminds.ebrains.eu/controlledTerms/";
+
     result = string.empty;
     for i = 1:numel(typeData)
         currentTypeSpec = typeData{i};
-        if startsWith(currentTypeSpec.http___schema_org_identifier, ...
-                "https://openminds.ebrains.eu/controlledTerms/")
-            result(end+1) = currentTypeSpec.http___schema_org_identifier; %#ok<AGROW>
+        semanticTypename = currentTypeSpec.http___schema_org_identifier;
+
+        if startsWith(semanticTypename, TYPE_NAMESPACE_IRI)
+            %result(end+1) = extractAfter(semanticTypename, TYPE_NAMESPACE_IRI); %#ok<AGROW>
+            result(end+1) = semanticTypename; %#ok<AGROW>
         else
-            disp(currentTypeSpec.http___schema_org_identifier)
-            warning('Expected type name to start with "https://openminds.ebrains.eu/controlledTerms/"')
+            % pass
+            % disp(currentTypeSpec.http___schema_org_identifier)
+            % warning('Expected type name to start with "https://openminds.ebrains.eu/controlledTerms/"')
         end
     end
 end

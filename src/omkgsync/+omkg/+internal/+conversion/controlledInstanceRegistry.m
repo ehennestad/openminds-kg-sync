@@ -52,6 +52,8 @@ classdef controlledInstanceRegistry < handle
                 apiClient = []
             end
             
+            omkg.internal.checkEnvironment()
+
             persistent singletonInstance
             if isempty(singletonInstance) || ~isvalid(singletonInstance)
                 singletonInstance = omkg.internal.conversion.controlledInstanceRegistry();
@@ -368,7 +370,9 @@ classdef controlledInstanceRegistry < handle
             saveData.typeUpdateOrder = obj.TypeUpdateOrder;
             saveData.lastTypeUpdated = obj.LastTypeUpdated;
             
-            utility.filewrite(mapFilepath, jsonencode(saveData, 'PrettyPrint', true));
+            fid = fopen(mapFilepath, "wt");
+            fileCleanup = onCleanup(@() fclose(fid));
+            fwrite(fid, jsonencode(saveData, 'PrettyPrint', true))
         end
         
         function loadFromFile(obj)

@@ -26,7 +26,7 @@ function identifierMap = getControlledTermIdMap(typeName, identifiers, options)
 
     if isempty(identifiers)
         response = options.ApiClient.listInstances(typeName, ...
-            "stage", "RELEASED", "Server", "prod", "space", "controlled");
+            "stage", "RELEASED", "Server", "PROD", "space", "controlled");
     else
         response = options.ApiClient.getInstancesBulk(identifiers, ...
             "stage", "RELEASED", "Server", "prod");
