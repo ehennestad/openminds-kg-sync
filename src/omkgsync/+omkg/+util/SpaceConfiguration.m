@@ -211,17 +211,7 @@ classdef SpaceConfiguration
             else
                 % Normalize existing list to cellstr if needed
                 classList = obj.Data.(groupName).(spaceName);
-                if ischar(classList)
-                    classList = {classList};
-                elseif isstring(classList)
-                    classList = cellstr(classList);
-                elseif iscell(classList) && ~iscellstr(classList)
-                    % Handle cell arrays of strings (modern MATLAB string arrays in cells)
-                    classList = cellfun(@char, classList, 'UniformOutput', false);
-                elseif ~iscellstr(classList) && ~iscell(classList)
-                    error("OMKG:SpaceConfiguration:SchemaError", ...
-                        "Group '%s' field '%s' must be a cellstr list.", groupName, spaceName);
-                end
+                classList = obj.normalizeClassList(classList);
                 obj.Data.(groupName).(spaceName) = classList;
             end
 
@@ -249,15 +239,7 @@ classdef SpaceConfiguration
                 for j = 1:numel(spaceNames)
                     spaceName = spaceNames{j};
                     classList = groupData.(spaceName);
-                    
-                    % Handle different types of class lists
-                    if ischar(classList)
-                        classList = {classList};
-                    elseif isstring(classList)
-                        classList = cellstr(classList);
-                    elseif iscell(classList) && ~iscellstr(classList)
-                        classList = cellfun(@char, classList, 'UniformOutput', false);
-                    end
+                    classList = obj.normalizeClassList(classList);
                     
                     if iscellstr(classList) || iscell(classList) || isstring(classList)
                         keep = ~strcmp(classList, className);
@@ -343,17 +325,7 @@ classdef SpaceConfiguration
                 return;
             end
             
-            if ischar(classList)
-                classList = {classList};
-            elseif isstring(classList)
-                classList = cellstr(classList);
-            elseif iscell(classList) && ~iscellstr(classList)
-                % Handle cell arrays of strings (modern MATLAB string arrays in cells)
-                classList = cellfun(@char, classList, 'UniformOutput', false);
-            elseif ~iscellstr(classList) && ~iscell(classList)
-                error("OMKG:SpaceConfiguration:SchemaError", ...
-                    "Group '%s' field '%s' must be a cellstr list.", groupName, spaceName);
-            end
+            classList = obj.normalizeClassList(classList);
 
             for i = 1:numel(classList)
                 className = classList{i};
@@ -422,6 +394,8 @@ classdef SpaceConfiguration
                 obj.Data.(groupName).default = [];
             end
         end
+    
+
     end
 
     methods (Static)
@@ -438,12 +412,8 @@ classdef SpaceConfiguration
             if ~isfile(filePath)
                 error("OMKG:SpaceConfiguration:NotFound", "Config file not found: %s", filePath);
             end
-            raw = fileread(filePath);
-            data = jsondecode(raw);
-            if ~isstruct(data) || ~isscalar(data)
-                error("OMKG:SpaceConfiguration:SchemaError", ...
-                    "Top-level JSON must decode to a scalar struct.");
-            end
+            jsonText = fileread(filePath);
+            data = omkg.util.SpaceConfiguration.jsondecode(jsonText);
             obj = omkg.util.SpaceConfiguration(data, filePath);
         end
 
@@ -451,12 +421,33 @@ classdef SpaceConfiguration
             arguments
                 jsonText (1,1) string
             end
+            data = omkg.util.SpaceConfiguration.jsondecode(jsonText);
+            obj = omkg.util.SpaceConfiguration(data);
+        end
+    end
+
+    methods (Static, Access = private)
+
+        function data = jsondecode(jsonText)
             data = jsondecode(char(jsonText));
             if ~isstruct(data) || ~isscalar(data)
                 error("OMKG:SpaceConfiguration:SchemaError", ...
                     "Top-level JSON must decode to a scalar struct.");
             end
-            obj = omkg.util.SpaceConfiguration(data);
+        end
+
+        function classList = normalizeClassList(classList)
+            if ischar(classList)
+                classList = {classList};
+            elseif isstring(classList)
+                classList = cellstr(classList);
+            elseif iscell(classList) && ~iscellstr(classList)
+                % Handle cell arrays of strings (modern MATLAB string arrays in cells)
+                classList = cellfun(@char, classList, 'UniformOutput', false);
+            elseif ~iscellstr(classList) && ~iscell(classList)
+                error("OMKG:SpaceConfiguration:SchemaError", ...
+                    "Group '%s' field '%s' must be a cellstr list.", groupName, spaceName);
+            end
         end
     end
 end
