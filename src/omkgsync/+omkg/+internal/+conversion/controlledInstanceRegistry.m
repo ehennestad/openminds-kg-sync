@@ -20,16 +20,41 @@ classdef controlledInstanceRegistry < handle
         TypeUpdateOrder string = string.empty
         LastTypeUpdated double = 0
         ApiClient = []  % Injectable API client for testing
-    end
+        Verbose logical = true  % Control console output
+    end    
     
+    properties (Dependent)
+        KgToOmMap
+        OmToKgMap
+    end
+
+    properties
+        KgToOmMap_
+        OmToKgMap_
+    end
+
     properties (Constant, Access = private)
         UPDATE_INTERVAL_HOURS = 24
         TYPES_PER_UPDATE = 5  % Number of types to update per background update call
     end
     
     methods (Access = private)
-        function obj = controlledInstanceRegistry()
+        function obj = controlledInstanceRegistry(options)
+            
             % Private constructor for singleton pattern
+
+            arguments
+                options.ApiClient = []
+                options.File = []
+                options.Verbose (1,1) logical = true
+            end
+            
+            if ~isempty(options.ApiClient)
+                obj.ApiClient = options.ApiClient;
+            end
+            
+            obj.Verbose = options.Verbose;
+
             obj.loadFromFile();
             if isempty(obj.IdentifierMap)
                 obj.downloadAll();
@@ -38,7 +63,7 @@ classdef controlledInstanceRegistry < handle
     end
     
     methods (Static)
-        function obj = instance(apiClient)
+        function obj = instance(options)
             % instance - Get or create the singleton instance
             %
             % Syntax:
@@ -47,25 +72,56 @@ classdef controlledInstanceRegistry < handle
             %
             % Input:
             %   apiClient - (Optional) API client for testing/mocking
+            %   Verbose - (Optional) Enable/disable console output (default: true)
             
             arguments
-                apiClient = []
+                options.ApiClient = []
+                options.File string = string.empty
+                options.Reset (1,1) logical = false
+                options.Verbose (1,1) logical = true
             end
             
             omkg.internal.checkEnvironment()
 
             persistent singletonInstance
-            if isempty(singletonInstance) || ~isvalid(singletonInstance)
-                singletonInstance = omkg.internal.conversion.controlledInstanceRegistry();
+
+            if options.Reset
+                if ~isempty(singletonInstance)
+                    if isvalid(singletonInstance)
+                        delete(singletonInstance)
+                    end
+                    singletonInstance = [];
+                end
             end
             
-            % Allow setting API client for testing
-            if ~isempty(apiClient)
-                singletonInstance.ApiClient = apiClient;
+            if isempty(singletonInstance) || ~isvalid(singletonInstance)
+                singletonInstance = omkg.internal.conversion.controlledInstanceRegistry(...
+                    "ApiClient", options.ApiClient, ...
+                    "Verbose", options.Verbose);
+            else
+                % Allow setting API client for testing % Todo: Consider
+                % whether api client should be immutable 
+                if ~isempty(options.ApiClient)
+                    singletonInstance.ApiClient = options.ApiClient;
+                end
+                % Allow updating verbosity
+                if isfield(options, 'Verbose')
+                    singletonInstance.Verbose = options.Verbose;
+                end
             end
             
             obj = singletonInstance;
         end
+    end
+
+    methods
+        function value = get.OmToKgMap(obj)
+            if isempty(obj.OmToKgMap_)
+                obj.OmToKgMap_ = obj.getMapping(true);
+            end
+            value = obj.OmToKgMap_;
+        end
+
     end
     
     methods (Access = public)
@@ -82,11 +138,11 @@ classdef controlledInstanceRegistry < handle
             %   kgId - Knowledge Graph UUID (string)
             
             openMindsId = string(openMindsId);
-            idx = find(strcmp({obj.IdentifierMap.om}, openMindsId), 1);
-            if isempty(idx)
-                kgId = "";
+
+            if isKey(obj.OmToKgMap, openMindsId)
+                kgId = obj.OmToKgMap(openMindsId);
             else
-                kgId = string(obj.IdentifierMap(idx).kg);
+                error('openMINDS id not found')
             end
         end
         
@@ -127,6 +183,14 @@ classdef controlledInstanceRegistry < handle
             arguments
                 obj
                 reverse (1,1) logical = false
+            end
+
+            if reverse && ~isempty(obj.OmToKgMap_)
+                map = obj.OmToKgMap_;
+                return
+            elseif ~reverse && ~isempty(obj.KgToOmMap_)
+                map = obj.KgToOmMap_;
+                return
             end
             
             keys = string({obj.IdentifierMap.kg});
@@ -206,7 +270,9 @@ classdef controlledInstanceRegistry < handle
             % Syntax:
             %   registry.downloadAll()
             
-            fprintf('Downloading all controlled instance identifiers...\n');
+            if obj.Verbose
+                fprintf('Downloading all controlled instance identifiers...\n');
+            end
             
             % Get API client
             apiClient = obj.getApiClient();
@@ -223,8 +289,10 @@ classdef controlledInstanceRegistry < handle
             numTypes = numel(controlledTermTypeIRI);
             instanceUuidListing = cell(1, numTypes);
             for i = 1:numTypes
-                fprintf('Fetching information for "%s" (%d/%d)\n', ...
-                    controlledTermTypeIRI{i}, i, numTypes);
+                if obj.Verbose
+                    fprintf('Fetching information for "%s" (%d/%d)\n', ...
+                        controlledTermTypeIRI{i}, i, numTypes);
+                end
                 
                 identifierMap = omkg.internal.retrieval.getControlledTermIdMap(...
                     controlledTermTypeIRI{i}, [], ...
@@ -236,8 +304,10 @@ classdef controlledInstanceRegistry < handle
             obj.LastUpdateTime = datetime('now');
             obj.saveToFile();
             
-            fprintf('Download complete. %d identifiers retrieved.\n', ...
-                numel(obj.IdentifierMap));
+            if obj.Verbose
+                fprintf('Download complete. %d identifiers retrieved.\n', ...
+                    numel(obj.IdentifierMap));
+            end
         end
     end
     
@@ -268,8 +338,11 @@ classdef controlledInstanceRegistry < handle
                 % Add any new types to the update order
                 newTypes = setdiff(currentTypes, obj.TypeUpdateOrder);
                 if ~isempty(newTypes)
-                    fprintf('Detected %d new type(s) in Knowledge Graph\n', numel(newTypes));
-                    obj.TypeUpdateOrder = [obj.TypeUpdateOrder; newTypes(:)];
+                    if obj.Verbose
+                        fprintf('Detected %d new type(s) in Knowledge Graph\n', numel(newTypes));
+                    end
+                    newTypes = reshape(newTypes, 1, []);
+                    obj.TypeUpdateOrder = [obj.TypeUpdateOrder, newTypes];
                 end
             end
             
@@ -284,8 +357,10 @@ classdef controlledInstanceRegistry < handle
             
             typesToUpdate = obj.TypeUpdateOrder(startIdx:endIdx);
             
-            fprintf('Incremental update: processing types %d-%d of %d\n', ...
-                startIdx, endIdx, numTypes);
+            if obj.Verbose
+                fprintf('Incremental update: processing types %d-%d of %d\n', ...
+                    startIdx, endIdx, numTypes);
+            end
             
             % Get API client
             apiClient = obj.getApiClient();
@@ -293,7 +368,9 @@ classdef controlledInstanceRegistry < handle
             % Process each type with optimized fetching
             for i = 1:numel(typesToUpdate)
                 typeIRI = typesToUpdate(i);
-                fprintf('  Checking "%s" for updates\n', typeIRI);
+                if obj.Verbose
+                    fprintf('  Checking "%s" for updates\n', typeIRI);
+                end
                 
                 % Step 1: Fast listing of all IDs for this type
                 currentIds = omkg.internal.retrieval.listControlledTermIds(...
@@ -304,7 +381,9 @@ classdef controlledInstanceRegistry < handle
                 newIds = setdiff(currentIds, cachedIds);
                 
                 if ~isempty(newIds)
-                    fprintf('    Found %d new identifiers, fetching details...\n', numel(newIds));
+                    if obj.Verbose
+                        fprintf('    Found %d new identifiers, fetching details...\n', numel(newIds));
+                    end
                     
                     % Step 3: Only fetch detailed data for new IDs
                     newIdentifiers = omkg.internal.retrieval.getControlledTermIdMap(...
@@ -313,7 +392,9 @@ classdef controlledInstanceRegistry < handle
                     % Add to our map
                     obj.IdentifierMap = [obj.IdentifierMap, newIdentifiers];
                 else
-                    fprintf('    No new identifiers found\n');
+                    if obj.Verbose
+                        fprintf('    No new identifiers found\n');
+                    end
                 end
             end
             

@@ -28,5 +28,6 @@ function identifiers = listControlledTermIds(typeName, options)
         "stage", "RELEASED", ...
         "returnPayload", false);
 
+    response = [response{:}];
     identifiers = string({response.x_id});
 end
