@@ -211,7 +211,7 @@ classdef SpaceConfiguration
             else
                 % Normalize existing list to cellstr if needed
                 classList = obj.Data.(groupName).(spaceName);
-                classList = obj.normalizeClassList(classList);
+                classList = obj.normalizeClassList(classList, groupName, spaceName);
                 obj.Data.(groupName).(spaceName) = classList;
             end
 
@@ -239,7 +239,7 @@ classdef SpaceConfiguration
                 for j = 1:numel(spaceNames)
                     spaceName = spaceNames{j};
                     classList = groupData.(spaceName);
-                    classList = obj.normalizeClassList(classList);
+                    classList = obj.normalizeClassList(classList, groupName, spaceName);
                     
                     if iscellstr(classList) || iscell(classList) || isstring(classList)
                         keep = ~strcmp(classList, className);
@@ -325,7 +325,7 @@ classdef SpaceConfiguration
                 return;
             end
             
-            classList = obj.normalizeClassList(classList);
+            classList = obj.normalizeClassList(classList, groupName, spaceName);
 
             for i = 1:numel(classList)
                 className = classList{i};
@@ -436,7 +436,7 @@ classdef SpaceConfiguration
             end
         end
 
-        function classList = normalizeClassList(classList)
+        function classList = normalizeClassList(classList, groupName, spaceName)
             if ischar(classList)
                 classList = {classList};
             elseif isstring(classList)
