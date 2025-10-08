@@ -121,7 +121,12 @@ classdef controlledInstanceRegistry < handle
             end
             value = obj.OmToKgMap_;
         end
-
+        function value = get.KgToOmMap(obj)
+            if isempty(obj.KgToOmMap_)
+                obj.KgToOmMap_ = obj.getMapping(false);
+            end
+            value = obj.KgToOmMap_;
+        end
     end
     
     methods (Access = public)
@@ -142,7 +147,9 @@ classdef controlledInstanceRegistry < handle
             if isKey(obj.OmToKgMap, openMindsId)
                 kgId = obj.OmToKgMap(openMindsId);
             else
-                error('openMINDS id not found')
+                error(...
+                    'OMKG:ControlledInstanceRegistry:IdNotFound', ...
+                    'openMINDS id not found')
             end
         end
         
@@ -158,12 +165,15 @@ classdef controlledInstanceRegistry < handle
             % Output:
             %   omId - openMINDS identifier (string)
             
+            
             kgId = string(kgId);
-            idx = find(strcmp({obj.IdentifierMap.kg}, kgId), 1);
-            if isempty(idx)
-                omId = "";
+
+            if isKey(obj.KgToOmMap, kgId)
+                omId = obj.KgToOmMap(kgId);
             else
-                omId = string(obj.IdentifierMap(idx).om);
+                error(...
+                    'OMKG:ControlledInstanceRegistry:IdNotFound', ...
+                    'KG id not found')
             end
         end
         
@@ -468,7 +478,7 @@ classdef controlledInstanceRegistry < handle
             
             fid = fopen(mapFilepath, "wt");
             fileCleanup = onCleanup(@() fclose(fid));
-            fwrite(fid, jsonencode(saveData, 'PrettyPrint', true))
+            fwrite(fid, jsonencode(saveData, 'PrettyPrint', true));
         end
         
         function loadFromFile(obj)
