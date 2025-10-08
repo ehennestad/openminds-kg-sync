@@ -15,6 +15,7 @@ classdef ControlledInstanceRegistryTest < matlab.unittest.TestCase
     properties
         TestDataDir
         OriginalCacheFile
+        OriginalSeedFile
     end
     
     methods (TestClassSetup)
@@ -24,11 +25,18 @@ classdef ControlledInstanceRegistryTest < matlab.unittest.TestCase
             testCase.TestDataDir = fullfile(toolboxDir, 'userdata');
             testCase.OriginalCacheFile = fullfile(testCase.TestDataDir, ...
                 'kg2om_identifier_loopkup.json');
-            
+            testCase.OriginalSeedFile = fullfile(toolboxDir, ...
+                'omkgsync', '+omkg', '+internal', 'resources', ...
+                'kg2om_identifier_loopkup.json');
             % Backup existing cache file if it exists
             if isfile(testCase.OriginalCacheFile)
                 copyfile(testCase.OriginalCacheFile, ...
                     [testCase.OriginalCacheFile '.backup']);
+            end
+
+            if isfile(testCase.OriginalSeedFile)
+                movefile(testCase.OriginalSeedFile, ...
+                    [testCase.OriginalSeedFile '.backup']);
             end
         end
     end
@@ -42,6 +50,11 @@ classdef ControlledInstanceRegistryTest < matlab.unittest.TestCase
             elseif isfile(testCase.OriginalCacheFile)
                 % Clean up test cache if no backup existed
                 delete(testCase.OriginalCacheFile);
+            end
+
+            backupFile = [testCase.OriginalSeedFile '.backup'];
+            if isfile(backupFile)
+                movefile(backupFile, testCase.OriginalSeedFile);
             end
         end
     end
