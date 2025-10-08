@@ -146,28 +146,4 @@ classdef Preferences < matlab.mixin.CustomDisplay & handle
             obj = objStore;
         end
     end
-
-    methods (Static)
-
-        function prefValue = getPreferenceValue(preferenceName)
-            %getPreferenceValue Get value for a preference
-            %
-            %   prefs = getPreferenceValue(preferenceName) returns the preference value
-            %   for the given preference name.
-            %
-            %   See also <a href="matlab:help omkg.util.Preferences" style="font-weight:bold">OMKG Preferences</a>
-
-            arguments
-                preferenceName (1,1) string
-            end
-
-            preferences = omkg.util.Preferences.getSingleton();
-
-            if isprop(preferences, preferenceName)
-                prefValue = preferences.(preferenceName);
-            else
-                error('There is no preferences with name "%s" in the preferences for the OpenMINDS-KG-Sync Toolbox', preferenceName)
-            end
-        end
-    end
 end
