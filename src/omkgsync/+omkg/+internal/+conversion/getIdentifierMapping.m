@@ -1,29 +1,26 @@
 function map = getIdentifierMapping(options)
+% getIdentifierMapping - Get identifier mapping (wrapper for controlledInstanceRegistry)
+%
+%   This function provides backward compatibility with the old API.
+%   It now delegates to the controlledInstanceRegistry singleton.
+%
+% Syntax:
+%   map = getIdentifierMapping()
+%   map = getIdentifierMapping('Reverse', true)
+%
+% Input:
+%   options.Reverse - If true, maps openMINDS -> KG, else KG -> openMINDS
+%
+% Output:
+%   map - dictionary or containers.Map object
+%
+% See also: omkg.internal.conversion.controlledInstanceRegistry
 
     arguments
         options.Reverse (1,1) logical = false
     end
 
-    mapFilepath = fullfile(...
-        ebrains.common.namespacedir('ebrains.kg'), ...
-        'resources', ...
-        'kg2om_identifier_loopkup.json');
-    data = jsondecode(fileread(mapFilepath));
-
-    keys = string({data.kg});
-    values = string({data.om});
-
-    if options.Reverse
-        if exist('dictionary', 'file')
-            map = dictionary(values, keys);
-        else
-            map = containers.Map(values, keys);
-        end
-    else
-        if exist('dictionary', 'file')
-            map = dictionary(keys, values);
-        else
-            map = containers.Map(keys, values);
-        end
-    end
+    % Get singleton instance and delegate to it
+    registry = omkg.internal.conversion.controlledInstanceRegistry.instance();
+    map = registry.getMapping(options.Reverse);
 end

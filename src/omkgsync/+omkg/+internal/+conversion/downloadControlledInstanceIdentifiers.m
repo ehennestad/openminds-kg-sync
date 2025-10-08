@@ -13,6 +13,8 @@ function identifierMap = downloadControlledInstanceIdentifiers()
 
     % Use api client to list all controlled term types in the controlled space
     apiClient = ebrains.kgcore.api.Basic();
+    apiClient = ebrains.kg.api.InstancesClient();
+
     [~, response] = apiClient.listTypes("RELEASED", "space", "controlled");
     controlledTermTypeIRI = processTypeResponse(response);
 
