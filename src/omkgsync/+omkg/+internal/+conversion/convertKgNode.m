@@ -150,11 +150,7 @@ function nodes = resolveAsControlledInstances(nodes, identfierMap)
         omId = identfierMap(nodes(i).x_id);
         newNodes{i} = openminds.instanceFromIRI(omId);
     end
-    try
-        nodes = [newNodes{:}];
-    catch
-        nodes = newNodes;
-    end
+    nodes = omkg.util.concatTypesIfHomogeneous(newNodes);
 end
 
 function unresolvedNodes = createUnresolvedNode(node, expectedObject)

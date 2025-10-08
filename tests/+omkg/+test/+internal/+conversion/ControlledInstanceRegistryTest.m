@@ -80,7 +80,7 @@ classdef ControlledInstanceRegistryTest < matlab.unittest.TestCase
             % Test that instance() returns the same object
             mockClient = testCase.createMockClient();
             
-            registry1 = omkg.internal.conversion.controlledInstanceRegistry.instance("ApiClient", mockClient);
+            registry1 = omkg.internal.conversion.controlledInstanceRegistry.instance("ApiClient", mockClient, 'Verbose', false);
             registry2 = omkg.internal.conversion.controlledInstanceRegistry.instance();
             
             testCase.verifyEqual(registry1, registry2, ...
@@ -216,7 +216,8 @@ classdef ControlledInstanceRegistryTest < matlab.unittest.TestCase
         function testNeedsUpdateAfterFreshDownload(testCase)
             % Test that needsUpdate returns false after fresh download
             mockClient = testCase.createMockClient();
-            registry = omkg.internal.conversion.controlledInstanceRegistry.instance('ApiClient', mockClient);
+            registry = omkg.internal.conversion.controlledInstanceRegistry.instance(...
+                'ApiClient', mockClient, 'Verbose', false);
             
             % Simulate fresh download by calling downloadAll
             registry.downloadAll();
@@ -228,7 +229,8 @@ classdef ControlledInstanceRegistryTest < matlab.unittest.TestCase
         function testIncrementalUpdate(testCase)
             % Test incremental update mechanism
             mockClient = testCase.createMockClient();
-            registry = omkg.internal.conversion.controlledInstanceRegistry.instance('ApiClient', mockClient);
+            registry = omkg.internal.conversion.controlledInstanceRegistry.instance( ...
+                'ApiClient', mockClient, 'Verbose', false);
             
             % Perform incremental update
             registry.update(false);
@@ -242,7 +244,8 @@ classdef ControlledInstanceRegistryTest < matlab.unittest.TestCase
         function testFullUpdate(testCase)
             % Test complete update mechanism
             mockClient = testCase.createMockClient();
-            registry = omkg.internal.conversion.controlledInstanceRegistry.instance('ApiClient', mockClient);
+            registry = omkg.internal.conversion.controlledInstanceRegistry.instance(...
+                'ApiClient', mockClient, 'Verbose', false);
             
             % Perform full update
             registry.update(true);
@@ -256,7 +259,8 @@ classdef ControlledInstanceRegistryTest < matlab.unittest.TestCase
         function testUpdateInProgressPreventsSimultaneous(testCase)
             % Test that simultaneous updates are prevented
             mockClient = testCase.createMockClient();
-            registry = omkg.internal.conversion.controlledInstanceRegistry.instance('ApiClient', mockClient);
+            registry = omkg.internal.conversion.controlledInstanceRegistry.instance(...
+                'ApiClient', mockClient, 'Verbose', false);
             
             % This is tricky to test without threading
             % We'll just verify the update completes successfully
@@ -271,7 +275,8 @@ classdef ControlledInstanceRegistryTest < matlab.unittest.TestCase
         function testDetectsNewTypes(testCase)
             % Test that incremental update detects new types
             mockClient = testCase.createMockClient();
-            registry = omkg.internal.conversion.controlledInstanceRegistry.instance('ApiClient', mockClient);
+            registry = omkg.internal.conversion.controlledInstanceRegistry.instance(...
+                'ApiClient', mockClient, 'Verbose', false);
             
             % Initial download
             registry.downloadAll();
@@ -293,7 +298,8 @@ classdef ControlledInstanceRegistryTest < matlab.unittest.TestCase
         function testSaveToFile(testCase)
             % Test that data is saved to file
             mockClient = testCase.createMockClient();
-            registry = omkg.internal.conversion.controlledInstanceRegistry.instance('ApiClient', mockClient);
+            registry = omkg.internal.conversion.controlledInstanceRegistry.instance(...
+                'ApiClient', mockClient, 'Verbose', false);
             
             % Trigger download which saves
             registry.downloadAll();
@@ -308,7 +314,8 @@ classdef ControlledInstanceRegistryTest < matlab.unittest.TestCase
             mockClient = testCase.createMockClient();
             
             % First instance: create and populate
-            registry1 = omkg.internal.conversion.controlledInstanceRegistry.instance('ApiClient', mockClient);
+            registry1 = omkg.internal.conversion.controlledInstanceRegistry.instance( ...
+                'ApiClient', mockClient, 'Verbose', false);
             registry1.downloadAll();
             omId = "https://openminds.ebrains.eu/controlledTerms/Species";
             kgId1 = registry1.getKgId(omId);
@@ -317,7 +324,8 @@ classdef ControlledInstanceRegistryTest < matlab.unittest.TestCase
             clear omkg.internal.conversion.controlledInstanceRegistry
             
             % Second instance: should load from file
-            registry2 = omkg.internal.conversion.controlledInstanceRegistry.instance('ApiClient', mockClient);
+            registry2 = omkg.internal.conversion.controlledInstanceRegistry.instance( ...
+                'ApiClient', mockClient, 'Verbose', false);
             kgId2 = registry2.getKgId(omId);
             
             testCase.verifyEqual(kgId1, kgId2, ...
@@ -327,7 +335,8 @@ classdef ControlledInstanceRegistryTest < matlab.unittest.TestCase
         function testFileFormatWithMetadata(testCase)
             % Test that file format includes metadata
             mockClient = testCase.createMockClient();
-            registry = omkg.internal.conversion.controlledInstanceRegistry.instance('ApiClient', mockClient);
+            registry = omkg.internal.conversion.controlledInstanceRegistry.instance(...
+                'ApiClient', mockClient, 'Verbose', false);
             registry.downloadAll();
             
             % Read and verify file format
@@ -356,7 +365,7 @@ classdef ControlledInstanceRegistryTest < matlab.unittest.TestCase
             mockClient = omkg.test.helper.mock.KGIntancesAPIMockClient();
 
             registry = omkg.internal.conversion.controlledInstanceRegistry.instance(...
-                'Reset', true, 'ApiClient', mockClient);
+                'Reset', true, 'ApiClient', mockClient, 'Verbose', false);
             
             % Should handle gracefully
             map = registry.getMapping();
