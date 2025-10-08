@@ -78,10 +78,6 @@ classdef Preferences < matlab.mixin.CustomDisplay & handle
                 obj.save()
             end
         end
-
-        function n = numArgumentsFromSubscript(obj, s, indexingContext)
-            n = builtin('numArgumentsFromSubscript', obj, s, indexingContext);
-        end
     end
 
     methods (Access = protected) % Overrides CustomDisplay methods
