@@ -11,7 +11,7 @@ classdef controlledInstanceRegistry < handle
 %   omId = registry.getOpenMindsId(kgId);
 %   registry.update(); % Force update
 %
-% See also: downloadControlledInstanceIdentifiers, getIdentifierMapping
+% See also: getIdentifierMapping
 
     properties (Access = private)
         IdentifierMap struct = struct('kg', {}, 'om', {})
