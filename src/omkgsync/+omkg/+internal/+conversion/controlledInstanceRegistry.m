@@ -28,14 +28,14 @@ classdef controlledInstanceRegistry < handle
         OmToKgMap
     end
 
-    properties
+    properties (Access = private)
         KgToOmMap_
         OmToKgMap_
     end
 
     properties (Constant, Access = private)
         UPDATE_INTERVAL_HOURS = 24
-        TYPES_PER_UPDATE = 5  % Number of types to update per background update call
+        TYPES_PER_UPDATE = 1  % Number of types to update per background update call
     end
     
     methods (Access = private)
@@ -486,7 +486,10 @@ classdef controlledInstanceRegistry < handle
             
             mapFilepath = obj.getFilePath();
             if ~isfile(mapFilepath)
-                return
+                mapFilepath = fullfile(fileparts(fileparts(mfilename('fullpath'))), 'resources', 'kg2om_identifier_loopkup.json');
+                if ~isfile(mapFilepath)
+                    return
+                end
             end
             
             try

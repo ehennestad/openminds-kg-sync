@@ -57,7 +57,7 @@ classdef ControlledInstanceRegistryTestHelper
                     
                     instance = struct();
                     instance.x_id = uuid;
-                    instance.http___schema_org_identifier = {omId};
+                    instance.http___schema_org_identifier = {char(omId)};
                     
                     allInstances{end+1} = instance; %#ok<AGROW>
                 end

@@ -46,7 +46,7 @@ classdef ControlledInstanceRegistryIntegrationTest < matlab.unittest.TestCase
             
             mockClient = testCase.createMockClient();
             omkg.internal.conversion.controlledInstanceRegistry.instance(...
-                'Reset', true, 'ApiClient', mockClient, 'Verbose', false)
+                'Reset', true, 'ApiClient', mockClient, 'Verbose', false);
         end
     end
     
@@ -96,7 +96,7 @@ classdef ControlledInstanceRegistryIntegrationTest < matlab.unittest.TestCase
             % Initial download
             registry.downloadAll();
             initialMap = registry.getMapping();
-            initialSize = numel(initialMap);
+            initialSize = initialMap.numEntries;
             
             % Add new type to mock
             newTypeIri = "https://openminds.ebrains.eu/controlledTerms/NewType";
@@ -112,7 +112,7 @@ classdef ControlledInstanceRegistryIntegrationTest < matlab.unittest.TestCase
             registry.update(false);
             
             % Verify new type was detected
-            testCase.verifyTrue(mockClient.wasCalledWith('listTypes', [], []), ...
+            testCase.verifyTrue(mockClient.getCallCount('listTypes') >= 1, ...
                 'Should call listTypes to detect new types');
         end
         

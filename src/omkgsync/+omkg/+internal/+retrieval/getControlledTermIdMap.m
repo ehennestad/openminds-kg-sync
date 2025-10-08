@@ -29,7 +29,7 @@ function identifierMap = getControlledTermIdMap(typeName, identifiers, options)
             "stage", "RELEASED", "Server", "PROD", "space", "controlled");
     else
         response = options.ApiClient.getInstancesBulk(identifiers, ...
-            "stage", "RELEASED", "Server", "prod");
+            "RELEASED", "Server", "prod");
     end
 
     identifierMap = processInstanceResponse(response);
