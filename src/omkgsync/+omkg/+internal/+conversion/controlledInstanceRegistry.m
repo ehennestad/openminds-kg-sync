@@ -249,6 +249,7 @@ classdef controlledInstanceRegistry < handle
             %   1. Use listControlledTermIds (fast) to get all current IDs
             %   2. Compare with cached IDs to find new ones
             %   3. Only fetch detailed data for new IDs
+            %   4. Refresh type list at cycle start to detect new types
             
             if isempty(obj.TypeUpdateOrder)
                 % Initialize type order if not set
@@ -256,6 +257,20 @@ classdef controlledInstanceRegistry < handle
                 obj.TypeUpdateOrder = omkg.internal.retrieval.getControlledTypes(...
                     'ApiClient', apiClient);
                 obj.LastTypeUpdated = 0;
+            end
+            
+            % Refresh type list when starting a new cycle to detect new types
+            if obj.LastTypeUpdated == 0
+                apiClient = obj.getApiClient();
+                currentTypes = omkg.internal.retrieval.getControlledTypes(...
+                    'ApiClient', apiClient);
+                
+                % Add any new types to the update order
+                newTypes = setdiff(currentTypes, obj.TypeUpdateOrder);
+                if ~isempty(newTypes)
+                    fprintf('Detected %d new type(s) in Knowledge Graph\n', numel(newTypes));
+                    obj.TypeUpdateOrder = [obj.TypeUpdateOrder; newTypes(:)];
+                end
             end
             
             numTypes = numel(obj.TypeUpdateOrder);
