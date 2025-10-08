@@ -16,7 +16,7 @@ Provides methods for authenticating with EBRAINS services and upload and downloa
 ## Requirements and installation
 It is recommended to use **MATLAB R2019b** or later.
 
-Users or developers who clone the repository using git can use [MatBox](https://github.com/ehennestad/MatBox) to quickly install this project's [requirements](./requirements.txt) (if any):
+Users or developers who clone the repository using git can use [MatBox](https://github.com/ehennestad/MatBox) to quickly install this project's [requirements](./requirements.txt):
 
 ```matlab
 omkgsynctools.installMatBox() % If MatBox is not installed
@@ -25,9 +25,26 @@ matbox.installRequirements(path/to/toolboxRootDir)
 
 ## Getting started
 
-```matlab
-< add some code examples here >
+### Syntax examples
+
+Listing types from a KG space:
 ```
+persons = kglist("Person", space="common", from=1, size=20)
+```
+
+Pulling individual instances from KG:
+``` matlab
+someInstance = kgpull(kgIdentifier)
+```
+
+Saving instances to KG:
+``` matlab
+kgsave(someInstance)
+```
+
+
+### Getting started tutorial
+See the [Getting Started](https://github.com/ehennestad/openminds-kg-sync/blob/dev/docs/GettingStarted.md) tutorial
 
 ## Contributing
 Please see the [Contributing guidelines](.github/CONTRIBUTING.md) and the [Developer notes](.github/DeveloperNotes.md)
