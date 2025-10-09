@@ -21,9 +21,9 @@ function versionStr = toolboxversion()
         matchedStr = regexp(fileStr, 'Version \d*\.\d*\.\d*(?= )', 'match');
     end
 
-    if isempty(matchedStr)
-        error('OMKGSYNC:Version:VersionNotFound', ...
-            'No version was detected for this openMINDS_KG_Sync installation.')
-    end
+    assert(~isempty(matchedStr), ...
+        'OMKGSYNC:Version:VersionNotFound', ...
+        'No version was detected for this openMINDS_KG_Sync installation.')
+    
     versionStr = matchedStr{1};
 end

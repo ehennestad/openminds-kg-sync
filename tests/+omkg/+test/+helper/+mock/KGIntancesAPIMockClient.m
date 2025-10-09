@@ -16,6 +16,7 @@ classdef KGIntancesAPIMockClient < ebrains.kg.api.InstancesClient
     properties
         % Response data for different methods
         ListResponse = []
+        ListTypesResponse = []
         InstanceResponse = []
         BulkResponse = []
         CreateResponse = []
@@ -46,6 +47,10 @@ classdef KGIntancesAPIMockClient < ebrains.kg.api.InstancesClient
             obj.ListResponse = response;
         end
         
+        function setListTypesResponse(obj, response)
+            obj.ListTypesResponse = response;
+        end
+        
         function setInstanceResponse(obj, response)
             obj.InstanceResponse = response;
         end
@@ -72,6 +77,7 @@ classdef KGIntancesAPIMockClient < ebrains.kg.api.InstancesClient
         
         function clearResponses(obj)
             obj.ListResponse = [];
+            obj.ListTypesResponse = [];
             obj.InstanceResponse = [];
             obj.BulkResponse = [];
             obj.CreateResponse = [];
@@ -262,6 +268,42 @@ classdef KGIntancesAPIMockClient < ebrains.kg.api.InstancesClient
             obj.simulateDelay();
             
             result = obj.BulkResponse;
+        end
+        
+        function result = listTypes(obj, requiredParams, optionalParams, serverOptions)
+            % listTypes - Mock implementation of listTypes for registry testing
+            arguments
+                obj (1,1) omkg.test.helper.mock.KGIntancesAPIMockClient
+                requiredParams.stage (1,1) string = "RELEASED"
+                requiredParams.space (1,1) string = "controlled"
+                optionalParams.withProperties logical = false
+                serverOptions.Server (1,1) string = "PROD"
+            end
+            
+            obj.recordCall('listTypes', {}, struct('requiredParams', requiredParams, 'optionalParams', optionalParams, 'serverOptions', serverOptions));
+            obj.checkForError('listTypes');
+            obj.simulateDelay();
+            
+            if isempty(obj.ListTypesResponse)
+                % Return default controlled term types for testing
+                result = {
+                    struct('http___schema_org_identifier', 'https://openminds.ebrains.eu/controlledTerms/Species')
+                    struct('http___schema_org_identifier', 'https://openminds.ebrains.eu/controlledTerms/Technique')
+                };
+            else
+                result = obj.ListTypesResponse;
+            end
+        end
+        
+        %% Helper Methods for Registry Testing
+        function addNewType(obj, typeIri)
+            % addNewType - Add a new type to the mock response (for testing new type detection)
+            if isempty(obj.ListTypesResponse)
+                obj.ListTypesResponse = obj.listTypes();
+            end
+            
+            newType = struct('http___schema_org_identifier', typeIri);
+            obj.ListTypesResponse{end+1} = newType;
         end
         
         %% Call Tracking and Verification Methods

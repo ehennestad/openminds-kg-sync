@@ -2,7 +2,7 @@ function linkedIdentifiers = extractLinkedIdentifiers(metadataNode, linkedIdenti
 % extractLinkedIdentifiers - Extract identifiers for forward linked nodes
 %
 %   Given a metadata node, will extract all forward links and append to a
-%   list of linked identifiers.
+%   list of linked identifiers given as an input.
 
     arguments
         metadataNode (1,:) cell
