@@ -10,7 +10,7 @@ classdef KgIntegrationTest < matlab.unittest.TestCase
 
     methods (Test, TestTags={'LiveIntegration'})
         function testList(testCase)
-            p = kglist("Person", "from", 100, "size", 20, "space", "common");
+            p = kglist("Person", "from", 100, "size", 20, "space", "common", "stage", "RELEASED");
 
             testCase.verifyClass(p, 'openminds.core.Person')
             testCase.verifyLength(p, 20)
