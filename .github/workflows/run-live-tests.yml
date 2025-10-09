@@ -39,11 +39,13 @@ jobs:
         with:
           command: |
             matbox.installRequirements('.')
-            
+            setenv('EBRAINS_MATLAB_FORCE_CLIENT_CREDENTIALS_OAUTH_FLOW', 'true')
             ebrains.authenticate(...
                 "OAuthFlow", "ClientCredentialsFlow", ...
                 "OIDCClientID", 'ebrains-wizard-dev', ...
                 "OIDCClientSecret", "${{ secrets.OIDC_CLIENT_SECRET }}")
+
+            tokenManager = ebrains.getTokenManager()
 
       - name: Restore MATLAB Path
         uses: matlab-actions/run-command@v2
