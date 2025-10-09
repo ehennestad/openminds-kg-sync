@@ -1,4 +1,4 @@
-function result = getOrdinalString(val)
+function result = getOrdinalNumberString(val)
     if val == 1
         result = sprintf('%dst', val); %1st
     elseif val == 2
