@@ -17,7 +17,7 @@ function space = resolveSpace(type, options)
 
     arguments
         type (1,1) openminds.enum.Types
-        options.SpaceProfile (1,1) string {mustBeMember(options.SpaceProfile, "default")} = "default"
+        options.SpaceProfile (1,1) string {mustBeMember(options.SpaceProfile, "default")} = "default" %#ok<INUSA>
     end
 
     persistent spaceConfig
