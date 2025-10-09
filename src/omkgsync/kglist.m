@@ -9,7 +9,7 @@ function [instances, nextPageFcn] = kglist(type, kgOptions, options)
         kgOptions.from            uint64
         kgOptions.size            uint64
         kgOptions.space (1,1) string = omkg.getpref("DefaultSpace")
-        kgOptions.stage (1,1) ebrains.kg.enum.KGStage = "IN_PROGRESS"
+        kgOptions.stage (1,1) ebrains.kg.enum.KGStage = "RELEASED"
         kgOptions.Server (1,1) ebrains.kg.enum.KGServer = omkg.getpref("DefaultServer")
         options.Client ebrains.kg.api.InstancesClient = ebrains.kg.api.InstancesClient()
     end
