@@ -2,6 +2,7 @@
 docs/reports/*
 
 releases/
+userdata/
 
 # Autosave files
 *.asv

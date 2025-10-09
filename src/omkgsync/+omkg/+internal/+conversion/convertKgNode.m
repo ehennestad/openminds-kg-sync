@@ -150,11 +150,7 @@ function nodes = resolveAsControlledInstances(nodes, identfierMap)
         omId = identfierMap(nodes(i).x_id);
         newNodes{i} = openminds.instanceFromIRI(omId);
     end
-    try
-        nodes = [newNodes{:}];
-    catch
-        nodes = newNodes;
-    end
+    nodes = omkg.util.concatTypesIfHomogeneous(newNodes);
 end
 
 function unresolvedNodes = createUnresolvedNode(node, expectedObject)
@@ -190,6 +186,7 @@ end
 
 function showUnsupportedPropertyWarning(typeName, propertyName)
     warning(...
+        'OMKG:ConvertKgNode:UnsupportedProperty', ...
         ['A downloaded instance of type "%s" includes a property ', ...
          'named "%s", but this property is not defined in the current ', ....
          'version of openMINDS and the property will be dropped.'], ...

@@ -116,7 +116,7 @@ classdef SpaceConfigurationTest < matlab.unittest.TestCase
             config = omkg.util.SpaceConfiguration(testCase.SampleConfig);
             
             % Set a new default
-            config = config.setModuleDefault(openminds.enum.Modules.core, "detailed");
+            config.setModuleDefault(openminds.enum.Modules.core, "detailed");
             
             testCase.verifyTrue(config.Dirty, ...
                 'Dirty flag should be set after modification');
@@ -134,7 +134,7 @@ classdef SpaceConfigurationTest < matlab.unittest.TestCase
             config = omkg.util.SpaceConfiguration(testCase.SampleConfig);
             
             % Clear existing default
-            config = config.clearGroupDefault(openminds.enum.Modules.core);
+            config.clearGroupDefault(openminds.enum.Modules.core);
             
             testCase.verifyTrue(config.Dirty, ...
                 'Dirty flag should be set after clearing default');
@@ -148,7 +148,7 @@ classdef SpaceConfigurationTest < matlab.unittest.TestCase
             config = omkg.util.SpaceConfiguration(testCase.SampleConfig);
             
             % Assign Person to detailed space (move from common)
-            config = config.assignClass("detailed", openminds.enum.Types.Person);
+            config.assignClass("detailed", openminds.enum.Types.Person);
             
             testCase.verifyTrue(config.Dirty, ...
                 'Dirty flag should be set after assignment');
@@ -186,10 +186,10 @@ classdef SpaceConfigurationTest < matlab.unittest.TestCase
             config = omkg.util.SpaceConfiguration(testCase.SampleConfig);
             
             % Clear the core module default so getSpace will error after unassignment
-            config = config.clearGroupDefault(openminds.enum.Modules.core);
+            config.clearGroupDefault(openminds.enum.Modules.core);
             
             % Unassign Person
-            config = config.unassignClass(openminds.enum.Types.Person);
+            config.unassignClass(openminds.enum.Types.Person);
             
             testCase.verifyTrue(config.Dirty, ...
                 'Dirty flag should be set after unassignment');

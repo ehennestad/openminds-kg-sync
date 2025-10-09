@@ -5,7 +5,7 @@ function metadataNode = filterProperties(metadataNode)
 %   metadataNode = omkg.internal.conversion.filterProperties(metadataNode)
 %   This function filters out fields from a metadata node that are not
 %   relevant to openMINDS metadata properties. For example, a KG metadata
-%   not carries extra information that is not part of openMINDS.
+%   node carries extra information that is not part of the openMINDS model.
 %
 % Input Arguments:
 %   metadataNode (1,:) struct - The input struct containing metadata fields
