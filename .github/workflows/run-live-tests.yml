@@ -1,0 +1,62 @@
+name: Live Test OMKG Sync
+
+on:
+  # Run once a day
+  schedule:
+    - cron: '0 0 * * *'
+      
+  # Allows for manually running this workflow from the Actions tab
+  workflow_dispatch:
+
+  push:
+    branches:
+      - add-live-test-workflow # todo: remove this branch when merged
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  run_tests:
+    name: Test OMKG Sync with EBRAINS Knowledge Graph
+    runs-on: ubuntu-latest
+    steps:      
+      - name: Check out repo
+        uses: actions/checkout@v4
+
+      - name: Set up MATLAB
+        uses: matlab-actions/setup-matlab@v2
+        with:
+          release: latest
+          cache: true
+
+      - name: Install MatBox
+        uses: ehennestad/matbox-actions/install-matbox@v1
+        
+      - name: Run tests
+        uses: matlab-actions/run-command@v2
+        if: always()
+        with:
+          command: |
+            matbox.installRequirements('.')
+            setenv('EBRAINS_MATLAB_FORCE_CLIENT_CREDENTIALS_OAUTH_FLOW', 'true')
+            ebrains.authenticate(...
+                "OAuthFlow", "ClientCredentialsFlow", ...
+                "OIDCClientID", 'ebrains-wizard-dev', ...
+                "OIDCClientSecret", "${{ secrets.OIDC_CLIENT_SECRET }}")
+
+            tokenManager = ebrains.getTokenManager()
+
+            addpath(genpath( "src" ));
+            addpath(genpath( "tests" ));
+            addpath(genpath( "tools" ));
+
+            runLiveIntegrationTests()
+
+      - name: Restore MATLAB Path
+        uses: matlab-actions/run-command@v2
+        if: always()
+        with:
+          command: |
+            restoredefaultpath()
+            savepath()

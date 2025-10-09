@@ -1,0 +1,6 @@
+function runLiveIntegrationTests()
+    projectRootDir = omkgsynctools.projectdir();
+    matbox.tasks.testToolbox(projectRootDir, ...
+        "CreateBadge", false, ...
+        "HasTag", "LiveIntegration")
+end

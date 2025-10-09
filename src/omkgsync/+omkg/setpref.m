@@ -7,4 +7,7 @@ function pref = setpref(preferenceName, preferenceValue)
 
     pref = omkg.util.Preferences.getSingleton;
     pref.(preferenceName) = preferenceValue;
+    if ~nargout
+        clear pref
+    end
 end
