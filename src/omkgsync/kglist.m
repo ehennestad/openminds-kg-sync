@@ -20,6 +20,10 @@ function [instances, nextPageFcn] = kglist(type, kgOptions, options)
         mustHaveFilterValue(kgOptions)
         kgOptions.filterProperty = expandPropertyName(kgOptions.filterProperty);
     end
+
+    if kgOptions.space == "auto" % Autoresolve space for given type
+        kgOptions.space = omkg.util.resolveSpace(type);
+    end
     
     % Initialize outputs
     instances = feval(sprintf('%s.empty', type.ClassName));
