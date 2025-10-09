@@ -95,7 +95,7 @@ classdef ControlledInstanceRegistryIntegrationTest < matlab.unittest.TestCase
             
             % Initial download
             registry.downloadAll();
-            initialMap = registry.getMapping();
+            initialMap = registry.KgToOmMap;
             initialSize = initialMap.numEntries;
             
             % Add new type to mock
@@ -178,7 +178,7 @@ classdef ControlledInstanceRegistryIntegrationTest < matlab.unittest.TestCase
             registry2 = omkg.internal.conversion.controlledInstanceRegistry.instance(...
                 'ApiClient', mockClient, 'Reset', true, 'Verbose', false);
             % Just accessing should use cache
-            map = registry2.getMapping();
+            map = registry2.KgToOmMap;
             secondCallCount = mockClient.getCallCount();
             
             testCase.verifyLessThan(secondCallCount, firstCallCount, ...
@@ -219,7 +219,7 @@ classdef ControlledInstanceRegistryIntegrationTest < matlab.unittest.TestCase
                 'ApiClient', mockClient, 'Reset', true, 'Verbose', false);
             
             registry.downloadAll();
-            map = registry.getMapping();
+            map = registry.KgToOmMap;
             
             % Check for duplicates
             if isa(map, 'dictionary')

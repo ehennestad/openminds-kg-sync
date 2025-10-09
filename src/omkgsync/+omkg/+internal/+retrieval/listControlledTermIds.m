@@ -28,6 +28,10 @@ function identifiers = listControlledTermIds(typeName, options)
         "stage", "RELEASED", ...
         "returnPayload", false);
 
-    response = [response{:}];
+    if iscell(response) 
+        % Todo: normalize mock responses? (I think KG will always return a 
+        % homogeneous list when returnPayload is false)
+        response = [response{:}];
+    end
     identifiers = string({response.x_id});
 end

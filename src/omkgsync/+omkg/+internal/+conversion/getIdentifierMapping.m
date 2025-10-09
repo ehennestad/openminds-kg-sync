@@ -22,5 +22,9 @@ function map = getIdentifierMapping(options)
 
     % Get singleton instance and delegate to it
     registry = omkg.internal.conversion.controlledInstanceRegistry.instance();
-    map = registry.getMapping(options.Reverse);
+    if options.Reverse
+        map = registry.OmToKgMap;
+    else
+        map = registry.KgToOmMap;
+    end
 end

@@ -13,14 +13,22 @@ classdef controlledInstanceRegistry < handle
 %
 % See also: getIdentifierMapping
 
+    % Todo: 
+    % - immutability of verbose, apiclient
+    % - pattern for using a different file, i.e during testing...
+
+
+    properties (SetAccess = immutable)
+        Verbose logical = true  % Control console output
+    end
+
     properties (Access = private)
         IdentifierMap struct = struct('kg', {}, 'om', {})
         LastUpdateTime datetime = datetime.empty
         UpdateInProgress logical = false
         TypeUpdateOrder string = string.empty
         LastTypeUpdated double = 0
-        ApiClient = []  % Injectable API client for testing
-        Verbose logical = true  % Control console output
+        ApiClient ebrains.kg.api.InstancesClient  % Injectable API client for testing
     end    
     
     properties (Dependent)
@@ -38,15 +46,12 @@ classdef controlledInstanceRegistry < handle
         TYPES_PER_UPDATE = 1  % Number of types to update per background update call
     end
     
-    methods (Access = private)
+    methods (Access = private) % Private constructor for singleton pattern
         function obj = controlledInstanceRegistry(options)
-            
-            % Private constructor for singleton pattern
-
             arguments
-                options.ApiClient = []
-                options.File = []
+                options.ApiClient (1,1) ebrains.kg.api.InstancesClient = ebrains.kg.api.InstancesClient();
                 options.Verbose (1,1) logical = true
+                options.File = []
             end
             
             if ~isempty(options.ApiClient)
@@ -62,20 +67,20 @@ classdef controlledInstanceRegistry < handle
         end
     end
     
-    methods (Static)
+    methods (Static) % Singleton getter
         function obj = instance(options)
             % instance - Get or create the singleton instance
             %
             % Syntax:
             %   registry = controlledInstanceRegistry.instance()
-            %   registry = controlledInstanceRegistry.instance(apiClient)
+            %   registry = controlledInstanceRegistry.instance(name, value)
             %
-            % Input:
+            % Name-value arguments:
             %   apiClient - (Optional) API client for testing/mocking
             %   Verbose - (Optional) Enable/disable console output (default: true)
             
             arguments
-                options.ApiClient = []
+                options.ApiClient ebrains.kg.api.InstancesClient = ebrains.kg.api.InstancesClient()
                 options.File string = string.empty
                 options.Reset (1,1) logical = false
                 options.Verbose (1,1) logical = true
@@ -105,9 +110,9 @@ classdef controlledInstanceRegistry < handle
                     singletonInstance.ApiClient = options.ApiClient;
                 end
                 % Allow updating verbosity
-                if isfield(options, 'Verbose')
-                    singletonInstance.Verbose = options.Verbose;
-                end
+                % if isfield(options, 'Verbose')
+                %     singletonInstance.Verbose = options.Verbose;
+                % end
             end
             
             obj = singletonInstance;
@@ -117,13 +122,13 @@ classdef controlledInstanceRegistry < handle
     methods
         function value = get.OmToKgMap(obj)
             if isempty(obj.OmToKgMap_)
-                obj.OmToKgMap_ = obj.getMapping(true);
+                obj.OmToKgMap_ = obj.createMapping("Reverse", true);
             end
             value = obj.OmToKgMap_;
         end
         function value = get.KgToOmMap(obj)
             if isempty(obj.KgToOmMap_)
-                obj.KgToOmMap_ = obj.getMapping(false);
+                obj.KgToOmMap_ = obj.createMapping("Reverse", false);
             end
             value = obj.KgToOmMap_;
         end
@@ -141,8 +146,11 @@ classdef controlledInstanceRegistry < handle
             %
             % Output:
             %   kgId - Knowledge Graph UUID (string)
-            
-            openMindsId = string(openMindsId);
+
+            arguments
+                obj (1,1) omkg.internal.conversion.controlledInstanceRegistry
+                openMindsId (1,1) string
+            end
 
             if isKey(obj.OmToKgMap, openMindsId)
                 kgId = obj.OmToKgMap(openMindsId);
@@ -164,10 +172,12 @@ classdef controlledInstanceRegistry < handle
             %
             % Output:
             %   omId - openMINDS identifier (string)
+                      
+            arguments
+                obj (1,1) omkg.internal.conversion.controlledInstanceRegistry
+                kgId (1,1) string
+            end
             
-            
-            kgId = string(kgId);
-
             if isKey(obj.KgToOmMap, kgId)
                 omId = obj.KgToOmMap(kgId);
             else
@@ -176,51 +186,7 @@ classdef controlledInstanceRegistry < handle
                     'KG id not found')
             end
         end
-        
-        function map = getMapping(obj, reverse)
-            % getMapping - Get identifier mapping as dictionary or containers.Map
-            %
-            % Syntax:
-            %   map = registry.getMapping()
-            %   map = registry.getMapping(reverse)
-            %
-            % Input:
-            %   reverse - If true, maps openMINDS -> KG, else KG -> openMINDS
-            %
-            % Output:
-            %   map - dictionary or containers.Map object
-            
-            arguments
-                obj
-                reverse (1,1) logical = false
-            end
 
-            if reverse && ~isempty(obj.OmToKgMap_)
-                map = obj.OmToKgMap_;
-                return
-            elseif ~reverse && ~isempty(obj.KgToOmMap_)
-                map = obj.KgToOmMap_;
-                return
-            end
-            
-            keys = string({obj.IdentifierMap.kg});
-            values = string({obj.IdentifierMap.om});
-            
-            if reverse
-                if exist('dictionary', 'file')
-                    map = dictionary(values, keys);
-                else
-                    map = containers.Map(values, keys);
-                end
-            else
-                if exist('dictionary', 'file')
-                    map = dictionary(keys, values);
-                else
-                    map = containers.Map(keys, values);
-                end
-            end
-        end
-        
         function update(obj, forceComplete)
             % update - Update identifier mappings (incremental or complete)
             %
@@ -237,23 +203,17 @@ classdef controlledInstanceRegistry < handle
             end
             
             if obj.UpdateInProgress
-                warning('controlledInstanceRegistry:UpdateInProgress', ...
+                warning('OMKG:ControlledInstanceRegistry:UpdateInProgress', ...
                     'Update already in progress. Skipping.');
                 return
             end
             
-            obj.UpdateInProgress = true;
-            try
-                if forceComplete
-                    obj.downloadAll();
-                else
-                    obj.updateIncremental();
-                end
-            catch ME
-                obj.UpdateInProgress = false;
-                rethrow(ME);
+            updateInProgressResetObj = obj.setUpdateInProgress(); %#ok<NASGU>
+            if forceComplete
+                obj.downloadAll();
+            else
+                obj.updateIncremental();
             end
-            obj.UpdateInProgress = false;
         end
         
         function tf = needsUpdate(obj)
@@ -283,13 +243,10 @@ classdef controlledInstanceRegistry < handle
             if obj.Verbose
                 fprintf('Downloading all controlled instance identifiers...\n');
             end
-            
-            % Get API client
-            apiClient = obj.getApiClient();
-            
+                        
             % Get all controlled term types
             controlledTermTypeIRI = omkg.internal.retrieval.getControlledTypes(...
-                'ApiClient', apiClient);
+                'ApiClient',  obj.ApiClient);
             
             % Store the type order for incremental updates
             obj.TypeUpdateOrder = controlledTermTypeIRI;
@@ -306,14 +263,15 @@ classdef controlledInstanceRegistry < handle
                 
                 identifierMap = omkg.internal.retrieval.getControlledTermIdMap(...
                     controlledTermTypeIRI{i}, [], ...
-                    'ApiClient', apiClient);
+                    'ApiClient', obj.ApiClient);
                 instanceUuidListing{i} = identifierMap;
             end
             
             obj.IdentifierMap = [instanceUuidListing{:}];
             obj.LastUpdateTime = datetime('now');
             obj.saveToFile();
-            
+            obj.clearCachedMaps()
+
             if obj.Verbose
                 fprintf('Download complete. %d identifiers retrieved.\n', ...
                     numel(obj.IdentifierMap));
@@ -321,7 +279,16 @@ classdef controlledInstanceRegistry < handle
         end
     end
     
-    methods (Access = private)
+    methods (Access = private) % Internal methods for update
+        function [cleanupObj] = setUpdateInProgress(obj)
+            obj.UpdateInProgress = true;
+            cleanupObj = onCleanup(@() obj.resetUpdateInProgress);
+        end
+
+        function resetUpdateInProgress(obj)
+            obj.UpdateInProgress = false;
+        end
+        
         function updateIncremental(obj)
             % updateIncremental - Update a subset of types incrementally (optimized)
             %
@@ -333,17 +300,15 @@ classdef controlledInstanceRegistry < handle
             
             if isempty(obj.TypeUpdateOrder)
                 % Initialize type order if not set
-                apiClient = obj.getApiClient();
                 obj.TypeUpdateOrder = omkg.internal.retrieval.getControlledTypes(...
-                    'ApiClient', apiClient);
+                    'ApiClient', obj.ApiClient);
                 obj.LastTypeUpdated = 0;
             end
             
             % Refresh type list when starting a new cycle to detect new types
             if obj.LastTypeUpdated == 0
-                apiClient = obj.getApiClient();
                 currentTypes = omkg.internal.retrieval.getControlledTypes(...
-                    'ApiClient', apiClient);
+                    'ApiClient', obj.ApiClient);
                 
                 % Add any new types to the update order
                 newTypes = setdiff(currentTypes, obj.TypeUpdateOrder);
@@ -371,10 +336,7 @@ classdef controlledInstanceRegistry < handle
                 fprintf('Incremental update: processing types %d-%d of %d\n', ...
                     startIdx, endIdx, numTypes);
             end
-            
-            % Get API client
-            apiClient = obj.getApiClient();
-            
+                        
             % Process each type with optimized fetching
             for i = 1:numel(typesToUpdate)
                 typeIRI = typesToUpdate(i);
@@ -384,7 +346,7 @@ classdef controlledInstanceRegistry < handle
                 
                 % Step 1: Fast listing of all IDs for this type
                 currentIds = omkg.internal.retrieval.listControlledTermIds(...
-                    typeIRI, 'ApiClient', apiClient);
+                    typeIRI, 'ApiClient', obj.ApiClient);
                 
                 % Step 2: Find new IDs (not in our cache)
                 cachedIds = obj.getKgIdsForType(typeIRI);
@@ -397,7 +359,7 @@ classdef controlledInstanceRegistry < handle
                     
                     % Step 3: Only fetch detailed data for new IDs
                     newIdentifiers = omkg.internal.retrieval.getControlledTermIdMap(...
-                        typeIRI, newIds, 'ApiClient', apiClient);
+                        typeIRI, newIds, 'ApiClient', obj.ApiClient);
                     
                     % Add to our map
                     obj.IdentifierMap = [obj.IdentifierMap, newIdentifiers];
@@ -417,6 +379,7 @@ classdef controlledInstanceRegistry < handle
             end
             
             obj.saveToFile();
+            obj.clearCachedMaps()
         end
         
         function kgIds = getKgIdsForType(obj, ~)
@@ -431,15 +394,6 @@ classdef controlledInstanceRegistry < handle
             % more precise per-type caching.
             
             kgIds = string({obj.IdentifierMap.kg});
-        end
-        
-        function apiClient = getApiClient(obj)
-            % getApiClient - Get API client (real or injected for testing)
-            
-            if isempty(obj.ApiClient)
-                obj.ApiClient = ebrains.kg.api.InstancesClient();
-            end
-            apiClient = obj.ApiClient;
         end
         
         function updateIdentifiersForType(obj, ~, newIdentifiers)
@@ -457,7 +411,44 @@ classdef controlledInstanceRegistry < handle
             % For now, append new identifiers (duplicates will be handled by lookup logic)
             obj.IdentifierMap = [obj.IdentifierMap, newIdentifiers];
         end
+    
+        function clearCachedMaps(obj)
+            obj.KgToOmMap_ = [];
+            obj.OmToKgMap_ = [];
+        end
+
+        function map = createMapping(obj, options)
+            % createMapping - Get identifier mapping as dictionary or containers.Map
+            %
+            % Syntax:
+            %   map = registry.createMapping()
+            %   map = registry.createMapping(name, value)
+            %
+            % Name-Value arguments:
+            %   Reverse - If true, maps openMINDS -> KG, else KG -> openMINDS
+            %
+            % Output arguments:
+            %   map - dictionary or containers.Map object
+            
+            arguments
+                obj
+                options.Reverse (1,1) logical = false
+            end
+
+            mapConstructorFcn = getMapConstructor();
+
+            keys = string({obj.IdentifierMap.kg});
+            values = string({obj.IdentifierMap.om});
+            
+            if options.Reverse
+                map = mapConstructorFcn(values, keys);
+            else
+                map = mapConstructorFcn(keys, values);
+            end
+        end
+    end
         
+    methods (Access = private) % Internal methods for save/load
         function saveToFile(obj)
             % saveToFile - Save identifier map to JSON file
             
@@ -513,7 +504,7 @@ classdef controlledInstanceRegistry < handle
                     obj.LastUpdateTime = datetime.empty;
                 end
             catch ME
-                warning('controlledInstanceRegistry:LoadFailed', ...
+                warning('OMKG:ControlledInstanceRegistry:LoadFailed', ...
                     'Failed to load identifier map: %s', ME.message);
             end
         end
@@ -526,5 +517,15 @@ classdef controlledInstanceRegistry < handle
                 'userdata', ...
                 'kg2om_identifier_loopkup.json');
         end
+    end
+end
+
+function fcnHandle = getMapConstructor()
+% getMapConstructor - Get function handle for a map constructor. Use
+% dictionary if available, otherwise fall back to containers.Map
+    if exist('dictionary', 'file')
+        fcnHandle = @dictionary;
+    else
+        fcnHandle = @containers.Map;
     end
 end

@@ -176,7 +176,7 @@ classdef ControlledInstanceRegistryTest < matlab.unittest.TestCase
             mockClient = testCase.createMockClient();
             registry = omkg.internal.conversion.controlledInstanceRegistry.instance('ApiClient', mockClient);
             
-            map = registry.getMapping();
+            map = registry.KgToOmMap;
             
             testCase.verifyTrue(isa(map, 'dictionary') || isa(map, 'containers.Map'), ...
                 'Should return dictionary or containers.Map');
@@ -189,7 +189,7 @@ classdef ControlledInstanceRegistryTest < matlab.unittest.TestCase
             mockClient = testCase.createMockClient();
             registry = omkg.internal.conversion.controlledInstanceRegistry.instance('ApiClient', mockClient);
             
-            map = registry.getMapping(true);
+            map = registry.OmToKgMap;
             
             testCase.verifyTrue(isa(map, 'dictionary') || isa(map, 'containers.Map'), ...
                 'Should return dictionary or containers.Map');
@@ -202,8 +202,8 @@ classdef ControlledInstanceRegistryTest < matlab.unittest.TestCase
             mockClient = testCase.createMockClient();
             registry = omkg.internal.conversion.controlledInstanceRegistry.instance('ApiClient', mockClient);
             
-            forwardMap = registry.getMapping(false);
-            reverseMap = registry.getMapping(true);
+            forwardMap = registry.KgToOmMap;
+            reverseMap = registry.OmToKgMap;
             
             % Both should have the same number of entries
             testCase.verifyEqual(numel(forwardMap), numel(reverseMap), ...
@@ -236,7 +236,7 @@ classdef ControlledInstanceRegistryTest < matlab.unittest.TestCase
             registry.update(false);
             
             % Verify registry still has data
-            map = registry.getMapping();
+            map = registry.KgToOmMap;
             testCase.verifyGreaterThan(map.numEntries, 0, ...
                 'Registry should have data after incremental update');
         end
@@ -251,7 +251,7 @@ classdef ControlledInstanceRegistryTest < matlab.unittest.TestCase
             registry.update(true);
             
             % Verify registry has data
-            map = registry.getMapping();
+            map = registry.KgToOmMap;
             testCase.verifyGreaterThan(map.numEntries, 0, ...
                 'Registry should have data after full update');
         end
@@ -280,7 +280,7 @@ classdef ControlledInstanceRegistryTest < matlab.unittest.TestCase
             
             % Initial download
             registry.downloadAll();
-            initialCount = numel(registry.getMapping());
+            initialCount = numel(registry.KgToOmMap);
             
             % Add new type to mock client
             mockClient.addNewType("https://openminds.ebrains.eu/controlledTerms/NewType");
@@ -368,7 +368,7 @@ classdef ControlledInstanceRegistryTest < matlab.unittest.TestCase
                 'Reset', true, 'ApiClient', mockClient, 'Verbose', false);
             
             % Should handle gracefully
-            map = registry.getMapping();
+            map = registry.KgToOmMap;
             testCase.verifyEqual(map.numEntries, 0, ...
                 'Should handle empty response gracefully');
         end
@@ -406,14 +406,14 @@ classdef ControlledInstanceRegistryTest < matlab.unittest.TestCase
             mockClient.setListTypesResponse(typeResponse);
             
             % Configure mock to return instance data
-            instanceResponse = {
+            instanceResponse = [
                 struct('x_id', '550e8400-e29b-41d4-a716-446655440000', ...
                     'http___schema_org_identifier', {{'https://openminds.ebrains.eu/controlledTerms/Species'}})
                 struct('x_id', '6ba7b810-9dad-11d1-80b4-00c04fd430c8', ...
                     'http___schema_org_identifier', {{'https://openminds.ebrains.eu/controlledTerms/Technique'}})
                 struct('x_id', '7c9e4567-e89b-12d3-a456-426614174001', ...
                     'http___schema_org_identifier', {{'https://openminds.ebrains.eu/controlledTerms/Sex'}})
-            };
+            ];
             mockClient.setListResponse(instanceResponse);
             mockClient.setBulkResponse(instanceResponse);
         end
