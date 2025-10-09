@@ -44,7 +44,7 @@ kgsave(someInstance)
 
 
 ### Getting started tutorial
-See the [Getting Started](https://github.com/ehennestad/openminds-kg-sync/blob/dev/docs/GettingStarted.md) tutorial
+See the [Getting Started](https://github.com/ehennestad/openminds-kg-sync/blob/main/docs/GettingStarted.md) tutorial
 
 ## Contributing
 Please see the [Contributing guidelines](.github/CONTRIBUTING.md) and the [Developer notes](.github/DeveloperNotes.md)
