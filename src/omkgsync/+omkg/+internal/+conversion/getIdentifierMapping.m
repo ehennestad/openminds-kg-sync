@@ -1,8 +1,8 @@
 function map = getIdentifierMapping(options)
-% getIdentifierMapping - Get identifier mapping (wrapper for controlledInstanceRegistry)
+% getIdentifierMapping - Get identifier mapping (wrapper for ControlledInstanceIdentifierRegistry)
 %
 %   This function provides backward compatibility with the old API.
-%   It now delegates to the controlledInstanceRegistry singleton.
+%   It now delegates to the ControlledInstanceIdentifierRegistry singleton.
 %
 % Syntax:
 %   map = getIdentifierMapping()
@@ -14,14 +14,14 @@ function map = getIdentifierMapping(options)
 % Output:
 %   map - dictionary or containers.Map object
 %
-% See also: omkg.internal.conversion.controlledInstanceRegistry
+% See also: omkg.internal.conversion.ControlledInstanceIdentifierRegistry
 
     arguments
         options.Reverse (1,1) logical = false
     end
 
     % Get singleton instance and delegate to it
-    registry = omkg.internal.conversion.controlledInstanceRegistry.instance();
+    registry = omkg.internal.conversion.ControlledInstanceIdentifierRegistry.instance();
     if options.Reverse
         map = registry.OmToKgMap;
     else

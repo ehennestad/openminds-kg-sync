@@ -1,12 +1,12 @@
-classdef controlledInstanceRegistry < handle
-% controlledInstanceRegistry - Singleton class for managing controlled instance identifiers
+classdef ControlledInstanceIdentifierRegistry < handle
+% ControlledInstanceIdentifierRegistry - Singleton class for managing controlled instance identifiers
 %
 %   This class manages the mapping between EBRAINS Knowledge Graph UUIDs
 %   and openMINDS identifiers for controlled instances. It handles initial
 %   download, incremental background updates, and provides lookup methods.
 %
 % Usage:
-%   registry = omkg.internal.conversion.controlledInstanceRegistry.instance();
+%   registry = omkg.internal.conversion.ControlledInstanceIdentifierRegistry.instance();
 %   kgId = registry.getKgId(openMindsId);
 %   omId = registry.getOpenMindsId(kgId);
 %   registry.update(); % Force update
@@ -47,7 +47,7 @@ classdef controlledInstanceRegistry < handle
     end
     
     methods (Access = private) % Private constructor for singleton pattern
-        function obj = controlledInstanceRegistry(options)
+        function obj = ControlledInstanceIdentifierRegistry(options)
             arguments
                 options.ApiClient (1,1) ebrains.kg.api.InstancesClient = ebrains.kg.api.InstancesClient();
                 options.Verbose (1,1) logical = true
@@ -72,8 +72,8 @@ classdef controlledInstanceRegistry < handle
             % instance - Get or create the singleton instance
             %
             % Syntax:
-            %   registry = controlledInstanceRegistry.instance()
-            %   registry = controlledInstanceRegistry.instance(name, value)
+            %   registry = ControlledInstanceIdentifierRegistry.instance()
+            %   registry = ControlledInstanceIdentifierRegistry.instance(name, value)
             %
             % Name-value arguments:
             %   apiClient - (Optional) API client for testing/mocking
@@ -100,7 +100,7 @@ classdef controlledInstanceRegistry < handle
             end
             
             if isempty(singletonInstance) || ~isvalid(singletonInstance)
-                singletonInstance = omkg.internal.conversion.controlledInstanceRegistry(...
+                singletonInstance = omkg.internal.conversion.ControlledInstanceIdentifierRegistry(...
                     "ApiClient", options.ApiClient, ...
                     "Verbose", options.Verbose);
             else
@@ -148,7 +148,7 @@ classdef controlledInstanceRegistry < handle
             %   kgId - Knowledge Graph UUID (string)
 
             arguments
-                obj (1,1) omkg.internal.conversion.controlledInstanceRegistry
+                obj (1,1) omkg.internal.conversion.ControlledInstanceIdentifierRegistry
                 openMindsId (1,1) string
             end
 
@@ -174,7 +174,7 @@ classdef controlledInstanceRegistry < handle
             %   omId - openMINDS identifier (string)
                       
             arguments
-                obj (1,1) omkg.internal.conversion.controlledInstanceRegistry
+                obj (1,1) omkg.internal.conversion.ControlledInstanceIdentifierRegistry
                 kgId (1,1) string
             end
             

@@ -45,7 +45,7 @@ classdef ControlledInstanceRegistryIntegrationTest < matlab.unittest.TestCase
             end
             
             mockClient = testCase.createMockClient();
-            omkg.internal.conversion.controlledInstanceRegistry.instance(...
+            omkg.internal.conversion.ControlledInstanceIdentifierRegistry.instance(...
                 'Reset', true, 'ApiClient', mockClient, 'Verbose', false);
         end
     end
@@ -55,7 +55,7 @@ classdef ControlledInstanceRegistryIntegrationTest < matlab.unittest.TestCase
         function testDownloadAllUsesRetrievalFunctions(testCase)
             % Test that downloadAll properly calls retrieval functions
             mockClient = testCase.createMockClient();
-            registry = omkg.internal.conversion.controlledInstanceRegistry.instance(...
+            registry = omkg.internal.conversion.ControlledInstanceIdentifierRegistry.instance(...
                 'ApiClient', mockClient, 'Reset', true, 'Verbose', false);
             
             % Download all should succeed
@@ -71,7 +71,7 @@ classdef ControlledInstanceRegistryIntegrationTest < matlab.unittest.TestCase
         function testIncrementalUpdateUsesRetrievalFunctions(testCase)
             % Test that incremental update properly calls retrieval functions
             mockClient = testCase.createMockClient();
-            registry = omkg.internal.conversion.controlledInstanceRegistry.instance(...
+            registry = omkg.internal.conversion.ControlledInstanceIdentifierRegistry.instance(...
                 'ApiClient', mockClient, 'Reset', true, 'Verbose', false);
             
             % Initial download
@@ -90,7 +90,7 @@ classdef ControlledInstanceRegistryIntegrationTest < matlab.unittest.TestCase
         function testNewTypeDetectionFlow(testCase)
             % Test the complete flow of detecting and processing a new type
             mockClient = testCase.createMockClient();
-            registry = omkg.internal.conversion.controlledInstanceRegistry.instance(...
+            registry = omkg.internal.conversion.ControlledInstanceIdentifierRegistry.instance(...
                 'ApiClient', mockClient, 'Reset', true, 'Verbose', false);
             
             % Initial download
@@ -130,7 +130,7 @@ classdef ControlledInstanceRegistryIntegrationTest < matlab.unittest.TestCase
             mockClient.setListResponse(instances);
             mockClient.setBulkResponse(instances);
             
-            registry = omkg.internal.conversion.controlledInstanceRegistry.instance(...
+            registry = omkg.internal.conversion.ControlledInstanceIdentifierRegistry.instance(...
                 'ApiClient', mockClient, 'Reset', true, 'Verbose', false);
             registry.downloadAll();
             
@@ -145,7 +145,7 @@ classdef ControlledInstanceRegistryIntegrationTest < matlab.unittest.TestCase
         function testIncrementalUpdateIsEfficient(testCase)
             % Test that incremental updates don't refetch everything
             mockClient = testCase.createMockClient();
-            registry = omkg.internal.conversion.controlledInstanceRegistry.instance(...
+            registry = omkg.internal.conversion.ControlledInstanceIdentifierRegistry.instance(...
                 'ApiClient', mockClient, 'Reset', true, 'Verbose', false);
             
             % Initial download
@@ -167,7 +167,7 @@ classdef ControlledInstanceRegistryIntegrationTest < matlab.unittest.TestCase
             mockClient = testCase.createMockClient();
             
             % First initialization with download
-            registry1 = omkg.internal.conversion.controlledInstanceRegistry.instance(...
+            registry1 = omkg.internal.conversion.ControlledInstanceIdentifierRegistry.instance(...
                 'ApiClient', mockClient, 'Reset', true, 'Verbose', false);
             registry1.downloadAll();
             firstCallCount = mockClient.getCallCount();
@@ -175,7 +175,7 @@ classdef ControlledInstanceRegistryIntegrationTest < matlab.unittest.TestCase
             % Clear singleton and reinitialize (should load from cache)
             mockClient.clearCalls();
             
-            registry2 = omkg.internal.conversion.controlledInstanceRegistry.instance(...
+            registry2 = omkg.internal.conversion.ControlledInstanceIdentifierRegistry.instance(...
                 'ApiClient', mockClient, 'Reset', true, 'Verbose', false);
             % Just accessing should use cache
             map = registry2.KgToOmMap;
@@ -193,7 +193,7 @@ classdef ControlledInstanceRegistryIntegrationTest < matlab.unittest.TestCase
         function testDataConsistencyAcrossUpdates(testCase)
             % Test that data remains consistent across updates
             mockClient = testCase.createMockClient();
-            registry = omkg.internal.conversion.controlledInstanceRegistry.instance(...
+            registry = omkg.internal.conversion.ControlledInstanceIdentifierRegistry.instance(...
                 'ApiClient', mockClient, 'Reset', true, 'Verbose', false);
             
             % Initial download
@@ -215,7 +215,7 @@ classdef ControlledInstanceRegistryIntegrationTest < matlab.unittest.TestCase
         function testNoDuplicateIdentifiers(testCase)
             % Test that registry doesn't create duplicate entries
             mockClient = testCase.createMockClient();
-            registry = omkg.internal.conversion.controlledInstanceRegistry.instance(...
+            registry = omkg.internal.conversion.ControlledInstanceIdentifierRegistry.instance(...
                 'ApiClient', mockClient, 'Reset', true, 'Verbose', false);
             
             registry.downloadAll();
