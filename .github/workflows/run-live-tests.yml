@@ -47,6 +47,12 @@ jobs:
 
             tokenManager = ebrains.getTokenManager()
 
+            addpath(genpath( "src" ));
+            addpath(genpath( "tests" ));
+            addpath(genpath( "tools" ));
+
+            runLiveIntegrationTests()
+
       - name: Restore MATLAB Path
         uses: matlab-actions/run-command@v2
         if: always()
