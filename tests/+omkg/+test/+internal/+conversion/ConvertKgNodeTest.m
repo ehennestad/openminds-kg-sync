@@ -3,14 +3,14 @@ classdef ConvertKgNodeTest < matlab.unittest.TestCase
     %
     % This test suite covers the conversion of Knowledge Graph nodes to
     % openMINDS format, including edge cases and error handling.
-    
+
     methods (TestClassSetup)
         function setupTestEnvironment(testCase) %#ok<MANU>
             % Ensure openMINDS environment is available
             omkg.internal.checkEnvironment();
         end
     end
-    
+
     %% Basic Conversion Tests
     methods (Test)
         function testConvertSimpleNode(testCase)
@@ -20,15 +20,15 @@ classdef ConvertKgNodeTest < matlab.unittest.TestCase
                 'x_type', {{'https://openminds.ebrains.eu/core/Person'}}, ...
                 'https___openminds_ebrains_eu_vocab_givenName', 'John', ...
                 'https___openminds_ebrains_eu_vocab_familyName', 'Doe');
-            
+
             omNode = omkg.internal.conversion.convertKgNode(kgNode);
-            
+
             testCase.verifyTrue(isa(omNode, 'openminds.abstract.Schema'), ...
                 'Converted node should be an openMINDS schema object');
             testCase.verifyTrue(strcmp(omNode.id, kgNode.x_id), ...
                 'ID should be preserved');
         end
-        
+
         function testConvertMultipleNodes(testCase)
             % Test conversion of multiple nodes in one call
             kgNodes = [...
@@ -38,13 +38,13 @@ classdef ConvertKgNodeTest < matlab.unittest.TestCase
                 struct('x_id', 'https://kg.ebrains.eu/api/instances/test-2', ...
                        'x_type', {{'https://openminds.ebrains.eu/core/Person'}}, ...
                        'https___openminds_ebrains_eu_vocab_givenName', 'Jane')];
-            
+
             omNodes = omkg.internal.conversion.convertKgNode(kgNodes);
-            
+
             testCase.verifyEqual(numel(omNodes), 2, ...
                 'Should return same number of nodes');
         end
-        
+
         function testConvertNodeWithUnsupportedProperty(testCase)
             % Test that unsupported properties trigger warnings
             kgNode = struct(...
@@ -52,14 +52,14 @@ classdef ConvertKgNodeTest < matlab.unittest.TestCase
                 'x_type', 'https://openminds.ebrains.eu/core/Person', ...
                 'https___openminds_ebrains_eu_vocab_givenName', 'John', ...
                 'https___openminds_ebrains_eu_vocab_unsupportedProperty', 'value');
-            
+
             testCase.verifyWarning(...
                 @() omkg.internal.conversion.convertKgNode(kgNode), ...
                 'OMKG:ConvertKgNode:UnsupportedProperty', ...
                 'Unsupported properties should trigger warning');
         end
     end
-    
+
     %% Error Handling Tests
     methods (Test)
         function testConvertInvalidNodeType(testCase)
@@ -67,30 +67,30 @@ classdef ConvertKgNodeTest < matlab.unittest.TestCase
             kgNode = struct(...
                 'x_id', 'https://kg.ebrains.eu/api/instances/test-123', ...
                 'x_type', 'https://invalid.type/DoesNotExist');
-            
+
             testCase.verifyError(...
                 @() omkg.internal.conversion.convertKgNode(kgNode), ...
                 'OPENMINDS_MATLAB:Validators:InvalidOpenMINDSIRI', ...
                 'Should error on invalid type');
         end
-        
+
         function testConvertWithWrongReferenceNodeType(testCase)
             % Test that providing wrong reference node type throws error
             kgNode = struct(...
                 'x_id', 'https://kg.ebrains.eu/api/instances/test-123', ...
                 'x_type', 'https://openminds.ebrains.eu/core/Person', ...
                 'https___schema_org_givenName', 'John');
-            
+
             % Create a reference node of different type
             wrongReferenceNode = openminds.core.Organization(...
                 'id', 'https://kg.ebrains.eu/api/instances/org-123');
-            
+
             testCase.verifyError(...
                 @() omkg.internal.conversion.convertKgNode(kgNode, wrongReferenceNode), ...
                 'OMKG:ConvertKgNode:ReferenceNodeWrongType', ...
                 'Should error when reference node type does not match');
         end
-        
+
         function testConvertWithEmbeddedNodeError(testCase)
             % Test error handling when converting embedded nodes
             kgNode = struct(...
@@ -106,66 +106,66 @@ classdef ConvertKgNodeTest < matlab.unittest.TestCase
                 'Should error with proper message for embedded node failures');
         end
     end
-    
+
     %% Linked Node Tests
     methods (Test)
         function testConvertWithLinkedNode(testCase)
             % Test conversion of node with linked references
             linkedNode = struct('x_id', 'https://kg.ebrains.eu/api/instances/linked-123');
-            
+
             kgNode = struct(...
                 'x_id', 'https://kg.ebrains.eu/api/instances/test-123', ...
                 'x_type', {{'https://openminds.ebrains.eu/core/Person'}}, ...
                 'https___openminds_ebrains_eu_vocab_givenName', 'John', ...
                 'https___openminds_ebrains_eu_vocab_contactInformation', linkedNode);
-            
+
             % Should create unresolved node reference
             omNode = omkg.internal.conversion.convertKgNode(kgNode);
-            
+
             testCase.verifyTrue(isa(omNode, 'openminds.abstract.Schema'), ...
                 'Should create valid node even with unresolved links');
         end
-        
+
         function testConvertWithEmbeddedNode(testCase)
             % Test conversion of node with embedded child nodes
             embeddedNode = struct(...
                 'x_type', 'https://openminds.ebrains.eu/core/Affiliation', ...
                 'https___schema_org_memberOf', struct(...
                     'x_id', 'https://kg.ebrains.eu/api/instances/org-123'));
-            
+
             kgNode = struct(...
                 'x_id', 'https://kg.ebrains.eu/api/instances/test-123', ...
                 'x_type', 'https://openminds.ebrains.eu/core/Person', ...
                 'https___schema_org_givenName', 'John', ...
                 'https___schema_org_affiliation', embeddedNode);
-            
+
             % Should recursively convert embedded nodes
             omNode = omkg.internal.conversion.convertKgNode(kgNode);
-            
+
             testCase.verifyTrue(isa(omNode, 'openminds.abstract.Schema'), ...
                 'Should handle embedded nodes');
         end
-        
+
         function testConvertWithCellArrayOfLinkedNodes(testCase)
             % Test conversion with multiple linked nodes
             linkedNodes = {
                 struct('x_id', 'https://kg.ebrains.eu/api/instances/linked-1')
                 struct('x_id', 'https://kg.ebrains.eu/api/instances/linked-2')
             };
-            
+
             kgNode = struct(...
                 'x_id', 'https://kg.ebrains.eu/api/instances/test-123', ...
                 'x_type', 'https://openminds.ebrains.eu/core/Person', ...
                 'https___schema_org_givenName', 'John', ...
                 'https___schema_org_affiliation', {linkedNodes});
-            
+
             omNode = omkg.internal.conversion.convertKgNode(kgNode);
-            
+
             testCase.verifyTrue(isa(omNode, 'openminds.abstract.Schema'), ...
                 'Should handle arrays of linked nodes');
         end
     end
-    
+
     %% Property Type Conversion Tests
     methods (Test)
         function testConvertCharProperty(testCase)
@@ -174,45 +174,45 @@ classdef ConvertKgNodeTest < matlab.unittest.TestCase
                 'x_id', 'https://kg.ebrains.eu/api/instances/test-123', ...
                 'x_type', 'https://openminds.ebrains.eu/core/Person', ...
                 'https___schema_org_givenName', char('John'));
-            
+
             omNode = omkg.internal.conversion.convertKgNode(kgNode);
-            
+
             testCase.verifyTrue(isa(omNode, 'openminds.abstract.Schema'), ...
                 'Should handle char properties');
         end
-        
+
         function testConvertCharWithConversionPreference(testCase)
             % Test char to string conversion when preference is set
             originalPref = getpref('omkg', 'ConvertChar', false);
             setpref('omkg', 'ConvertChar', true);
-            
+
             cleanupObj = onCleanup(@() setpref('omkg', 'ConvertChar', originalPref));
-            
+
             kgNode = struct(...
                 'x_id', 'https://kg.ebrains.eu/api/instances/test-123', ...
                 'x_type', 'https://openminds.ebrains.eu/core/Person', ...
                 'https___schema_org_givenName', char('John'));
-            
+
             omNode = omkg.internal.conversion.convertKgNode(kgNode);
-            
+
             testCase.verifyTrue(isa(omNode, 'openminds.abstract.Schema'), ...
                 'Should convert char to string when preference is set');
         end
-        
+
         function testConvertNumericProperty(testCase)
             % Test conversion of numeric properties
             kgNode = struct(...
                 'x_id', 'https://kg.ebrains.eu/api/instances/test-123', ...
                 'x_type', 'https://openminds.ebrains.eu/core/QuantitativeValue', ...
                 'https___schema_org_value', 42.5);
-            
+
             omNode = omkg.internal.conversion.convertKgNode(kgNode);
-            
+
             testCase.verifyTrue(isa(omNode, 'openminds.abstract.Schema'), ...
                 'Should handle numeric properties');
         end
     end
-    
+
     %% Reference Node Tests
     methods (Test)
         function testConvertWithValidReferenceNode(testCase)
@@ -222,20 +222,20 @@ classdef ConvertKgNodeTest < matlab.unittest.TestCase
                 'x_type', 'https://openminds.ebrains.eu/core/Person', ...
                 'https___schema_org_givenName', 'John', ...
                 'https___schema_org_familyName', 'Doe');
-            
+
             % Create reference node first
             referenceNode = openminds.core.Person(...
                 'id', 'https://kg.ebrains.eu/api/instances/test-123');
-            
+
             omNode = omkg.internal.conversion.convertKgNode(kgNode, referenceNode);
-            
+
             testCase.verifyEqual(omNode, referenceNode, ...
                 'Should return the same reference node');
             testCase.verifyTrue(isa(omNode, 'openminds.core.Person'), ...
                 'Should maintain correct type');
         end
     end
-    
+
     %% Edge Cases
     methods (Test)
         function testConvertWithEmptyCellArray(testCase)
@@ -245,13 +245,13 @@ classdef ConvertKgNodeTest < matlab.unittest.TestCase
                 'x_type', 'https://openminds.ebrains.eu/core/Person', ...
                 'https___schema_org_givenName', 'John', ...
                 'https___schema_org_affiliation', {{}});
-            
+
             omNode = omkg.internal.conversion.convertKgNode(kgNode);
-            
+
             testCase.verifyTrue(isa(omNode, 'openminds.abstract.Schema'), ...
                 'Should handle empty cell arrays');
         end
-        
+
         function testConvertCellArrayOfNodes(testCase)
             % Test that cell array input is handled correctly
             kgNodes = {
@@ -262,23 +262,23 @@ classdef ConvertKgNodeTest < matlab.unittest.TestCase
                        'x_type', 'https://openminds.ebrains.eu/core/Person', ...
                        'https___schema_org_givenName', 'Jane')
             };
-            
+
             omNodes = omkg.internal.conversion.convertKgNode(kgNodes);
-            
+
             testCase.verifyGreaterThanOrEqual(numel(omNodes), 2, ...
                 'Should convert all nodes from cell array');
         end
-        
+
         function testConvertWithParentNodeContext(testCase)
             % Test error message includes parent context
             parentNode = struct(...
                 'x_id', 'https://kg.ebrains.eu/api/instances/parent-123', ...
                 'x_type', {{'https://openminds.ebrains.eu/core/Person'}});
-            
+
             embeddedNode = struct(...
                 'x_type', 'https://openminds.ebrains.eu/core/Affiliation', ...
                 'https___openminds_ebrains_eu_vocab_memberOf', 'Test');
-            
+
             try
                 omkg.internal.conversion.convertKgNode(embeddedNode, ...
                     'ParentNode', parentNode);

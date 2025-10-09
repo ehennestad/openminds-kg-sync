@@ -7,16 +7,16 @@ function omNode = convertKgNode(kgNode, omReferenceNode, options)
 %   omNode = omkg.internal.conversion.convertKgNode(kgNode, omReferenceNode, options)
 %
 % Input Arguments:
-%   - kgNode (1,:) - Struct or cell array of metadata nodes/instances returned 
-%       from the instances API endpoint (jsonld converted to struct by 
+%   - kgNode (1,:) - Struct or cell array of metadata nodes/instances returned
+%       from the instances API endpoint (jsonld converted to struct by
 %       jsondecode).
-%   - omReferenceNode (openminds.abstract.Schema) - Optional reference node for 
-%       setting properties. If not provided, a new openMINDS node will be 
+%   - omReferenceNode (openminds.abstract.Schema) - Optional reference node for
+%       setting properties. If not provided, a new openMINDS node will be
 %       created. Used if we are resolving a node instead of creating a new
 %       one.
 %
 % Name-Value Arguments (options):
-%  Specify options using name-value arguments as Name1=Value1,...,NameN=ValueN, 
+%  Specify options using name-value arguments as Name1=Value1,...,NameN=ValueN,
 %  where Name is the argument name and Value is the corresponding value.
 %
 %  - ParentNode (Type) - Default: []. Parent node for the converted instance or linked node.
@@ -38,7 +38,7 @@ function omNode = convertKgNode(kgNode, omReferenceNode, options)
         for i = 1:numel(kgNode)
             omNode{i} = omkg.internal.conversion.convertKgNode(kgNode{i}, "ParentNode", options.ParentNode);
         end
-        
+
         omNode = omkg.util.concatTypesIfHomogeneous(omNode);
         return
     end
@@ -49,10 +49,10 @@ function omNode = convertKgNode(kgNode, omReferenceNode, options)
     end
 
     [identifier, type] = omkg.internal.conversion.getNodeKeywords(kgNode, "@id", "@type");
-    
+
     processedKgNode = omkg.internal.conversion.filterProperties(kgNode);
     processedKgNode = omkg.internal.conversion.removeNamespaceIRIFromPropertyNames(processedKgNode);
-    
+
     omDummyNode = openminds.fromTypeName(type, identifier); % create a dummy to get some info about the class we will create
 
     propertyNames = fieldnames(processedKgNode)';
@@ -73,7 +73,7 @@ function omNode = convertKgNode(kgNode, omReferenceNode, options)
         if isstruct(currentPropertyValue) || iscell(currentPropertyValue)
             if isLinkedNode(currentPropertyValue)
                 try
-                    if all(isKey(controlledInstanceMap, {currentPropertyValue.x_id})) 
+                    if all(isKey(controlledInstanceMap, {currentPropertyValue.x_id}))
                         % Todo: check and resolve one by one. What if some are
                         % resolvable and others are not.
                         currentPropertyValue = resolveAsControlledInstances(currentPropertyValue, controlledInstanceMap);
@@ -99,7 +99,7 @@ function omNode = convertKgNode(kgNode, omReferenceNode, options)
         else
             % pass : value should not need processing
         end
-         
+
         propertyValues{i} = currentPropertyValue;
     end
 
@@ -122,7 +122,7 @@ function omNode = convertKgNode(kgNode, omReferenceNode, options)
             omNode = openminds.fromTypeName(type, identifier, nvPairs(:));
         catch MECause
             errorId = 'OMKG:ConvertKGNode:ConversionFailed';
-            
+
             if isempty(options.ParentNode)
                 errorMessage = sprintf(...
                     'Failed to create instance with identifier "%s".', ...
@@ -174,7 +174,7 @@ end
 
 function tf = isEmbeddedNode(node)
     isEmbedded = @(x) isstruct(x) && isfield(x, 'x_type');
-    
+
     if iscell(node) % non-scalar
         tf = all(cellfun(@(c) isEmbedded(c), node));
     elseif isstruct(node)

@@ -7,7 +7,7 @@ function space = resolveSpace(type, options)
 %
 % Input Arguments:
 %   - type (1,1) openminds.enum.Types - The type of space to resolve.
-%   
+%
 % Name-Value Arguments:
 % - SpaceProfile (1,1) string - The space profile to use for the
 %   resolution (default is 'default'). Not implemented yet.

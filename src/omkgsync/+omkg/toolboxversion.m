@@ -12,7 +12,7 @@ function versionStr = toolboxversion()
     contentsFile = fullfile(rootPath, 'Contents.m');
 
     fileStr = fileread(contentsFile);
-   
+
     % First try to get a version with a sub-patch version number
     matchedStr = regexp(fileStr, 'Version \d*\.\d*\.\d*.\d*(?= )', 'match');
 
@@ -24,6 +24,6 @@ function versionStr = toolboxversion()
     assert(~isempty(matchedStr), ...
         'OMKGSYNC:Version:VersionNotFound', ...
         'No version was detected for this openMINDS_KG_Sync installation.')
-    
+
     versionStr = matchedStr{1};
 end

@@ -77,11 +77,11 @@ function kgdelete(target, kgOptions, options)
 
     % Extract UUID and delete
     uuid = omkg.util.getIdentifierUUID(instanceId);
-    
+
     % Pass server options to client
     nvPairs = namedargs2cell(kgOptions);
     options.Client.deleteInstance(uuid, nvPairs{:});
-    
+
     if options.Verbose
         fprintf('Deleted %s with id: %s\n', targetDescription, instanceId);
     end

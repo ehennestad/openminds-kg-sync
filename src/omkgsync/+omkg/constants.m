@@ -12,7 +12,7 @@ classdef constants
         % EBRAINS Knowledge Graph constants (wrapped for consistency)
         KgNamespaceIRI = ebrains.common.constant.KgNamespaceIRI()
         KgInstanceIRIPrefix = ebrains.common.constant.KgInstanceIRIPrefix()
-        
+
         % OpenMINDS-specific constants
         OpenMINDSNamespaceIRI = "https://openminds.ebrains.eu/"
         OpenMINDSInstanceIRIPrefix = "https://openminds.ebrains.eu/instances/"

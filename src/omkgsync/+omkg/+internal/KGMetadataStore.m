@@ -77,13 +77,13 @@ classdef KGMetadataStore < openminds.interface.MetadataStore
                 % Embedded instances are not saved on their own.
             else
                 instanceID = instance.id;
-                
+
                 % Save instance
                 jsonDoc = instance.serialize("Serializer", obj.Serializer);
 
                 if obj.isKgIdentifier(instanceID)
                     uuid = omkg.util.getIdentifierUUID(instanceID);
-    
+
                     if ~ismissing(obj.PayloadLogFolder)
                         filename = "kg_payload_" + uuid + ".jsonld";
                         savePath = fullfile(obj.PayloadLogFolder, filename);
@@ -97,7 +97,7 @@ classdef KGMetadataStore < openminds.interface.MetadataStore
                         if obj.Verbose
                             fprintf('Updated instance "%s" of type "%s".\n', string(instance), class(instance))
                         end
-                        
+
                     elseif options.SaveMode == "replace"
                         obj.InstanceClient.replaceInstance(uuid, jsonDoc, "returnPayload", false, "Server", obj.DefaultServer);
                         if obj.Verbose
@@ -132,13 +132,13 @@ classdef KGMetadataStore < openminds.interface.MetadataStore
                         "returnPayload", true, ...
                         "Server", obj.DefaultServer);
                     id = resp.data.x_id;
-                    
+
                     if obj.Verbose
                         fprintf('Saved instance "%s" of type "%s" to space "%s" with id "%s".\n', string(instance), class(instance), space, id)
                     end
 
-                    % Todo: consider if this should be done here. MetadataStore 
-                    % must have access to set id of instance 
+                    % Todo: consider if this should be done here. MetadataStore
+                    % must have access to set id of instance
                     % Update the local instance with the new KG ID
                     % instance.id = id;
                 end
@@ -147,10 +147,10 @@ classdef KGMetadataStore < openminds.interface.MetadataStore
 
         function instances = load(~, ~) %#ok<STOUT>
             error('load is not implemented for KG Metadata Stores.')
-            %Todo: load space?
+            % Todo: load space?
         end
     end
-    
+
     methods (Access = private)
         function isKg = isKgIdentifier(~, identifier)
             % Check if identifier is a KG identifier (contains KG URL pattern)
@@ -174,7 +174,7 @@ classdef KGMetadataStore < openminds.interface.MetadataStore
             end
             omkg.validator.mustBeValidUUID(uuid)
         end
-    
+
         function space = resolveSpace(obj, instance)
             type = openminds.enum.Types.fromClassName(class(instance));
             space = obj.SpaceConfiguration.getSpace(type);

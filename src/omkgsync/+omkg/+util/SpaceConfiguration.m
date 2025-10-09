@@ -12,17 +12,17 @@ classdef SpaceConfiguration < handle
 %
 % Usage:
 %   cfg = omkg.util.SpaceConfiguration.loadDefault();
-% 
+%
 %   % O(1) lookups across the whole config:
 %   cfg.getSpace("Affiliation")          % -> "common"
 %   cfg.getSpace("ChemicalMixture")      % -> "in-depth" (via group default)
-%   
+%
 %   % Move/assign a class without specifying a group:
 %   cfg = cfg.assignClass("spatial", "CoordinatePoint");
-% 
+%
 %   % Remove a class from all spaces:
 %   cfg = cfg.unassignClass("CoordinatePoint");
-%   
+%
 %   % Save:
 %   cfg.save("space-defaults_v2.json");
 
@@ -44,7 +44,7 @@ classdef SpaceConfiguration < handle
                 data (1,1) struct
                 filePath (1,1) string = ""
             end
-            
+
             obj.Data = data;
             obj.FilePath = filePath;
             obj.rebuildIndex();
@@ -58,15 +58,15 @@ classdef SpaceConfiguration < handle
                 obj
                 type (1,1) openminds.enum.Types
             end
-            
+
             className = char(type);
-            
+
             % Check for exact mapping first
             if isKey(obj.Index, className)
                 space = string(obj.Index(className));
                 return
             end
-            
+
             % Fall back to module default
             space = obj.getModuleDefaultSpace(type);
         end
@@ -118,7 +118,7 @@ classdef SpaceConfiguration < handle
 
             % Add class to target space
             obj.addClassToSpace(groupName, spaceKey, typeKey);
-            
+
             % Update Index
             obj.Index(typeKey) = spaceKey;
             obj.Dirty = true;
@@ -131,12 +131,12 @@ classdef SpaceConfiguration < handle
                 className
                 silent (1,1) logical = false
             end
-            
+
             % Convert to char (handles both string and enum inputs)
             classKey = char(className);
-            
+
             removed = obj.removeClassFromAllSpaces(classKey);
-            
+
             if isKey(obj.Index, classKey)
                 obj.Index = remove(obj.Index, classKey);
             end
@@ -145,7 +145,7 @@ classdef SpaceConfiguration < handle
                 warning("OMKG:SpaceConfiguration:NotFound", ...
                     "Class '%s' not found in any space list.", classKey);
             end
-            
+
             obj.Dirty = obj.Dirty || removed;
         end
 
@@ -155,7 +155,7 @@ classdef SpaceConfiguration < handle
                 obj
                 filePath (1,1) string = ""
             end
-            
+
             targetPath = obj.resolveFilePath(filePath);
             jsonText = jsonencode(obj.Data, "PrettyPrint", true);
             obj.writeToFile(targetPath, jsonText);
@@ -169,12 +169,12 @@ classdef SpaceConfiguration < handle
             obj.SpaceToGroup = initializeEmptyMap();
             obj.GroupDefault = initializeEmptyMap();
         end
-        
+
         function space = getModuleDefaultSpace(obj, type)
             % Get the default space for a module, or error if none exists
             module = type.getModule();
             moduleName = char(module);
-            
+
             if isKey(obj.GroupDefault, moduleName)
                 defaultSpace = obj.GroupDefault(moduleName);
                 if ~isempty(char(defaultSpace))
@@ -182,12 +182,12 @@ classdef SpaceConfiguration < handle
                     return
                 end
             end
-            
+
             error("OMKG:SpaceConfiguration:NoFallback", ...
                 "Class '%s' not mapped and module '%s' has no usable default.", ...
                 char(type), moduleName);
         end
-        
+
         function validateSpaceExists(obj, spaceName)
             % Validate that a space exists in the configuration
             if ~isKey(obj.SpaceToGroup, spaceName)
@@ -195,7 +195,7 @@ classdef SpaceConfiguration < handle
                     "Space '%s' was not found in any group.", spaceName);
             end
         end
-        
+
         function addClassToSpace(obj, groupName, spaceName, className)
             % Add a class to a space within a group
             % Ensure list exists and is cellstr
@@ -214,26 +214,26 @@ classdef SpaceConfiguration < handle
                 obj.Data.(groupName).(spaceName) = [classList; {className}];
             end
         end
-        
+
         function removed = removeClassFromAllSpaces(obj, className)
             % Remove className from all space lists across all groups
             removed = false;
             groupNames = fieldnames(obj.Data);
-            
+
             for i = 1:numel(groupNames)
                 groupName = groupNames{i};
                 groupData = obj.Data.(groupName);
-                
+
                 if ~isstruct(groupData)
                     continue;
                 end
-                
+
                 spaceNames = setdiff(fieldnames(groupData), {'default'});
                 for j = 1:numel(spaceNames)
                     spaceName = spaceNames{j};
                     classList = groupData.(spaceName);
                     classList = obj.normalizeClassList(classList, groupName, spaceName);
-                    
+
                     if iscellstr(classList) || iscell(classList) || isstring(classList)
                         keep = ~strcmp(classList, className);
                         if any(~keep)
@@ -244,17 +244,17 @@ classdef SpaceConfiguration < handle
                 end
             end
         end
-        
+
         function rebuildIndex(obj)
             % Build global Index(class -> space), SpaceToGroup(space -> group),
             % and GroupDefault(group -> default). Enforce class uniqueness.
             obj.initializeMaps();
-            
+
             groupNames = fieldnames(obj.Data);
             for i = 1:numel(groupNames)
                 groupName = groupNames{i};
                 groupData = obj.Data.(groupName);
-                
+
                 obj.validateGroupStructure(groupName, groupData);
                 obj.GroupDefault = obj.processGroupDefault(obj.GroupDefault, groupName, groupData);
                 [obj.Index, obj.SpaceToGroup] = obj.processGroupSpaces(obj.Index, obj.SpaceToGroup, groupName, groupData);
@@ -268,7 +268,7 @@ classdef SpaceConfiguration < handle
                     "Group '%s' must be a struct.", groupName);
             end
         end
-        
+
         function groupDefaults = processGroupDefault(~, groupDefaults, groupName, groupData)
             % Process the default field for a group
             if isfield(groupData, 'default') && ~isempty(char(groupData.default))
@@ -277,21 +277,21 @@ classdef SpaceConfiguration < handle
                 groupDefaults(groupName) = "";
             end
         end
-        
+
         function [classIndex, spaceToGroup] = processGroupSpaces(obj, classIndex, spaceToGroup, groupName, groupData)
             % Process all spaces within a group
             spaceNames = setdiff(fieldnames(groupData), {'default'});
-            
+
             for i = 1:numel(spaceNames)
                 spaceName = spaceNames{i};
                 obj.validateSpaceUniqueness(spaceToGroup, spaceName, groupName);
                 spaceToGroup(spaceName) = groupName;
-                
+
                 classList = groupData.(spaceName);
                 classIndex = obj.processSpaceClasses(classIndex, spaceName, groupName, classList);
             end
         end
-        
+
         function validateSpaceUniqueness(~, spaceToGroup, spaceName, groupName)
             % Validate that spaces are unique across groups
             if isKey(spaceToGroup, spaceName) && ~strcmp(spaceToGroup(spaceName), groupName)
@@ -300,13 +300,13 @@ classdef SpaceConfiguration < handle
                     spaceToGroup(spaceName), groupName, spaceName);
             end
         end
-        
+
         function classIndex = processSpaceClasses(obj, classIndex, spaceName, groupName, classList)
             % Process all classes within a space
             if isempty(classList)
                 return;
             end
-            
+
             classList = obj.normalizeClassList(classList, groupName, spaceName);
 
             for i = 1:numel(classList)
@@ -315,7 +315,7 @@ classdef SpaceConfiguration < handle
                 classIndex(className) = spaceName;
             end
         end
-        
+
         function validateClassUniqueness(~, classIndex, className, spaceName)
             % Validate that classes are globally unique
             if isKey(classIndex, className) && ~strcmp(classIndex(className), spaceName)
@@ -324,7 +324,7 @@ classdef SpaceConfiguration < handle
                     className, classIndex(className), spaceName);
             end
         end
-        
+
         function targetPath = resolveFilePath(obj, filePath)
             % Resolve the file path for saving, using object's FilePath if needed
             if filePath == ""
@@ -337,7 +337,7 @@ classdef SpaceConfiguration < handle
                 targetPath = filePath;
             end
         end
-        
+
         function writeToFile(~, filePath, content)
             % Write content to file with proper error handling
             fileHandle = fopen(filePath, "w");
@@ -345,7 +345,7 @@ classdef SpaceConfiguration < handle
                 error("OMKG:SpaceConfiguration:IO", ...
                     "Failed to open '%s' for writing.", filePath);
             end
-            
+
             cleanup = onCleanup(@() fclose(fileHandle));
             fwrite(fileHandle, content, "char");
         end
@@ -353,7 +353,7 @@ classdef SpaceConfiguration < handle
         function ensureGroup(obj, schemaGroup)
             % Ensure a group exists in the data structure
             groupName = char(schemaGroup);
-            
+
             if ~isfield(obj.Data, groupName)
                 obj.Data.(groupName) = struct('default', []);
             else
@@ -361,7 +361,7 @@ classdef SpaceConfiguration < handle
                 obj.ensureGroupHasDefault(groupName);
             end
         end
-        
+
         function validateExistingGroup(obj, groupName)
             % Validate that existing group is a struct
             if ~isstruct(obj.Data.(groupName))
@@ -369,7 +369,7 @@ classdef SpaceConfiguration < handle
                     "Group '%s' exists but is not a struct.", groupName);
             end
         end
-        
+
         function ensureGroupHasDefault(obj, groupName)
             % Ensure group has a default field
             if ~isfield(obj.Data.(groupName), 'default')

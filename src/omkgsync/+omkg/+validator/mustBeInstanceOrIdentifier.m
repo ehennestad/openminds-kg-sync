@@ -33,7 +33,6 @@ function mustBeInstanceOrIdentifier(target)
             omkg.validator.mustBeValidKGIdentifier(currentTarget.id)
         end
 
-
     elseif isstring(target) || ischar(target)
         % For strings (scalar or array), validate each is a valid KG identifier
         target = string(target);

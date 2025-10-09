@@ -1,6 +1,6 @@
 function [instances, nextPageFcn] = kglist(type, kgOptions, options)
 % kglist - List instances for a specified type
-    
+
     arguments
         type (1,1) openminds.enum.Types
         % opts.searchByLabel          string - Deactivated - can not confirm how this works.
@@ -24,11 +24,11 @@ function [instances, nextPageFcn] = kglist(type, kgOptions, options)
     if kgOptions.space == "auto" % Autoresolve space for given type
         kgOptions.space = omkg.util.resolveSpace(type);
     end
-    
+
     % Initialize outputs
     instances = feval(sprintf('%s.empty', type.ClassName));
     nextPageFcn = @() [];
-    
+
     % Get instances from KG API Client
     nvPairs = namedargs2cell(kgOptions);
     data = options.Client.listInstances(type, nvPairs{:});
