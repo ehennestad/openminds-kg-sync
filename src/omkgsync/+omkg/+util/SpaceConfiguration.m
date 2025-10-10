@@ -138,7 +138,11 @@ classdef SpaceConfiguration < handle
             removed = obj.removeClassFromAllSpaces(classKey);
 
             if isKey(obj.Index, classKey)
-                obj.Index(classKey) = [];
+                if isa(obj.Index, 'containers.Map')
+                    obj.Index.remove(classKey);
+                else
+                    obj.Index(classKey) = [];
+                end
             end
 
             if ~silent && ~removed
