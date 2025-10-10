@@ -197,9 +197,11 @@ classdef KGSerializerTest < matlab.unittest.TestCase
             person = openminds.core.Person(...
                 'id', 'https://kg.ebrains.eu/api/instances/person-1', ...
                 'givenName', 'John');
-
+            
+            affiliation = openminds.core.Affiliation(...
+                'memberOf', org);
             try
-                person.affiliation = org;
+                person.affiliation = affiliation;
             catch
                 % Skip if affiliation not available
                 testCase.assumeFail('Affiliation property not available');

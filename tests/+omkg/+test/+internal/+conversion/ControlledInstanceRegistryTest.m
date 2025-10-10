@@ -539,6 +539,6 @@ function count = getMapCount(map)
     if isa(map, 'dictionary')
         count = map.numEntries();
     elseif isa(map, 'containers.Map')
-        count = map.Count;
+        count = double(map.Count);
     end
 end

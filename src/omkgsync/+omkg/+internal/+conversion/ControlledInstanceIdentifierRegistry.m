@@ -152,7 +152,7 @@ classdef ControlledInstanceIdentifierRegistry < handle
             end
 
             if isKey(obj.OmToKgMap, openMindsId)
-                kgId = obj.OmToKgMap(openMindsId);
+                kgId = string( obj.OmToKgMap(openMindsId) );
             else
                 error(...
                     'OMKG:ControlledInstanceRegistry:IdNotFound', ...
@@ -178,7 +178,7 @@ classdef ControlledInstanceIdentifierRegistry < handle
             end
 
             if isKey(obj.KgToOmMap, kgId)
-                omId = obj.KgToOmMap(kgId);
+                omId = string( obj.KgToOmMap(kgId) );
             else
                 error(...
                     'OMKG:ControlledInstanceRegistry:IdNotFound', ...
