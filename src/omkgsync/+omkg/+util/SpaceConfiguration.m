@@ -138,7 +138,7 @@ classdef SpaceConfiguration < handle
             removed = obj.removeClassFromAllSpaces(classKey);
 
             if isKey(obj.Index, classKey)
-                obj.Index = remove(obj.Index, classKey);
+                obj.Index(classKey) = [];
             end
 
             if ~silent && ~removed
@@ -435,7 +435,7 @@ end
 function map = initializeEmptyMap()
 % Initialize maps with dictionary if available, fallback to containers.Map
     if exist('dictionary', 'file')
-        map = configureDictionary('char', 'char');
+        map = dictionary(string.empty, string.empty);
     else
         map = containers.Map('KeyType', 'char', 'ValueType', 'char');
     end

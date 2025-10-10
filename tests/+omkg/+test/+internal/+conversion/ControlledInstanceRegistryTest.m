@@ -190,7 +190,7 @@ classdef ControlledInstanceRegistryTest < matlab.unittest.TestCase
 
             testCase.verifyTrue(isa(map, 'dictionary') || isa(map, 'containers.Map'), ...
                 'Should return dictionary or containers.Map');
-            testCase.verifyGreaterThan(map.numEntries, 0, ...
+            testCase.verifyGreaterThan(getMapCount(map), 0, ...
                 'Map should contain entries');
         end
 
@@ -203,7 +203,7 @@ classdef ControlledInstanceRegistryTest < matlab.unittest.TestCase
 
             testCase.verifyTrue(isa(map, 'dictionary') || isa(map, 'containers.Map'), ...
                 'Should return dictionary or containers.Map');
-            testCase.verifyGreaterThan(map.numEntries, 0, ...
+            testCase.verifyGreaterThan(getMapCount(map), 0, ...
                 'Map should contain entries');
         end
 
@@ -263,7 +263,7 @@ classdef ControlledInstanceRegistryTest < matlab.unittest.TestCase
 
             % Verify registry still has data
             map = registry.KgToOmMap;
-            testCase.verifyGreaterThan(map.numEntries, 0, ...
+            testCase.verifyGreaterThan(getMapCount(map), 0, ...
                 'Registry should have data after incremental update');
         end
 
@@ -298,7 +298,7 @@ classdef ControlledInstanceRegistryTest < matlab.unittest.TestCase
 
             % Verify registry has data
             map = registry.KgToOmMap;
-            testCase.verifyGreaterThan(map.numEntries, 0, ...
+            testCase.verifyGreaterThan(getMapCount(map), 0, ...
                 'Registry should have data after full update');
         end
 
@@ -478,7 +478,7 @@ classdef ControlledInstanceRegistryTest < matlab.unittest.TestCase
 
             % Should handle gracefully
             map = registry.KgToOmMap;
-            testCase.verifyEqual(map.numEntries, 0, ...
+            testCase.verifyEqual(getMapCount(map), 0, ...
                 'Should handle empty response gracefully');
         end
 
@@ -532,5 +532,13 @@ classdef ControlledInstanceRegistryTest < matlab.unittest.TestCase
             % Uses helper to create more comprehensive test data
             mockClient = omkg.test.internal.conversion.ControlledInstanceRegistryTestHelper.createConfiguredMock(3, 5);
         end
+    end
+end
+
+function count = getMapCount(map)
+    if isa(map, 'dictionary')
+        count = map.numEntries();
+    elseif isa(map, 'containers.Map')
+        count = map.Count;
     end
 end
