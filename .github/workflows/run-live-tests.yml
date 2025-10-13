@@ -8,10 +8,6 @@ on:
   # Allows for manually running this workflow from the Actions tab
   workflow_dispatch:
 
-  push:
-    branches:
-      - add-live-test-workflow # todo: remove this branch when merged
-
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -39,6 +35,9 @@ jobs:
         with:
           command: |
             matbox.installRequirements('.')
+
+            openminds.version(3)
+
             setenv('EBRAINS_MATLAB_FORCE_CLIENT_CREDENTIALS_OAUTH_FLOW', 'true')
             ebrains.authenticate(...
                 "OAuthFlow", "ClientCredentialsFlow", ...
