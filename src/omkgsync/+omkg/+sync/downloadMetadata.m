@@ -32,22 +32,22 @@ function omNode = downloadMetadata(kgIdentifier, options)
 
     controlledTermUuidMap = omkg.internal.conversion.getIdentifierMapping();
     controlledTermKgIds = controlledTermUuidMap.keys();
-    
+
     % Download instance
     kgNode = options.Client.getInstance(uuid, "Server", options.Server);
-    
+
     kgIRI = omkg.internal.conversion.getNodeKeywords(kgNode, "@id");
     rootNode = omkg.internal.conversion.convertKgNode(kgNode, options.ReferenceNode);
-    
+
     [allNodes, newNodes] = deal({rootNode});
     resolvedIRIs = kgIRI;
 
     for i = 1:options.NumLinksToResolve
-        
+
         linkedIRIs = omkg.internal.conversion.extractLinkedIdentifiers(newNodes);
         linkedIRIs = setdiff(linkedIRIs, controlledTermKgIds);
         linkedIRIs = setdiff(linkedIRIs, resolvedIRIs);
-        
+
         if ~isempty(linkedIRIs)
             if options.Verbose
                 fprintf(['Following links of %s order. ', ...
@@ -72,7 +72,7 @@ function omNode = downloadMetadata(kgIdentifier, options)
             % No more links to resolve
         end
     end
-    
+
     if options.Verbose
         fprintf('Done.\n');
     end

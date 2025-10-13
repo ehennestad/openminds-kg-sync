@@ -52,16 +52,16 @@ function ids = kgsave(openmindsInstance, kgOptions, options)
         options.MetadataStore omkg.internal.KGMetadataStore
         options.Verbose (1,1) logical = true
     end
-    
+
     % Check environment compatibility
     omkg.internal.checkEnvironment()
-    
+
     % Validate inputs
     if isempty(openmindsInstance)
         ids = string.empty();
         return
     end
-    
+
     % Configure metadata store with provided options
     if ~isfield(options, 'MetadataStore')
         serializer = omkg.internal.KGSerializer();
@@ -74,18 +74,18 @@ function ids = kgsave(openmindsInstance, kgOptions, options)
     else
         metadataStore = options.MetadataStore;
     end
-        
+
     % Save instances and collect IDs
     numInstances = numel(openmindsInstance);
     ids = strings(1, numInstances);
-    
+
     for i = 1:numInstances
         try
             % Convert SaveMode enum to string for KGMetadataStore
             % Todo: saveModeStr = string(options.SaveMode.Name);
             ids(i) = openmindsInstance(i).save(metadataStore); %, 'SaveMode', saveModeStr);
-            %id = openmindsInstance(i).save(metadataStore, 'SaveMode', saveModeStr);
-            %ids(i) = id;
+            % id = openmindsInstance(i).save(metadataStore, 'SaveMode', saveModeStr);
+            % ids(i) = id;
         catch ME
             % Add context to error and re-throw
             error('OMKG:kgsave:SaveFailed', ...

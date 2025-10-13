@@ -7,7 +7,7 @@ function resolveLinks(instance, instanceIds, instanceCollection)
     end
 
     metaType = openminds.internal.meta.fromInstance(instance);
-    
+
     for i = 1:metaType.NumProperties
         thisPropertyName = metaType.PropertyNames{i};
         if metaType.isPropertyWithLinkedType(thisPropertyName)
@@ -49,7 +49,7 @@ function resolveLinks(instance, instanceIds, instanceCollection)
             if ~isempty(resolvedInstances)
                 instance.(thisPropertyName) = resolvedInstances;
             end
-        
+
         elseif metaType.isPropertyWithEmbeddedType(thisPropertyName)
             embeddedInstances = instance.(thisPropertyName);
 

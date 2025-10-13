@@ -9,8 +9,8 @@ classdef Preferences < matlab.mixin.CustomDisplay & handle
 %                                       Choose an existing KG space or use
 %                                       "auto" to resolve space
 %                                       automatically given type.
-%                                       Auto-resolving is handled by 
-%                                       omkg.util.SpaceConfiguration 
+%                                       Auto-resolving is handled by
+%                                       omkg.util.SpaceConfiguration
 
     properties (SetObservable)
         DefaultServer (1,1) ebrains.kg.enum.KGServer = "preprod"
@@ -101,7 +101,7 @@ classdef Preferences < matlab.mixin.CustomDisplay & handle
     end
 
     methods (Access = private)
-        
+
         function addListeners(~)
         %createListeners Create listeners for some preferences
         end

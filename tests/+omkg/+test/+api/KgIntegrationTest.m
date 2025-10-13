@@ -1,5 +1,5 @@
 classdef KgIntegrationTest < matlab.unittest.TestCase
-    
+
     properties (TestParameter)
         Type = {'Person', 'DatasetVersion', 'Subject', 'TissueSample'}
     end
@@ -33,7 +33,7 @@ classdef KgIntegrationTest < matlab.unittest.TestCase
                 "stage", "RELEASED");
 
             testCase.verifyClass(instances, "openminds.core.DatasetVersion")
-            
+
             id = instances(1).id;
 
             try
@@ -57,7 +57,7 @@ classdef KgIntegrationTest < matlab.unittest.TestCase
                 'contactInformation', openminds.core.ContactInformation('email', 'johndoe@testing.io'));
 
             kgsave(person, "space", "myspace");
-            
+
             kgdelete(person.contactInformation.id)
             kgdelete(person.id)
         end
@@ -68,7 +68,7 @@ classdef KgIntegrationTest < matlab.unittest.TestCase
                 'contactInformation', openminds.core.ContactInformation('email', 'johndoe@testing.io'));
 
             savedIdPre = kgsave(person, "space", "myspace");
-            
+
             personFetchedPreEdit = kgpull(savedIdPre);
             testCase.verifyTrue(personFetchedPreEdit.familyName=="")
 

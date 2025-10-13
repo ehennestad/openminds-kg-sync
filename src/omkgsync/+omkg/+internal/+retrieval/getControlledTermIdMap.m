@@ -6,13 +6,13 @@ function identifierMap = getControlledTermIdMap(typeName, identifiers, options)
 %   This function retrieves controlled term IDs from an API based on the
 %   specified type name and a list of identifiers. If no identifiers
 %   are provided, it lists all instances of the specified type.
-% 
+%
 % Input Arguments:
 %   typeName    (1,1) string  - The type name for the controlled terms.
 %   identifiers  (1,:) string  - A list of identifiers to fetch specific terms (optional).
-% 
+%
 % Name-Value Arguments:
-%  - ApiClient - An instance of the API client to be used for 
+%  - ApiClient - An instance of the API client to be used for
 %    fetching the controlled term instances.
 %
 % Output Arguments:

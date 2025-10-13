@@ -2,20 +2,20 @@ function identifiers = listControlledTermIds(typeName, options)
 % listControlledTermIds - Retrieve controlled term identifiers
 %
 % Syntax:
-%   identifiers = omkg.internal.retrieval.listControlledTermIds(typeName, options) 
-%   This function retrieves a list of identifiers for controlled terms 
+%   identifiers = omkg.internal.retrieval.listControlledTermIds(typeName, options)
+%   This function retrieves a list of identifiers for controlled terms
 %   based on the specified type name and options provided.
 %
 % Input Arguments:
-%  - typeName (string) - The type name for the controlled terms to be 
+%  - typeName (string) - The type name for the controlled terms to be
 %    retrieved.
 %
 % Name-Value Arguments:
-%  - ApiClient - An instance of the API client to be used for 
+%  - ApiClient - An instance of the API client to be used for
 %    fetching the controlled term instances.
 %
 % Output Arguments:
-%  - identifiers (string array) - An array of identifiers for the 
+%  - identifiers (string array) - An array of identifiers for the
 %    controlled terms retrieved from the API.
 
     arguments
@@ -28,8 +28,8 @@ function identifiers = listControlledTermIds(typeName, options)
         "stage", "RELEASED", ...
         "returnPayload", false);
 
-    if iscell(response) 
-        % Todo: normalize mock responses? (I think KG will always return a 
+    if iscell(response)
+        % Todo: normalize mock responses? (I think KG will always return a
         % homogeneous list when returnPayload is false)
         response = [response{:}];
     end

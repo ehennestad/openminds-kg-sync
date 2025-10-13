@@ -14,7 +14,7 @@ Sync openMINDS metadata to and from EBRAINS KG
 Provides methods for authenticating with EBRAINS services and upload and download metadata to the EBRAINS Knowledge Graph using openMINDS metadata types
 
 ## Requirements and installation
-It is recommended to use **MATLAB R2019b** or later.
+It is recommended to use **MATLAB R2021b** or later.
 
 Users or developers who clone the repository using git can use [MatBox](https://github.com/ehennestad/MatBox) to quickly install this project's [requirements](./requirements.txt):
 
@@ -44,7 +44,7 @@ kgsave(someInstance)
 
 
 ### Getting started tutorial
-See the [Getting Started](https://github.com/ehennestad/openminds-kg-sync/blob/dev/docs/GettingStarted.md) tutorial
+See the [Getting Started](https://github.com/ehennestad/openminds-kg-sync/blob/main/docs/GettingStarted.md) tutorial
 
 ## Contributing
 Please see the [Contributing guidelines](.github/CONTRIBUTING.md) and the [Developer notes](.github/DeveloperNotes.md)
