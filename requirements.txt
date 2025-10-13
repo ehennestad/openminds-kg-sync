@@ -2,7 +2,7 @@
 # You can install these dependencies using MatBox:
 #   matbox.installRequirements(toolboxRootFolder)
 
-https://github.com/openMetadataInitiative/openMINDS_MATLAB # dev
+https://github.com/openMetadataInitiative/openMINDS_MATLAB
 # https://github.com/ehennestad/EBRAINS-MATLAB # dev 
 
 #fex://134212-openminds-metadata-models-for-matlab
