@@ -39,6 +39,9 @@ jobs:
         with:
           command: |
             matbox.installRequirements('.')
+
+            openminds.version(3)
+            
             setenv('EBRAINS_MATLAB_FORCE_CLIENT_CREDENTIALS_OAUTH_FLOW', 'true')
             ebrains.authenticate(...
                 "OAuthFlow", "ClientCredentialsFlow", ...
