@@ -11,7 +11,7 @@ function rootDir = toolboxdir()
     % Get the location of this function
     functionPath = mfilename('fullpath');
 
-    % Get the package directory (+omkgsync)
+    % Get the package directory (+omkg)
     packageDir = fileparts(functionPath);
 
     % Get the code directory (parent of package directory)

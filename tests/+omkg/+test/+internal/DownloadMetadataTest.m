@@ -47,7 +47,7 @@ classdef DownloadMetadataTest < matlab.unittest.TestCase
             catch ME
                 % If it fails due to missing dependencies, that's expected in test environment
                 if contains(ME.message, 'openminds') || contains(ME.message, 'ebrains')
-                    warning('OMKGSYNC:TestSkipped', 'Test skipped due to missing openMINDS/EBRAINS dependencies: %s', ME.message);
+                    warning('OMKG:TestSkipped', 'Test skipped due to missing openMINDS/EBRAINS dependencies: %s', ME.message);
                 else
                     rethrow(ME);
                 end
@@ -97,7 +97,7 @@ classdef DownloadMetadataTest < matlab.unittest.TestCase
             catch ME
                 % Todo: This is a very unspecific check. Should be improved
                 if contains(ME.message, 'openminds') || contains(ME.message, 'ebrains')
-                    warning('OMKGSYNC:TestSkipped', 'Test skipped due to missing dependencies: %s', ME.message);
+                    warning('OMKG:TestSkipped', 'Test skipped due to missing dependencies: %s', ME.message);
                 else
                     rethrow(ME);
                 end
@@ -117,7 +117,7 @@ classdef DownloadMetadataTest < matlab.unittest.TestCase
                     'Should propagate mock client errors');
             catch ME
                 if contains(ME.message, 'openminds') || contains(ME.message, 'ebrains')
-                    warning('OMKGSYNC:TestSkipped', 'Test skipped due to missing dependencies: %s', ME.message);
+                    warning('OMKG:TestSkipped', 'Test skipped due to missing dependencies: %s', ME.message);
                 else
                     rethrow(ME);
                 end

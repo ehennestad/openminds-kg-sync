@@ -1,5 +1,5 @@
 classdef constants
-% OMKGSYNC Constants - Centralized constant definitions
+% OMKG Constants - Centralized constant definitions
 %
 % This class provides all constants used throughout the openMINDS KG Sync toolbox,
 % including wrapped EBRAINS constants for consistency and openMINDS-specific values.

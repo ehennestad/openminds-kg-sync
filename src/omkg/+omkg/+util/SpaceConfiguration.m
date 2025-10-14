@@ -385,7 +385,7 @@ classdef SpaceConfiguration < handle
     methods (Static)
         function obj = loadDefault()
             filePath = fullfile(omkg.toolboxdir, ...
-                'omkgsync', 'resources', 'defaults', 'default_spaces.json');
+                'omkg', 'resources', 'defaults', 'default_spaces.json');
             obj = omkg.util.SpaceConfiguration.load(filePath);
         end
 
