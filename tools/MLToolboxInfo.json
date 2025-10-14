@@ -10,6 +10,6 @@
         "Description": "Provides methods for authenticating with EBRAINS services and upload and download metadata to the EBRAINS Knowledge Graph using openMINDS metadata types",
         "MinimumMatlabRelease": "R2021b",
         "MaximumMatlabRelease": "",
-        "ToolboxGettingStartedGuide": "src/omkg/gettingStarted.mlx"
+        "ToolboxGettingStartedGuide": "src/omkg/GettingStarted.mlx"
     }
 }
