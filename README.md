@@ -1,6 +1,7 @@
 # openMINDS_KG_Sync
 
 [![Version Number](https://img.shields.io/github/v/release/ehennestad/openminds-kg-sync?label=version)](https://github.com/ehennestad/openminds-kg-sync/releases/latest)
+[![View OMKG Sync Toolbox on File Exchange](https://www.mathworks.com/matlabcentral/images/matlab-file-exchange.svg)](https://se.mathworks.com/matlabcentral/fileexchange/182309-openminds-kg-sync-toolbox)
 [![MATLAB Tests](.github/badges/tests.svg)](https://github.com/ehennestad/openminds-kg-sync/actions/workflows/test-code.yml)
 [![codecov](https://codecov.io/gh/ehennestad/openminds-kg-sync/graph/badge.svg?token=JZNUFC2953)](https://codecov.io/gh/ehennestad/openminds-kg-sync)
 [![MATLAB Code Issues](.github/badges/code_issues.svg)](https://github.com/ehennestad/openminds-kg-sync/security/code-scanning)
