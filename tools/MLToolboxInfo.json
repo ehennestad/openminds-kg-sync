@@ -9,6 +9,7 @@
         "Summary": "Sync openMINDS metadata to and from EBRAINS KG",
         "Description": "Provides methods for authenticating with EBRAINS services and upload and download metadata to the EBRAINS Knowledge Graph using openMINDS metadata types",
         "MinimumMatlabRelease": "R2021b",
-        "MaximumMatlabRelease": ""
+        "MaximumMatlabRelease": "",
+        "ToolboxGettingStartedGuide": "src/omkg/gettingStarted.mlx"
     }
 }

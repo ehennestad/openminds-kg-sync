@@ -6,19 +6,19 @@ This document provides guidance for developing and maintaining the openMINDS_KG_
 
 ```
 openminds-kg-sync/
-├── src/omkgsync/                                  # Main toolbox source code
-│   ├── +omkgsync/                                 # MATLAB package namespace
-│   ├── Contents.m                                 # Toolbox contents listing
-│   └── gettingStarted.m                           # Getting started guide
-├── tests/                                         # Unit tests and test utilities
-│   ├── +omkgsync/                                 # Namespace for unit tests and test utilites
-├── tools/                                         # Development and build tools
-│   ├── +omkgsynctools/                            # Toolbox utilities
-│   └── MLToolboxInfo.json                         # Toolbox metadata
-└── docs/                                          # Documentation
-    ├── buildDocs.m                                # Documentation builder
-    ├── README.md                                  # Documentation guide
-    └── STYLE_GUIDE.md                             # Coding style guide
+├── src/omkg/                       # Main toolbox source code
+│   ├── +omkg/                      # MATLAB package namespace
+│   ├── Contents.m                  # Toolbox contents listing
+│   └── gettingStarted.m            # Getting started guide
+├── tests/                          # Unit tests and test utilities
+│   ├── +omkg/                      # Namespace for unit tests and test utilites
+├── tools/                          # Development and build tools
+│   ├── +omkgsynctools/             # Toolbox utilities
+│   └── MLToolboxInfo.json          # Toolbox metadata
+└── docs/                           # Documentation
+    ├── buildDocs.m                 # Documentation builder
+    ├── README.md                   # Documentation guide
+    └── STYLE_GUIDE.md              # Coding style guide
 ```
 
 ## 🚀 Development Workflow
@@ -27,15 +27,15 @@ openminds-kg-sync/
 
 ```matlab
 % Add the toolbox to your MATLAB path
-addpath(genpath('src/omkgsync'));
+addpath(genpath('src/omkg'));
 
 % Verify installation
-omkgsync.toolboxversion()
+omkg.toolboxversion()
 ```
 
 ### 2. Writing Functions
 
-**Location**: Place your main functions in `src/omkgsync/+omkgsync/`
+**Location**: Place your main functions in `src/omkg/+omkg/`
 
 **Naming Convention**: Use camelCase for function names and PascalCase for class names
 
@@ -45,8 +45,8 @@ function output = myFunction(input, options)
 % MYFUNCTION Brief description of what the function does
 %
 % Syntax:
-%   output = omkgsync.myFunction(input)
-%   output = omkgsync.myFunction(input, options)
+%   output = omkg.myFunction(input)
+%   output = omkg.myFunction(input, options)
 %
 % Description:
 %   Detailed description of the function's purpose and behavior.
@@ -69,11 +69,11 @@ function output = myFunction(input, options)
 %
 % Examples:
 %   % Basic usage
-%   result = omkgsync.myFunction(data);
+%   result = omkg.myFunction(data);
 %
 %   % With options
 %   opts.field1 = value;
-%   result = omkgsync.myFunction(data, opts);
+%   result = omkg.myFunction(data, opts);
 %
 % See also: RELATEDFUNCTION1, RELATEDFUNCTION2
 %
@@ -110,7 +110,7 @@ end
 
 function setupOnce(testCase)
 % Setup for the entire test suite
-addpath(fullfile(fileparts(mfilename('fullpath')), '..', 'src', 'omkgsync'));
+addpath(fullfile(fileparts(mfilename('fullpath')), '..', 'src', 'omkg'));
 end
 
 function setup(testCase)
@@ -121,7 +121,7 @@ end
 function testBasicFunctionality(testCase)
 % Test basic functionality
 input = testCase.TestData.sampleData;
-result = omkgsync.myFunction(input);
+result = omkg.myFunction(input);
 verifySize(testCase, result, size(input));
 end
 
@@ -129,13 +129,13 @@ function testWithOptions(testCase)
 % Test with optional parameters
 input = testCase.TestData.sampleData;
 options.field1 = 2;
-result = omkgsync.myFunction(input, options);
+result = omkg.myFunction(input, options);
 verifyClass(testCase, result, 'double');
 end
 
 function testErrorHandling(testCase)
 % Test error conditions
-verifyError(testCase, @() omkgsync.myFunction('invalid'), ...
+verifyError(testCase, @() omkg.myFunction('invalid'), ...
     'MATLAB:validators:mustBeNumeric');
 end
 ```
@@ -203,7 +203,7 @@ end
 
 % Provide meaningful error messages
 if size(input, 2) ~= 3
-    error('OMKGSYNC:invalidInput', ...
+    error('OMKG:invalidInput', ...
         'Input must have exactly 3 columns, got %d', size(input, 2));
 end
 ```
@@ -214,15 +214,15 @@ end
 
 ```matlab
 % Check code quality
-checkcode('src/omkgsync/')
+checkcode('src/omkg/')
 
 % Profile performance
 profile on
-omkgsync.myFunction(data);
+omkg.myFunction(data);
 profile viewer
 
 % Dependency analysis
-[fList, pList] = matlab.codetools.requiredFilesAndProducts('src/omkgsync');
+[fList, pList] = matlab.codetools.requiredFilesAndProducts('src/omkg');
 ```
 
 ### Git Workflow
