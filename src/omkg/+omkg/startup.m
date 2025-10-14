@@ -1,7 +1,3 @@
-if isempty( which('openminds.version') )
-    env om a
-end
-
 ebrains.authenticate()
 
 omkg.internal.checkEnvironment();
