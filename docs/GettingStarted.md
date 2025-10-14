@@ -30,23 +30,23 @@ disp(prefs)
 ```matlabTextOutput
 Preferences for the OpenMINDS-KG-Sync Toolbox:
 
-    DefaultServer: PROD
+    DefaultServer: PREPROD
      DefaultSpace: "myspace"
 ```
 
-Run startup. This will a) handle authentication (log in to EBRAINS), b) ensure we are using the right version of openMINDS and c) remind us of our preferences.
+Run startup to: a) handle authentication (log in to EBRAINS), b) ensure we are using the right version of openMINDS and c) remind us of our preferences.
 
 ```matlab
 omkg.startup()
 ```
 
 ```matlabTextOutput
-Default server: PROD
+Default server: PREPROD
 Default space: myspace
 ```
 # Step 2: Create openMINDS Metadata
 
-Let's create some basic neuroscience metadata using openMINDS. We start by creating a **`Person`**
+Let's create some basic neuroscience metadata using openMINDS. We start by creating a **`Person`**:
 
 ```matlab
 % Person is part of the openMINDS core module
@@ -61,13 +61,9 @@ disp(person) % Display the Person instance
 ```
 
 ```matlabTextOutput
-  Person (_:2b625824-7742-4104-afe3-9c006c9f2858) with properties:
+  Person (_:4c8232ea-682a-4238-a1db-8e22d956e382) with properties:
 
-           affiliation: [1x0 Affiliation] (Affiliation)
-         alternateName: [1x0 string]
-     associatedAccount: [1x0 AccountInformation] (AccountInformation)
     contactInformation: jane.doe@example.com (ContactInformation)
-     digitalIdentifier: [1x0 ORCID] (ORCID)
             familyName: "Doe"
              givenName: "Jane"
 
@@ -85,14 +81,11 @@ disp(organization) % Display the Organization instance
 ```
 
 ```matlabTextOutput
-  Organization (_:e566de06-c6a8-4093-b3de-108c39b9cdf4) with properties:
+  Organization (_:e5b2b192-dec5-4e6b-a37c-3b9ee4c8235c) with properties:
 
-          affiliation: [1x0 Affiliation] (Affiliation)
-    digitalIdentifier: [1x0 DigitalIdentifier] (Any of: GRIDID, RORID, RRID )
-             fullName: "Example Neuroscience Institute"
-            hasParent: [1x0 Organization] (Organization)
-             homepage: ""
-            shortName: "ENI"
+     fullName: "Example Neuroscience Institute"
+     homepage: ""
+    shortName: "ENI"
 
   Required Properties: fullName
 ```
@@ -110,13 +103,13 @@ person.affiliation = affiliation;
 Now let's save our metadata to the EBRAINS Knowledge Graph.
 
 ```matlab
-personId = kgsave(person); %TODO: retrieve the identifier
+personId = kgsave(person);
 ```
 
 ```matlabTextOutput
-Saved instance "jane.doe@example.com" of type "openminds.core.actors.ContactInformation" to space "myspace".
-Saved instance "Example Neuroscience Institute" of type "openminds.core.actors.Organization" to space "myspace".
-Saved instance "Doe, Jane" of type "openminds.core.actors.Person" to space "myspace".
+Saved instance "jane.doe@example.com" of type "openminds.core.actors.ContactInformation" to space "myspace" with id "https://kg.ebrains.eu/api/instances/b592b581-60dd-44a3-a965-b4ceb48040fb".
+Saved instance "Example Neuroscience Institute" of type "openminds.core.actors.Organization" to space "myspace" with id "https://kg.ebrains.eu/api/instances/ea80db74-88f7-4d88-93fc-b8eca4607e59".
+Saved instance "Doe, Jane" of type "openminds.core.actors.Person" to space "myspace" with id "https://kg.ebrains.eu/api/instances/481017f7-153d-4f2e-b4ad-03a20b6e0d5c".
 ```
 
 ```matlab
@@ -124,17 +117,17 @@ fprintf('✓ Person saved with ID: %s\n\n', personId);
 ```
 
 ```matlabTextOutput
-✓ Person saved with ID: 
+✓ Person saved with ID: https://kg.ebrains.eu/api/instances/481017f7-153d-4f2e-b4ad-03a20b6e0d5c
 ```
 
-Notice that linked instances were saved automatically. You can now confirm that these instances were saved in you "myspace" in the [Knowledge Graph Editor](https://editor.kg.ebrains.eu/browse?space=myspace)!
+Notice that linked instances were saved automatically. You can now confirm that these instances were saved in your "myspace" in the [Knowledge Graph Editor](https://editor.kg-ppd.ebrains.eu/browse?space=myspace)!
 
 # Step 4: List and Search Metadata
 
 Let's explore what's already in the Knowledge Graph.
 
 ```matlab
-[people, nextPage] = kglist("Person");
+[people, nextPage] = kglist("Person", "stage", "IN_PROGRESS"); % Need to use stage="IN_PROGRESS" because metadata is not released yet
 % Print names of people that were found
 if ~isempty(people)
     fprintf('✓ Found %d Person instances:\n', length(people));
@@ -154,10 +147,8 @@ end
 ```
 
 ```matlabTextOutput
-✓ Found 3 Person instances:
-1. Jane Doe (ID: 75ec86a9-5b28-4c74-b54a-6d460bd6e973)
-  2. Jane Doe (ID: 15c3df1f-a538-4c0b-9462-691e744623db)
-  3. Jane Doe (ID: 997dc90f-d3d7-4b21-b643-2002d35f7c2e)
+✓ Found 1 Person instances:
+1. Jane Doe (ID: 481017f7-153d-4f2e-b4ad-03a20b6e0d5c)
 ```
 # Step 5: Retrieve Existing Metadata
 
@@ -170,13 +161,10 @@ disp(retrievedInstance)
 ```
 
 ```matlabTextOutput
-  Person (https://kg.ebrains.eu/api/instances/75ec86a9-5b28-4c74-b54a-6d460bd6e973) with properties:
+  Person (https://kg.ebrains.eu/api/instances/481017f7-153d-4f2e-b4ad-03a20b6e0d5c) with properties:
 
-           affiliation: <external reference> (Affiliation)
-         alternateName: [1x0 string]
-     associatedAccount: [1x0 AccountInformation] (AccountInformation)
+           affiliation: <reference> (Affiliation)
     contactInformation: <reference> (ContactInformation)
-     digitalIdentifier: [1x0 ORCID] (ORCID)
             familyName: "Doe"
              givenName: "Jane"
 
@@ -195,6 +183,10 @@ contactInfo.email = "jane.doe.updated@example.com";
 kgsave(contactInfo)
 ```
 
+```matlabTextOutput
+Updated instance "jane.doe.updated@example.com" of type "openminds.core.actors.ContactInformation".
+```
+
 The `kgsave` function automatically detects if an instance already has an ID and updates it rather than creating a new one.
 
 
@@ -209,9 +201,9 @@ kgdelete( {person, contactInfo, organization} );
 ```
 
 ```matlabTextOutput
-Deleted instance of type 'openminds.core.actors.Person' with id: https://kg.ebrains.eu/api/instances/75ec86a9-5b28-4c74-b54a-6d460bd6e973
-Deleted instance of type 'openminds.core.actors.ContactInformation' with id: https://kg.ebrains.eu/api/instances/e771b03d-6359-49b0-9bc5-6b6d51fd25d7
-Deleted instance of type 'openminds.core.actors.Organization' with id: https://kg.ebrains.eu/api/instances/3026e1c8-020c-4142-8c35-1f8e55808b9c
+Deleted instance of type 'openminds.core.actors.Person' with id: https://kg.ebrains.eu/api/instances/481017f7-153d-4f2e-b4ad-03a20b6e0d5c
+Deleted instance of type 'openminds.core.actors.ContactInformation' with id: https://kg.ebrains.eu/api/instances/b592b581-60dd-44a3-a965-b4ceb48040fb
+Deleted instance of type 'openminds.core.actors.Organization' with id: https://kg.ebrains.eu/api/instances/ea80db74-88f7-4d88-93fc-b8eca4607e59
 ```
 
 It is also possible to delete instances one\-by\-one:
