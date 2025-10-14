@@ -1,4 +1,5 @@
 % openMINDS_KG_Sync
-% Version 1.0.0 ({{ date }})
+% Version 0.1.0 (R2021b+) 14-Oct-2025
 %
-% Copyright {{ year }} Eivind Hennestad
+% Copyright (c) 2025, University of Oslo / Neural Systems
+% -------------------------------------------------------
