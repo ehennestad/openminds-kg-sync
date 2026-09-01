@@ -9,7 +9,9 @@ function omNode = convertKgNode(kgNode, omReferenceNode, options)
 % Input Arguments:
 %   - kgNode (1,:) - Struct or cell array of metadata nodes/instances returned
 %       from the instances API endpoint (jsonld converted to struct by
-%       jsondecode).
+%       jsondecode). JSON-LD keyword fields may be in x_ form (x_id, x_type)
+%       as produced by jsondecode, or in the at_ form (at_id, at_type) used
+%       by openMINDS_MATLAB.
 %   - omReferenceNode (openminds.abstract.Schema) - Optional reference node for
 %       setting properties. If not provided, a new openMINDS node will be
 %       created. Used if we are resolving a node instead of creating a new
@@ -30,6 +32,10 @@ function omNode = convertKgNode(kgNode, omReferenceNode, options)
         omReferenceNode {mustBeA(omReferenceNode, ["double", "openminds.abstract.Schema"])} = []
         options.ParentNode = [];
     end
+
+    % Hand structs to openMINDS in the at_ form it expects for keywords
+    kgNode = omkg.internal.conversion.normalizeJsonLdKeywords(kgNode);
+    options.ParentNode = omkg.internal.conversion.normalizeJsonLdKeywords(options.ParentNode);
 
     % Loop through each node if a list is provided
     if numel(kgNode) > 1
@@ -73,7 +79,7 @@ function omNode = convertKgNode(kgNode, omReferenceNode, options)
         if isstruct(currentPropertyValue) || iscell(currentPropertyValue)
             if isLinkedNode(currentPropertyValue)
                 try
-                    if all(isKey(controlledInstanceMap, {currentPropertyValue.x_id}))
+                    if all(isKey(controlledInstanceMap, {currentPropertyValue.at_id}))
                         % Todo: check and resolve one by one. What if some are
                         % resolvable and others are not.
                         currentPropertyValue = resolveAsControlledInstances(currentPropertyValue, controlledInstanceMap);
@@ -147,7 +153,7 @@ function nodes = resolveAsControlledInstances(nodes, identfierMap)
     newNodes = cell(1, numel(nodes));
 
     for i = 1:numel(nodes)
-        omId = identfierMap(nodes(i).x_id);
+        omId = identfierMap(nodes(i).at_id);
         newNodes{i} = openminds.instanceFromIRI(omId);
     end
     nodes = omkg.util.concatTypesIfHomogeneous(newNodes);
@@ -162,23 +168,23 @@ function unresolvedNodes = createUnresolvedNode(node, expectedObject)
         if openminds.utility.isMixedInstance( expectedObject )
             unresolvedNodes{iNode} = feval(class(expectedObject), thisNode);
         else
-            unresolvedNodes{iNode} = feval(class(expectedObject), 'id', thisNode.x_id);
+            unresolvedNodes{iNode} = feval(class(expectedObject), 'id', thisNode.at_id);
         end
     end
     unresolvedNodes = [unresolvedNodes{:}];
 end
 
 function tf = isLinkedNode(node)
-    tf = isstruct(node) && isfield(node, 'x_id');
+    tf = isstruct(node) && isfield(node, 'at_id');
 end
 
 function tf = isEmbeddedNode(node)
-    isEmbedded = @(x) isstruct(x) && isfield(x, 'x_type');
+    isEmbedded = @(x) isstruct(x) && isfield(x, 'at_type');
 
     if iscell(node) % non-scalar
         tf = all(cellfun(@(c) isEmbedded(c), node));
     elseif isstruct(node)
-        tf = isfield(node, 'x_type');
+        tf = isfield(node, 'at_type');
     else
         tf = false;
     end

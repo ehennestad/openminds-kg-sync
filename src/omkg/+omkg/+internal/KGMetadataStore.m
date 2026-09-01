@@ -131,7 +131,8 @@ classdef KGMetadataStore < openminds.interface.MetadataStore
                         "space", space, ...
                         "returnPayload", true, ...
                         "Server", obj.DefaultServer);
-                    id = resp.data.x_id;
+                    resp = omkg.internal.conversion.normalizeJsonLdKeywords(resp);
+                    id = resp.data.at_id;
 
                     if obj.Verbose
                         fprintf('Saved instance "%s" of type "%s" to space "%s" with id "%s".\n', string(instance), class(instance), space, id)

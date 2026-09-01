@@ -20,8 +20,9 @@ function varargout = getNodeKeywords(node, keywords)
 %   [id, type] = omkg.internal.conversion.getNodeKeywords(metadataNode, "@id", "@type")
 %
 % Note: As MATLAB does not support fieldnames that start with @, the @-symbol
-%   is replaced with the prefix x_. This function assumes @-keywords are
-%   represented with the prefix x_, e.g @type <-> x_type
+%   is replaced with the prefix at_. This function assumes @-keywords are
+%   represented with the prefix at_, e.g @type <-> at_type (see
+%   omkg.internal.conversion.normalizeJsonLdKeywords)
 
     arguments
         node (1,1) struct
@@ -30,9 +31,8 @@ function varargout = getNodeKeywords(node, keywords)
         keywords (1,1) string
     end
 
-    % Matlab will replace the @ used for jsonld keywords with x_,
-    % e.g @id -> x_id
-    keywords = replace(string(keywords), '@', 'x_');
+    % Keyword fields use the at_ prefix in place of @, e.g @id -> at_id
+    keywords = replace(string(keywords), '@', 'at_');
 
     numKeywords = numel(keywords);
     varargout = cell(1, numKeywords);
