@@ -143,6 +143,13 @@ classdef ConvertKgNodeTest < matlab.unittest.TestCase
 
             testCase.verifyTrue(isa(omNode, 'openminds.abstract.Schema'), ...
                 'Should create valid node even with unresolved links');
+
+            linkedInstance = omNode.contactInformation;
+            testCase.verifyEqual(string(linkedInstance.id), string(linkedNode.x_id))
+            testCase.verifyTrue(linkedInstance.isReference(), ...
+                'A linked node must be an explicit reference so it is resolved later and never saved as an empty node');
+            testCase.verifyEqual(string(omNode.getUnresolvedLinks()), string(linkedNode.x_id), ...
+                'The linked node should be reported as an unresolved link');
         end
 
         function testConvertWithEmbeddedNode(testCase)

@@ -47,19 +47,19 @@ classdef KGResolverTest < matlab.unittest.TestCase
             resolver = testCase.createResolver();
 
             testCase.verifyTrue(resolver.canResolve(testCase.PersonIri))
-            testCase.verifyTrue(resolver.canResolve([testCase.PersonIri, testCase.ControlledIri]))
+            testCase.verifyTrue(resolver.canResolve(testCase.ControlledIri))
         end
 
         function testCannotResolveOtherIdentifiers(testCase)
             resolver = testCase.createResolver();
 
             testCase.verifyFalse(resolver.canResolve("https://openminds.ebrains.eu/instances/species/musMusculus"))
-            testCase.verifyFalse(resolver.canResolve([testCase.PersonIri, "https://example.org/other"]))
+            testCase.verifyFalse(resolver.canResolve("https://example.org/other"))
         end
 
         function testResolveNodePopulatesTypedReferenceInPlace(testCase)
             resolver = testCase.createResolver();
-            personStub = openminds.core.Person('id', testCase.PersonIri);
+            personStub = openminds.core.Person('id', testCase.PersonIri, 'IsReference', true);
 
             resolved = resolver.resolveNode(personStub);
 
@@ -84,7 +84,7 @@ classdef KGResolverTest < matlab.unittest.TestCase
 
         function testResolveNodeUsesConfiguredServer(testCase)
             resolver = testCase.createResolver("Server", ebrains.kg.enum.KGServer.PREPROD);
-            personStub = openminds.core.Person('id', testCase.PersonIri);
+            personStub = openminds.core.Person('id', testCase.PersonIri, 'IsReference', true);
 
             resolver.resolveNode(personStub);
 
@@ -94,7 +94,7 @@ classdef KGResolverTest < matlab.unittest.TestCase
 
         function testResolveNodeResolvesControlledInstanceLocally(testCase)
             resolver = testCase.createResolver();
-            speciesStub = openminds.controlledterms.Species('id', testCase.ControlledIri);
+            speciesStub = openminds.controlledterms.Species('id', testCase.ControlledIri, 'IsReference', true);
 
             resolved = resolver.resolveNode(speciesStub);
 
@@ -128,14 +128,14 @@ classdef KGResolverTest < matlab.unittest.TestCase
 
             % Registering without Replace keeps the first resolver
             openminds.registerLinkResolver(testCase.createResolver())
-            personStub = openminds.core.Person('id', testCase.PersonIri);
+            personStub = openminds.core.Person('id', testCase.PersonIri, 'IsReference', true);
             personStub.resolve();
             testCase.verifyEqual(firstClient.getCallCount('getInstance'), 1)
             testCase.verifyEqual(testCase.MockClient.getCallCount('getInstance'), 0)
 
             % Registering with Replace swaps in the new resolver
             openminds.registerLinkResolver(testCase.createResolver(), "Replace", true)
-            personStub = openminds.core.Person('id', testCase.PersonIri);
+            personStub = openminds.core.Person('id', testCase.PersonIri, 'IsReference', true);
             personStub.resolve();
             testCase.verifyEqual(firstClient.getCallCount('getInstance'), 1)
             testCase.verifyEqual(testCase.MockClient.getCallCount('getInstance'), 1)

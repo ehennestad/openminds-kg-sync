@@ -168,7 +168,11 @@ function unresolvedNodes = createUnresolvedNode(node, expectedObject)
         if openminds.utility.isMixedInstance( expectedObject )
             unresolvedNodes{iNode} = feval(class(expectedObject), thisNode);
         else
-            unresolvedNodes{iNode} = feval(class(expectedObject), 'id', thisNode.at_id);
+            % An id alone creates a node; the link must be an explicit
+            % reference so that it is resolved later and never saved as
+            % an empty node.
+            unresolvedNodes{iNode} = feval(class(expectedObject), ...
+                'id', thisNode.at_id, 'IsReference', true);
         end
     end
     unresolvedNodes = [unresolvedNodes{:}];

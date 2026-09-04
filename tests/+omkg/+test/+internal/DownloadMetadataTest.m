@@ -93,6 +93,12 @@ classdef DownloadMetadataTest < matlab.unittest.TestCase
                     'NumLinksToResolve', 1);
 
                 testCase.verifyNotEmpty(result, 'Should return non-empty result');
+                testCase.verifyEqual(testCase.MockClient.getCallCount('getInstancesBulk'), 1, ...
+                    'Linked references should be downloaded in bulk when resolving one level of links');
+                testCase.verifyEqual(result.contactInformation.email, "john.doe@example.com", ...
+                    'The linked node should be resolved with the downloaded values');
+                testCase.verifyFalse(result.contactInformation.isReference(), ...
+                    'A resolved link should no longer be a reference');
 
             catch ME
                 % Todo: This is a very unspecific check. Should be improved

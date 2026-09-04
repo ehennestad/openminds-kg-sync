@@ -116,12 +116,12 @@ classdef KGResolver < openminds.interface.LinkResolver
         end
 
         function tf = canResolve(obj, IRI)
-        % canResolve - Whether all given IRIs are KG instance identifiers
+        % canResolve - Whether the given IRI is a KG instance identifier
             arguments
                 obj (1,1) omkg.internal.KGResolver
-                IRI (1,:) string
+                IRI (1,1) string
             end
-            tf = all(startsWith(IRI, obj.IRIPrefix));
+            tf = startsWith(IRI, obj.IRIPrefix);
         end
     end
 
