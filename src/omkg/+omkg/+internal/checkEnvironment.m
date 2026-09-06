@@ -8,9 +8,8 @@ function checkEnvironment()
         openminds.version(3);
     end
 
-    % Ensure KG resolver is added to openminds' linkresolver registry
-    resolverRegistry = openminds.internal.resolver.LinkResolverRegistry.instance();
-    if ~resolverRegistry.hasLinkResolver('omkg.internal.KGResolver')
-        resolverRegistry.addLinkResolver( omkg.internal.KGResolver() )
-    end
+    % Ensure a KG resolver is registered in openminds' link resolver
+    % registry. Registration is idempotent per IRI prefix, so a resolver
+    % that was registered earlier (possibly reconfigured) is kept.
+    openminds.registerLinkResolver( omkg.internal.KGResolver() )
 end

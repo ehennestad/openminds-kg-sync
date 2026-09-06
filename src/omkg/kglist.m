@@ -36,6 +36,7 @@ function [instances, nextPageFcn] = kglist(type, kgOptions, options)
     if isempty(data); return; end
 
     % Post-process (convert to openMINDS type instances)
+    data = omkg.internal.conversion.normalizeJsonLdKeywords(data);
     if ~iscell(data)
         data = num2cell(data);
     end
@@ -47,7 +48,7 @@ function [instances, nextPageFcn] = kglist(type, kgOptions, options)
         try
             instances(i) = omkg.internal.conversion.convertKgNode(data{i});
         catch ME
-            warning('Could not create metadata for instance with id "%s" with following error: %s', data{i}.x_id, ME.message)
+            warning('Could not create metadata for instance with id "%s" with following error: %s', data{i}.at_id, ME.message)
         end
     end
 

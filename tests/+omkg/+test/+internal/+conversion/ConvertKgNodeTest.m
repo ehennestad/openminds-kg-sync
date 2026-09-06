@@ -58,6 +58,25 @@ classdef ConvertKgNodeTest < matlab.unittest.TestCase
                 'OMKG:ConvertKgNode:UnsupportedProperty', ...
                 'Unsupported properties should trigger warning');
         end
+
+        function testConvertNodeWithAtFormKeywords(testCase)
+            % Test that nodes with at_-form keywords (at_id, at_type) convert
+            % identically to nodes with jsondecode's x_-form keywords
+            linkedNode = struct('at_id', 'https://kg.ebrains.eu/api/instances/linked-123');
+            kgNode = struct(...
+                'at_id', 'https://kg.ebrains.eu/api/instances/test-123', ...
+                'at_type', {{'https://openminds.ebrains.eu/core/Person'}}, ...
+                'https___openminds_ebrains_eu_vocab_givenName', 'John', ...
+                'https___openminds_ebrains_eu_vocab_contactInformation', linkedNode);
+
+            omNode = omkg.internal.conversion.convertKgNode(kgNode);
+
+            testCase.verifyClass(omNode, 'openminds.core.Person')
+            testCase.verifyEqual(string(omNode.id), string(kgNode.at_id))
+            testCase.verifyEqual(omNode.givenName, "John")
+            testCase.verifyEqual(string(omNode.contactInformation.id), string(linkedNode.at_id), ...
+                'Linked node should become an unresolved reference with the given id');
+        end
     end
 
     %% Error Handling Tests
@@ -124,6 +143,13 @@ classdef ConvertKgNodeTest < matlab.unittest.TestCase
 
             testCase.verifyTrue(isa(omNode, 'openminds.abstract.Schema'), ...
                 'Should create valid node even with unresolved links');
+
+            linkedInstance = omNode.contactInformation;
+            testCase.verifyEqual(string(linkedInstance.id), string(linkedNode.x_id))
+            testCase.verifyTrue(linkedInstance.isReference(), ...
+                'A linked node must be an explicit reference so it is resolved later and never saved as an empty node');
+            testCase.verifyEqual(string(omNode.getUnresolvedLinks()), string(linkedNode.x_id), ...
+                'The linked node should be reported as an unresolved link');
         end
 
         function testConvertWithEmbeddedNode(testCase)

@@ -32,6 +32,7 @@ function identifierMap = getControlledTermIdMap(typeName, identifiers, options)
             "RELEASED", "Server", "prod");
     end
 
+    response = omkg.internal.conversion.normalizeJsonLdKeywords(response);
     identifierMap = processInstanceResponse(response);
 end
 
@@ -44,7 +45,7 @@ function result = processInstanceResponse(data)
         if iscell(thisData)
             thisData = thisData{1};
         end
-        kgIds(j) = string(thisData.x_id);
+        kgIds(j) = string(thisData.at_id);
 
         schemaIds = thisData.http___schema_org_identifier;
         isOpenMindsIdentifier = startsWith(schemaIds, 'https://openminds');
