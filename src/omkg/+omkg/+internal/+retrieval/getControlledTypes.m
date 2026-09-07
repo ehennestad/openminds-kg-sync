@@ -31,7 +31,7 @@ function result = processTypeResponse(typeData)
 %
 %   Returns a string array with names (@type IRI) of controlled term types
 
-    TYPE_NAMESPACE_IRI = "https://openminds.ebrains.eu/controlledTerms/";
+    TYPE_NAMESPACE_IRI = omkg.constants.OpenMINDSNamespaceIRI + "controlledTerms/";
 
     result = string.empty;
     for i = 1:numel(typeData)

@@ -13,8 +13,11 @@ classdef constants
         KgNamespaceIRI = ebrains.common.constant.KgNamespaceIRI()
         KgInstanceIRIPrefix = ebrains.common.constant.KgInstanceIRIPrefix()
 
-        % OpenMINDS-specific constants
-        OpenMINDSNamespaceIRI = "https://openminds.ebrains.eu/"
-        OpenMINDSInstanceIRIPrefix = "https://openminds.ebrains.eu/instances/"
+        % OpenMINDS-specific constants. The KG holds instances tagged with
+        % either the v3-and-below namespace (openminds.ebrains.eu) or the
+        % v4-and-above namespace (openminds.om-i.org), so both are listed
+        % here for matching against downloaded data.
+        OpenMINDSNamespaceIRI = ["https://openminds.ebrains.eu/", "https://openminds.om-i.org/"]
+        OpenMINDSInstanceIRIPrefix = ["https://openminds.ebrains.eu/instances/", "https://openminds.om-i.org/instances/"]
     end
 end

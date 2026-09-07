@@ -11,10 +11,19 @@ classdef Preferences < matlab.mixin.CustomDisplay & handle
 %                                       automatically given type.
 %                                       Auto-resolving is handled by
 %                                       omkg.util.SpaceConfiguration
+%       KgOpenMINDSVersion  (double)  : The openMINDS model version (major
+%                                       version number) the KG is assumed
+%                                       to use. The KG does not expose this
+%                                       via an API, so it is a pinned
+%                                       preference rather than something
+%                                       detected at runtime. Used to set
+%                                       the active openMINDS_MATLAB model
+%                                       version before uploading metadata.
 
     properties (SetObservable)
         DefaultServer (1,1) ebrains.kg.enum.KGServer = "preprod"
         DefaultSpace (1,1) string = "myspace"
+        KgOpenMINDSVersion (1,1) double = 4
     end
 
     properties (Constant, Access = private)

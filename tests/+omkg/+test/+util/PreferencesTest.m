@@ -76,6 +76,27 @@ classdef PreferencesTest < matlab.unittest.TestCase
                 'Set and retrieved DefaultSpace values should match');
         end
 
+        function testGetPrefKgOpenMINDSVersion(testCase)
+            % Test getting the pinned KG openMINDS version preference
+
+            version = omkg.getpref("KgOpenMINDSVersion");
+
+            testCase.verifyClass(version, 'double', ...
+                'KgOpenMINDSVersion should be a double');
+            testCase.verifyEqual(version, 4, ...
+                'Default KgOpenMINDSVersion should be 4');
+        end
+
+        function testSetPrefKgOpenMINDSVersion(testCase)
+            % Test setting the pinned KG openMINDS version preference
+
+            omkg.setpref("KgOpenMINDSVersion", 3);
+            retrievedValue = omkg.getpref("KgOpenMINDSVersion");
+
+            testCase.verifyEqual(retrievedValue, 3, ...
+                'Set and retrieved KgOpenMINDSVersion values should match');
+        end
+
         function testPreferencesSingleton(testCase)
             % Test that preferences behave as a singleton
 
