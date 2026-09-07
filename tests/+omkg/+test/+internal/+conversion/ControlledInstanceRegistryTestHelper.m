@@ -188,15 +188,5 @@ classdef ControlledInstanceRegistryTestHelper
 
             idMap = struct('kg', num2cell(kgIds), 'om', num2cell(omIds));
         end
-
-        function cleanupTestCache()
-            % cleanupTestCache - Remove test cache file
-            toolboxDir = omkg.toolboxdir();
-            cacheFile = fullfile(toolboxDir, 'userdata', 'kg2om_identifier_loopkup.json');
-
-            if isfile(cacheFile)
-                delete(cacheFile);
-            end
-        end
     end
 end

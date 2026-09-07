@@ -22,7 +22,6 @@ classdef ControlledInstanceIdentifierRegistry < handle
 
     % Todo:
     % - immutability of verbose, apiclient
-    % - pattern for using a different file, i.e during testing...
 
     properties (SetAccess = immutable)
         Verbose logical = true  % Control console output
@@ -32,6 +31,7 @@ classdef ControlledInstanceIdentifierRegistry < handle
         IdentifierMap struct = struct('kg', {}, 'om', {})
         LastUpdateTime datetime = datetime.empty
         UpdateInProgress logical = false
+        FilePathOverride string = string.empty  % Injectable cache file for testing
         ApiClient ebrains.kg.api.InstancesClient  % Injectable API client for testing
     end
 
@@ -54,7 +54,7 @@ classdef ControlledInstanceIdentifierRegistry < handle
             arguments
                 options.ApiClient (1,1) ebrains.kg.api.InstancesClient = ebrains.kg.api.InstancesClient();
                 options.Verbose (1,1) logical = true
-                options.File = []
+                options.File string = string.empty
             end
 
             if ~isempty(options.ApiClient)
@@ -62,11 +62,9 @@ classdef ControlledInstanceIdentifierRegistry < handle
             end
 
             obj.Verbose = options.Verbose;
+            obj.FilePathOverride = options.File;
 
             obj.loadFromFile();
-            if isempty(obj.IdentifierMap)
-                obj.downloadAll();
-            end
         end
     end
 
@@ -83,13 +81,18 @@ classdef ControlledInstanceIdentifierRegistry < handle
             %   Verbose - (Optional) Enable/disable console output (default: true)
 
             arguments
-                options.ApiClient ebrains.kg.api.InstancesClient = ebrains.kg.api.InstancesClient()
+                options.ApiClient ebrains.kg.api.InstancesClient = ...
+                    ebrains.kg.api.InstancesClient.empty
                 options.File string = string.empty
                 options.Reset (1,1) logical = false
                 options.Verbose (1,1) logical = true
             end
 
-            omkg.internal.checkEnvironment()
+            % checkEnvironment is deliberately not called here. Every public
+            % entry point calls it before anything reaches this registry,
+            % and calling it here would put the registry on the resolver
+            % construction path: checkEnvironment registers a KGResolver,
+            % which reads this registry.
 
             persistent singletonInstance
 
@@ -102,20 +105,19 @@ classdef ControlledInstanceIdentifierRegistry < handle
                 end
             end
 
+            % Only forward an API client that the caller actually supplied,
+            % so that a plain instance() call does not replace a client that
+            % was injected for testing.
+            constructorArgs = {"Verbose", options.Verbose, "File", options.File};
+            if ~isempty(options.ApiClient)
+                constructorArgs = [constructorArgs, {"ApiClient", options.ApiClient}];
+            end
+
             if isempty(singletonInstance) || ~isvalid(singletonInstance)
-                singletonInstance = omkg.internal.conversion.ControlledInstanceIdentifierRegistry(...
-                    "ApiClient", options.ApiClient, ...
-                    "Verbose", options.Verbose);
-            else
-                % Allow setting API client for testing % Todo: Consider
-                % whether api client should be immutable
-                if ~isempty(options.ApiClient)
-                    singletonInstance.ApiClient = options.ApiClient;
-                end
-                % Allow updating verbosity
-                % if isfield(options, 'Verbose')
-                %     singletonInstance.Verbose = options.Verbose;
-                % end
+                singletonInstance = ...
+                    omkg.internal.conversion.ControlledInstanceIdentifierRegistry(constructorArgs{:});
+            elseif ~isempty(options.ApiClient)
+                singletonInstance.ApiClient = options.ApiClient;
             end
 
             obj = singletonInstance;
@@ -232,6 +234,39 @@ classdef ControlledInstanceIdentifierRegistry < handle
             tf = hoursSinceUpdate >= obj.UPDATE_INTERVAL_HOURS;
         end
 
+        function filepath = getFilePath(obj)
+            % getFilePath - Path of the cached identifier map for the active version
+            %
+            %   A File given to the constructor overrides this, and also
+            %   suppresses the shipped resource, so that a test can run
+            %   against a known map without touching the user's cache.
+            %
+            %   The cache lives in prefdir, next to the toolbox preferences,
+            %   because the toolbox folder is read-only for an installed
+            %   toolbox. It is keyed by openMINDS version: an openMINDS
+            %   instance IRI carries a version specific namespace, and a map
+            %   written for one version resolves to nothing under another.
+
+            if ~isempty(obj.FilePathOverride)
+                filepath = obj.FilePathOverride;
+                return
+            end
+
+            filepath = fullfile(prefdir, "omkg", ...
+                sprintf("kg2om_identifier_lookup_v%d.json", ...
+                    omkg.getpref("KgOpenMINDSVersion")));
+        end
+
+        function filepath = getSeedFilePath(~)
+            % getSeedFilePath - Path of the identifier map shipped with the toolbox
+
+            resourceDir = fullfile(...
+                fileparts(fileparts(mfilename('fullpath'))), 'resources');
+
+            filepath = fullfile(resourceDir, ...
+                sprintf("kg2om_identifier_lookup_v%d.json", ...
+                    omkg.getpref("KgOpenMINDSVersion")));
+        end
     end
 
     methods (Access = private) % Internal methods for update
@@ -361,10 +396,20 @@ classdef ControlledInstanceIdentifierRegistry < handle
 
         function loadFromFile(obj)
             % loadFromFile - Load identifier map from JSON file
+            %
+            %   Falls back to the resource shipped with the toolbox, which
+            %   only exists for the openMINDS versions it was generated for.
+            %   Starting with an empty map is a valid outcome: controlled
+            %   instances are then resolved by downloading them from the
+            %   Knowledge Graph instead of from the local openMINDS library.
 
             mapFilepath = obj.getFilePath();
             if ~isfile(mapFilepath)
-                mapFilepath = fullfile(fileparts(fileparts(mfilename('fullpath'))), 'resources', 'kg2om_identifier_loopkup.json');
+                if ~isempty(obj.FilePathOverride)
+                    % An explicit file means that file and nothing else.
+                    return
+                end
+                mapFilepath = obj.getSeedFilePath();
                 if ~isfile(mapFilepath)
                     return
                 end
@@ -396,14 +441,6 @@ classdef ControlledInstanceIdentifierRegistry < handle
             end
         end
 
-        function filepath = getFilePath(~)
-            % getFilePath - Get the file path for the identifier map
-
-            filepath = fullfile(...
-                omkg.toolboxdir(), ...
-                'userdata', ...
-                'kg2om_identifier_loopkup.json');
-        end
     end
 end
 

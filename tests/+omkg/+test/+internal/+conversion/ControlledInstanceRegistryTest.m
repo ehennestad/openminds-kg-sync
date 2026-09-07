@@ -23,65 +23,56 @@ classdef ControlledInstanceRegistryTest < matlab.unittest.TestCase
                       "https://openminds.ebrains.eu/instances/technique/technique1"}
     end
 
-    properties
-        TestDataDir
-        OriginalCacheFile
-        OriginalSeedFile
+    properties (Access = private)
+        % Cache file the registry under test reads and writes. Pointing the
+        % registry at a temporary file keeps the user's real cache and the
+        % resource shipped with the toolbox out of the test entirely.
+        CacheFile (1,1) string
     end
 
     methods (TestClassSetup)
-        function setupTestEnvironment(testCase)
-            % Set up test environment - backup existing cache if present
-            toolboxDir = omkg.toolboxdir();
-            testCase.TestDataDir = fullfile(toolboxDir, 'userdata');
-            testCase.OriginalCacheFile = fullfile(testCase.TestDataDir, ...
-                'kg2om_identifier_loopkup.json');
-            testCase.OriginalSeedFile = fullfile(toolboxDir, ...
-                'omkg', '+omkg', '+internal', 'resources', ...
-                'kg2om_identifier_loopkup.json');
-            % Backup existing cache file if it exists
-            if isfile(testCase.OriginalCacheFile)
-                copyfile(testCase.OriginalCacheFile, ...
-                    [testCase.OriginalCacheFile '.backup']);
-            end
-
-            if isfile(testCase.OriginalSeedFile)
-                movefile(testCase.OriginalSeedFile, ...
-                    [testCase.OriginalSeedFile '.backup']);
-            end
-        end
-    end
-
-    methods (TestClassTeardown)
-        function restoreEnvironment(testCase)
-            % Restore original cache file
-            backupFile = [testCase.OriginalCacheFile '.backup'];
-            if isfile(backupFile)
-                movefile(backupFile, testCase.OriginalCacheFile);
-            elseif isfile(testCase.OriginalCacheFile)
-                % Clean up test cache if no backup existed
-                delete(testCase.OriginalCacheFile);
-            end
-
-            backupFile = [testCase.OriginalSeedFile '.backup'];
-            if isfile(backupFile)
-                movefile(backupFile, testCase.OriginalSeedFile);
-            end
+        function pinOpenMindsVersion(testCase)
+            % The registry consults openMINDS to choose between identifier
+            % aliases, so the version has to be fixed for the test to be
+            % deterministic. instance() does not pin it.
+            originalVersion = openminds.version();
+            openminds.version("v3.0");
+            testCase.addTeardown(@() openminds.version(originalVersion));
         end
     end
 
     methods (TestMethodSetup)
         function clearSingletonForTest(testCase)
-            % Clear singleton instance before each test
-            % This ensures each test starts with a fresh registry
-            if isfile(testCase.OriginalCacheFile)
-                delete(testCase.OriginalCacheFile)
+            % Give each test a fresh registry backed by its own cache file
+            import matlab.unittest.fixtures.TemporaryFolderFixture
+
+            tempFolder = testCase.applyFixture(TemporaryFolderFixture);
+            testCase.CacheFile = fullfile(tempFolder.Folder, ...
+                "kg2om_identifier_lookup_test.json");
+
+            % The registry no longer downloads on construction, so populate
+            % it here: most tests below assume a registry that has data.
+            registry = testCase.createRegistry(testCase.createMockClient());
+            registry.update();
+        end
+    end
+
+    methods (Access = private)
+        function discardCache(testCase)
+            % discardCache - Remove this test's cache file
+            %
+            %   A reset registry reloads its cache, so a test that needs an
+            %   unpopulated registry has to remove the file first.
+            if isfile(testCase.CacheFile)
+                delete(testCase.CacheFile)
             end
+        end
 
-            mockClient = testCase.createMockClient();
-
-            omkg.internal.conversion.ControlledInstanceIdentifierRegistry.instance(...
-                'Reset', true, 'ApiClient', mockClient, 'Verbose', false);
+        function registry = createRegistry(testCase, mockClient)
+            % createRegistry - Reset the singleton onto this test's cache file
+            registry = omkg.internal.conversion.ControlledInstanceIdentifierRegistry.instance(...
+                'Reset', true, 'ApiClient', mockClient, 'Verbose', false, ...
+                'File', testCase.CacheFile);
         end
     end
 
@@ -223,6 +214,22 @@ classdef ControlledInstanceRegistryTest < matlab.unittest.TestCase
 
     %% Update and Download Tests
     methods (Test)
+        function testStartsEmptyWithoutCacheOrShippedResource(testCase)
+            % Construction must not reach the network. With no cache for the
+            % active openMINDS version, an empty map is the correct state:
+            % controlled instances are then downloaded from the Knowledge
+            % Graph like any other node.
+            mockClient = testCase.createMockClient();
+            testCase.discardCache();
+
+            registry = testCase.createRegistry(mockClient);
+
+            testCase.verifyEqual(getMapCount(registry.KgToOmMap), 0, ...
+                'A registry with no cache should start empty')
+            testCase.verifyEqual(mockClient.getCallCount(), 0, ...
+                'Construction should not call the Knowledge Graph')
+        end
+
         function testNeedsUpdateAfterFreshDownload(testCase)
             % Test that needsUpdate returns false after fresh download
             mockClient = testCase.createMockClient();
@@ -238,8 +245,7 @@ classdef ControlledInstanceRegistryTest < matlab.unittest.TestCase
         function testUpdateUsesRetrievalFunctions(testCase)
             % Test that update properly calls retrieval functions
             mockClient = testCase.createConfiguredMockClient();
-            registry = omkg.internal.conversion.ControlledInstanceIdentifierRegistry.instance(...
-                'ApiClient', mockClient, 'Reset', true, 'Verbose', false);
+            registry = testCase.createRegistry(mockClient);
 
             registry.update();
 
@@ -269,8 +275,7 @@ classdef ControlledInstanceRegistryTest < matlab.unittest.TestCase
             % from the Knowledge Graph must disappear from the map too. The
             % per-type incremental refresh this replaced could only ever add.
             mockClient = testCase.createMockClient();
-            registry = omkg.internal.conversion.ControlledInstanceIdentifierRegistry.instance(...
-                'ApiClient', mockClient, 'Reset', true, 'Verbose', false);
+            registry = testCase.createRegistry(mockClient);
             registry.update();
 
             retiredKgId = "6ba7b810-9dad-11d1-80b4-00c04fd430c8";
@@ -290,8 +295,7 @@ classdef ControlledInstanceRegistryTest < matlab.unittest.TestCase
         function testNewTypeDetectionFlow(testCase)
             % Test the complete flow of detecting and processing a new type
             mockClient = testCase.createConfiguredMockClient();
-            registry = omkg.internal.conversion.ControlledInstanceIdentifierRegistry.instance(...
-                'ApiClient', mockClient, 'Reset', true, 'Verbose', false);
+            registry = testCase.createRegistry(mockClient);
 
             % Initial download
             registry.update();
@@ -317,8 +321,7 @@ classdef ControlledInstanceRegistryTest < matlab.unittest.TestCase
         function testDataConsistencyAcrossUpdates(testCase)
             % Test that data remains consistent across updates
             mockClient = testCase.createConfiguredMockClient();
-            registry = omkg.internal.conversion.ControlledInstanceIdentifierRegistry.instance(...
-                'ApiClient', mockClient, 'Reset', true, 'Verbose', false);
+            registry = testCase.createRegistry(mockClient);
 
             % Initial download
             registry.update();
@@ -349,7 +352,7 @@ classdef ControlledInstanceRegistryTest < matlab.unittest.TestCase
             registry.update();
 
             % Verify file exists
-            testCase.verifyTrue(isfile(testCase.OriginalCacheFile), ...
+            testCase.verifyTrue(isfile(testCase.CacheFile), ...
                 'Cache file should be created');
         end
 
@@ -381,16 +384,14 @@ classdef ControlledInstanceRegistryTest < matlab.unittest.TestCase
             mockClient = testCase.createConfiguredMockClient();
 
             % First initialization with download
-            registry1 = omkg.internal.conversion.ControlledInstanceIdentifierRegistry.instance(...
-                'ApiClient', mockClient, 'Reset', true, 'Verbose', false);
+            registry1 = testCase.createRegistry(mockClient);
             registry1.update();
             firstCallCount = mockClient.getCallCount();
 
             % Clear singleton and reinitialize (should load from cache)
             mockClient.clearCalls();
 
-            registry2 = omkg.internal.conversion.ControlledInstanceIdentifierRegistry.instance(...
-                'ApiClient', mockClient, 'Reset', true, 'Verbose', false);
+            registry2 = testCase.createRegistry(mockClient);
             % Just accessing should use cache
             map = registry2.KgToOmMap;
             secondCallCount = mockClient.getCallCount();
@@ -409,7 +410,7 @@ classdef ControlledInstanceRegistryTest < matlab.unittest.TestCase
             registry.update();
 
             % Read and verify file format
-            data = jsondecode(fileread(testCase.OriginalCacheFile));
+            data = jsondecode(fileread(testCase.CacheFile));
 
             testCase.verifyTrue(isfield(data, 'identifiers'), ...
                 'File should contain identifiers field');
@@ -423,8 +424,7 @@ classdef ControlledInstanceRegistryTest < matlab.unittest.TestCase
         function testNoDuplicateIdentifiers(testCase)
             % Test that registry doesn't create duplicate entries
             mockClient = testCase.createConfiguredMockClient();
-            registry = omkg.internal.conversion.ControlledInstanceIdentifierRegistry.instance(...
-                'ApiClient', mockClient, 'Reset', true, 'Verbose', false);
+            registry = testCase.createRegistry(mockClient);
 
             registry.update();
             map = registry.KgToOmMap;
@@ -461,8 +461,7 @@ classdef ControlledInstanceRegistryTest < matlab.unittest.TestCase
                     {{'https://openminds.ebrains.eu/controlledTerms/programmingLanguage/AMPL'}})
             ]);
 
-            registry = omkg.internal.conversion.ControlledInstanceIdentifierRegistry.instance(...
-                'ApiClient', mockClient, 'Reset', true, 'Verbose', false);
+            registry = testCase.createRegistry(mockClient);
             registry.update();
 
             kgToOmMap = registry.KgToOmMap;
@@ -486,8 +485,7 @@ classdef ControlledInstanceRegistryTest < matlab.unittest.TestCase
                     'http___schema_org_identifier', ...
                     {{'https://example.org/some/other/identifier'}}));
 
-            registry = omkg.internal.conversion.ControlledInstanceIdentifierRegistry.instance(...
-                'ApiClient', mockClient, 'Reset', true, 'Verbose', false);
+            registry = testCase.createRegistry(mockClient);
             registry.update();
 
             testCase.verifyError(...
@@ -512,8 +510,7 @@ classdef ControlledInstanceRegistryTest < matlab.unittest.TestCase
                     struct('x_id', char(aliasedKgId), ...
                         'http___schema_org_identifier', aliasOrder(1)));
 
-                registry = omkg.internal.conversion.ControlledInstanceIdentifierRegistry.instance(...
-                    'ApiClient', mockClient, 'Reset', true, 'Verbose', false);
+                registry = testCase.createRegistry(mockClient);
                 registry.update();
 
                 testCase.verifyEqual(registry.getOpenMindsId(aliasedKgId), ...
@@ -535,8 +532,7 @@ classdef ControlledInstanceRegistryTest < matlab.unittest.TestCase
                         'https://openminds.ebrains.eu/instances/contributionType/metadataManagement'
                     }}));
 
-            registry = omkg.internal.conversion.ControlledInstanceIdentifierRegistry.instance(...
-                'ApiClient', mockClient, 'Reset', true, 'Verbose', false);
+            registry = testCase.createRegistry(mockClient);
             registry.update();
 
             testCase.verifyEqual(registry.getKgId(...
@@ -552,15 +548,10 @@ classdef ControlledInstanceRegistryTest < matlab.unittest.TestCase
     methods (Test)
         function testHandlesEmptyResponse(testCase)
             % Test handling of empty API response
-
-            if isfile(testCase.OriginalCacheFile)
-                delete(testCase.OriginalCacheFile)
-            end
-
             mockClient = omkg.test.helper.mock.KGIntancesAPIMockClient();
+            testCase.discardCache();
 
-            registry = omkg.internal.conversion.ControlledInstanceIdentifierRegistry.instance(...
-                'Reset', true, 'ApiClient', mockClient, 'Verbose', false);
+            registry = testCase.createRegistry(mockClient);
 
             % Should handle gracefully
             map = registry.KgToOmMap;

@@ -43,12 +43,12 @@ classdef KGResolver < openminds.interface.LinkResolver
         % for controlled instances (dictionary or containers.Map).
         IdentifierMap = []
 
-        % The identifier map is loaded from the controlled instance registry
-        % on first use rather than in the constructor. Registering the
-        % resolver at startup must be cheap and offline, and the registry
-        % itself calls omkg.internal.checkEnvironment (which constructs a
-        % resolver), so loading eagerly would recurse.
-        IsIdentifierMapLoaded (1,1) logical = false
+        % Whether IdentifierMap was supplied by the caller. Otherwise the
+        % map is read from the controlled instance registry on each use:
+        % registering the resolver at startup must be cheap and offline, and
+        % the registry owns the cache, so re-reading it costs a lookup and
+        % keeps the resolver correct after omkg.updateControlledInstances.
+        HasInjectedIdentifierMap (1,1) logical = false
     end
 
     methods
@@ -78,7 +78,7 @@ classdef KGResolver < openminds.interface.LinkResolver
 
             if ~isnumeric(options.IdentifierMap)
                 obj.IdentifierMap = options.IdentifierMap;
-                obj.IsIdentifierMapLoaded = true;
+                obj.HasInjectedIdentifierMap = true;
             end
         end
 
@@ -127,12 +127,12 @@ classdef KGResolver < openminds.interface.LinkResolver
 
     methods (Access = private)
         function identifierMap = getIdentifierMap(obj)
-        % getIdentifierMap - Return the identifier map, loading it on first use
-            if ~obj.IsIdentifierMapLoaded
-                obj.IdentifierMap = omkg.internal.conversion.getIdentifierMapping();
-                obj.IsIdentifierMapLoaded = true;
+        % getIdentifierMap - Return the identifier map to resolve against
+            if obj.HasInjectedIdentifierMap
+                identifierMap = obj.IdentifierMap;
+            else
+                identifierMap = omkg.internal.conversion.getIdentifierMapping();
             end
-            identifierMap = obj.IdentifierMap;
         end
     end
 end

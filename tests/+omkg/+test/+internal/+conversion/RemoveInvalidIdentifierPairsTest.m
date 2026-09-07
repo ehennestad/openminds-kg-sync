@@ -174,6 +174,8 @@ function pairs = makePair(kgId, omId)
 end
 
 function filePath = shippedResourcePath()
+    % The v3 resource specifically: the shipped map is keyed by openMINDS
+    % version, and only v3 ships with the toolbox.
     filePath = fullfile(omkg.toolboxdir(), 'omkg', '+omkg', '+internal', ...
-        'resources', 'kg2om_identifier_loopkup.json');
+        'resources', 'kg2om_identifier_lookup_v3.json');
 end

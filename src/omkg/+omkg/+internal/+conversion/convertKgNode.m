@@ -49,10 +49,9 @@ function omNode = convertKgNode(kgNode, omReferenceNode, options)
         return
     end
 
-    persistent controlledInstanceMap
-    if isempty(controlledInstanceMap)
-        controlledInstanceMap = omkg.internal.conversion.getIdentifierMapping();
-    end
+    % Read through to the registry rather than caching here, so that a
+    % refresh via omkg.updateControlledInstances takes effect immediately.
+    controlledInstanceMap = omkg.internal.conversion.getIdentifierMapping();
 
     [identifier, type] = omkg.internal.conversion.getNodeKeywords(kgNode, "@id", "@type");
 
