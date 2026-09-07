@@ -2,7 +2,7 @@ function mustBeInstanceOrIdentifier(target)
 % mustBeInstanceOrIdentifier - Validates input is either openMINDS instance or KG identifier
 %
 % This validator ensures the input is either:
-% - An openMINDS schema instance or array (openminds.abstract.Schema)
+% - An openMINDS schema instance or array (openminds.Node)
 % - A valid KG identifier string or string array
 %
 % Syntax:
@@ -15,7 +15,7 @@ function mustBeInstanceOrIdentifier(target)
         target
     end
 
-    if isa(target, 'openminds.abstract.Schema')
+    if isa(target, 'openminds.Node')
         % For openMINDS instances (scalar or array), validate they all have IDs
         for i = 1:numel(target)
             if isempty(target(i).id) || target(i).id == ""

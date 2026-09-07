@@ -10,7 +10,7 @@ function linkedIdentifiers = extractLinkedIdentifiers(metadataNode, linkedIdenti
     end
 
     for i = 1:numel(metadataNode)
-        currentUnresolvedLinks = metadataNode{i}.getUnresolvedLinks();
+        currentUnresolvedLinks = metadataNode{i}.getUnresolvedLinkIdentifiers();
         linkedIdentifiers = [linkedIdentifiers, currentUnresolvedLinks]; %#ok<AGROW>
     end
 

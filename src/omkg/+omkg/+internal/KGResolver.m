@@ -14,10 +14,11 @@ classdef KGResolver < openminds.interface.LinkResolver
 %
 %   RESOLUTION MODES:
 %   A typed reference node (e.g. an openminds.core.Person that only has an
-%   id) is populated in place. An openminds.internal.MixedTypeReference has
-%   no known type until the node is downloaded, so a new instance of the
-%   downloaded type is built and returned instead. Callers must use the
-%   returned value.
+%   id) is populated in place. A reference whose type is not known until the
+%   node is downloaded cannot be, because an instance cannot change its
+%   class, so a new instance of the downloaded type is built and returned
+%   instead. openminds.interface.LinkResolver.isTypeKnown tells the two
+%   cases apart. Callers must use the returned value.
 %
 %   Controlled instances (e.g. controlled terms) exist both in the KG and in
 %   the local openMINDS instance library. These are resolved from the local
@@ -85,12 +86,11 @@ classdef KGResolver < openminds.interface.LinkResolver
         % resolveNode - Fetch or populate a single KG reference node
         %
         %   The instance is populated in place when its type is known and
-        %   replaced by a new instance of the downloaded type when it is an
-        %   openminds.internal.MixedTypeReference.
+        %   replaced by a new instance of the downloaded type when it is not.
 
             arguments
                 obj (1,1) omkg.internal.KGResolver
-                instance (1,1) openminds.abstract.Schema
+                instance (1,1) openminds.Node
             end
 
             identifier = string(instance.id);
@@ -100,13 +100,13 @@ classdef KGResolver < openminds.interface.LinkResolver
                 openMindsIdentifier = identifierMap(identifier);
                 instance = openminds.instanceFromIRI(openMindsIdentifier);
             else
-                if isa(instance, 'openminds.internal.MixedTypeReference')
+                if openminds.interface.LinkResolver.isTypeKnown(instance)
+                    % The instance is populated with the downloaded values.
+                    referenceNode = instance;
+                else
                     % The type is unknown until the node is downloaded, so
                     % a new typed instance is created from the KG node.
                     referenceNode = [];
-                else
-                    % The instance is populated with the downloaded values.
-                    referenceNode = instance;
                 end
                 instance = omkg.sync.downloadMetadata(identifier, ...
                     "ReferenceNode", referenceNode, ...

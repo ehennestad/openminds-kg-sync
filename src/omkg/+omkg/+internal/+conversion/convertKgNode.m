@@ -12,7 +12,7 @@ function omNode = convertKgNode(kgNode, omReferenceNode, options)
 %       jsondecode). JSON-LD keyword fields may be in x_ form (x_id, x_type)
 %       as produced by jsondecode, or in the at_ form (at_id, at_type) used
 %       by openMINDS_MATLAB.
-%   - omReferenceNode (openminds.abstract.Schema) - Optional reference node for
+%   - omReferenceNode (openminds.Node) - Optional reference node for
 %       setting properties. If not provided, a new openMINDS node will be
 %       created. Used if we are resolving a node instead of creating a new
 %       one.
@@ -29,7 +29,7 @@ function omNode = convertKgNode(kgNode, omReferenceNode, options)
 
     arguments
         kgNode (1,:) {mustBeA(kgNode, ["struct", "cell"])} % Metadata node/instance returned from the instances api endpoint
-        omReferenceNode {mustBeA(omReferenceNode, ["double", "openminds.abstract.Schema"])} = []
+        omReferenceNode {mustBeA(omReferenceNode, ["double", "openminds.Node"])} = []
         options.ParentNode = [];
     end
 

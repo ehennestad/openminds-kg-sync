@@ -273,7 +273,7 @@ classdef KGSerializerTest < matlab.unittest.TestCase
             % Test post-processing handles empty arrays
             serializer = omkg.internal.KGSerializer();
 
-            % postProcessInstances is protected, but we can test through serialize
+            % postProcessDocuments is protected, but we can test through serialize
             person = openminds.core.Person(...
                 'id', 'https://kg.ebrains.eu/api/instances/person-1', ...
                 'givenName', 'John');
