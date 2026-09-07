@@ -2,14 +2,21 @@ classdef ControlledInstanceIdentifierRegistry < handle
 % ControlledInstanceIdentifierRegistry - Singleton class for managing controlled instance identifiers
 %
 %   This class manages the mapping between EBRAINS Knowledge Graph UUIDs
-%   and openMINDS identifiers for controlled instances. It handles initial
-%   download, incremental background updates, and provides lookup methods.
+%   and openMINDS identifiers for controlled instances. It handles the
+%   download, caching and refresh of that mapping, and provides lookup
+%   methods.
+%
+%   A refresh replaces the whole mapping. The Knowledge Graph offers no
+%   delta endpoint for controlled instances, so listing the identifiers of
+%   a type costs the same request as fetching them. A partial refresh would
+%   save response payload but not round trips, and could never observe an
+%   instance that was removed from the Knowledge Graph.
 %
 % Usage:
 %   registry = omkg.internal.conversion.ControlledInstanceIdentifierRegistry.instance();
 %   kgId = registry.getKgId(openMindsId);
 %   omId = registry.getOpenMindsId(kgId);
-%   registry.update(); % Force update
+%   registry.update(); % Refresh from the Knowledge Graph
 %
 % See also: getIdentifierMapping
 
@@ -25,8 +32,6 @@ classdef ControlledInstanceIdentifierRegistry < handle
         IdentifierMap struct = struct('kg', {}, 'om', {})
         LastUpdateTime datetime = datetime.empty
         UpdateInProgress logical = false
-        TypeUpdateOrder string = string.empty
-        LastTypeUpdated double = 0
         ApiClient ebrains.kg.api.InstancesClient  % Injectable API client for testing
     end
 
@@ -42,7 +47,6 @@ classdef ControlledInstanceIdentifierRegistry < handle
 
     properties (Constant, Access = private)
         UPDATE_INTERVAL_HOURS = 24
-        TYPES_PER_UPDATE = 1  % Number of types to update per background update call
     end
 
     methods (Access = private) % Private constructor for singleton pattern
@@ -186,19 +190,18 @@ classdef ControlledInstanceIdentifierRegistry < handle
             end
         end
 
-        function update(obj, forceComplete)
-            % update - Update identifier mappings (incremental or complete)
+        function update(obj)
+            % update - Replace the identifier mappings from the Knowledge Graph
             %
             % Syntax:
-            %   registry.update()        % Incremental update
-            %   registry.update(true)    % Force complete update
+            %   registry.update()
             %
-            % Input:
-            %   forceComplete - If true, updates all types (default: false)
+            %   Downloads every controlled instance and replaces the cached
+            %   mapping, so that instances removed from the Knowledge Graph
+            %   and identifiers that changed are both picked up.
 
             arguments
-                obj
-                forceComplete (1,1) logical = false
+                obj (1,1) omkg.internal.conversion.ControlledInstanceIdentifierRegistry
             end
 
             if obj.UpdateInProgress
@@ -208,11 +211,7 @@ classdef ControlledInstanceIdentifierRegistry < handle
             end
 
             updateInProgressResetObj = obj.setUpdateInProgress(); %#ok<NASGU>
-            if forceComplete
-                obj.downloadAll();
-            else
-                obj.updateIncremental();
-            end
+            obj.downloadAll();
         end
 
         function tf = needsUpdate(obj)
@@ -233,11 +232,23 @@ classdef ControlledInstanceIdentifierRegistry < handle
             tf = hoursSinceUpdate >= obj.UPDATE_INTERVAL_HOURS;
         end
 
+    end
+
+    methods (Access = private) % Internal methods for update
+        function [cleanupObj] = setUpdateInProgress(obj)
+            obj.UpdateInProgress = true;
+            cleanupObj = onCleanup(@() obj.resetUpdateInProgress);
+        end
+
+        function resetUpdateInProgress(obj)
+            obj.UpdateInProgress = false;
+        end
+
         function downloadAll(obj)
             % downloadAll - Download all controlled instance identifiers
             %
-            % Syntax:
-            %   registry.downloadAll()
+            %   Replaces IdentifierMap wholesale. Call update() rather than
+            %   this method, so that concurrent refreshes are serialized.
 
             if obj.Verbose
                 fprintf('Downloading all controlled instance identifiers...\n');
@@ -246,10 +257,6 @@ classdef ControlledInstanceIdentifierRegistry < handle
             % Get all controlled term types
             controlledTermTypeIRI = omkg.internal.retrieval.getControlledTypes(...
                 'ApiClient',  obj.ApiClient);
-
-            % Store the type order for incremental updates
-            obj.TypeUpdateOrder = controlledTermTypeIRI;
-            obj.LastTypeUpdated = 0;
 
             % Download all instances
             numTypes = numel(controlledTermTypeIRI);
@@ -284,143 +291,6 @@ classdef ControlledInstanceIdentifierRegistry < handle
                 end
             end
         end
-    end
-
-    methods (Access = private) % Internal methods for update
-        function [cleanupObj] = setUpdateInProgress(obj)
-            obj.UpdateInProgress = true;
-            cleanupObj = onCleanup(@() obj.resetUpdateInProgress);
-        end
-
-        function resetUpdateInProgress(obj)
-            obj.UpdateInProgress = false;
-        end
-
-        function updateIncremental(obj)
-            % updateIncremental - Update a subset of types incrementally (optimized)
-            %
-            % Strategy:
-            %   1. Use listControlledTermIds (fast) to get all current IDs
-            %   2. Compare with cached IDs to find new ones
-            %   3. Only fetch detailed data for new IDs
-            %   4. Refresh type list at cycle start to detect new types
-
-            if isempty(obj.TypeUpdateOrder)
-                % Initialize type order if not set
-                obj.TypeUpdateOrder = omkg.internal.retrieval.getControlledTypes(...
-                    'ApiClient', obj.ApiClient);
-                obj.LastTypeUpdated = 0;
-            end
-
-            % Refresh type list when starting a new cycle to detect new types
-            if obj.LastTypeUpdated == 0
-                currentTypes = omkg.internal.retrieval.getControlledTypes(...
-                    'ApiClient', obj.ApiClient);
-
-                % Add any new types to the update order
-                newTypes = setdiff(currentTypes, obj.TypeUpdateOrder);
-                if ~isempty(newTypes)
-                    if obj.Verbose
-                        fprintf('Detected %d new type(s) in Knowledge Graph\n', numel(newTypes));
-                    end
-                    newTypes = reshape(newTypes, 1, []);
-                    obj.TypeUpdateOrder = [obj.TypeUpdateOrder, newTypes];
-                end
-            end
-
-            numTypes = numel(obj.TypeUpdateOrder);
-            if numTypes == 0
-                return
-            end
-
-            % Determine which types to update
-            startIdx = obj.LastTypeUpdated + 1;
-            endIdx = min(startIdx + obj.TYPES_PER_UPDATE - 1, numTypes);
-
-            typesToUpdate = obj.TypeUpdateOrder(startIdx:endIdx);
-
-            if obj.Verbose
-                fprintf('Incremental update: processing types %d-%d of %d\n', ...
-                    startIdx, endIdx, numTypes);
-            end
-
-            % Process each type with optimized fetching
-            for i = 1:numel(typesToUpdate)
-                typeIRI = typesToUpdate(i);
-                if obj.Verbose
-                    fprintf('  Checking "%s" for updates\n', typeIRI);
-                end
-
-                % Step 1: Fast listing of all IDs for this type
-                currentIds = omkg.internal.retrieval.listControlledTermIds(...
-                    typeIRI, 'ApiClient', obj.ApiClient);
-
-                % Step 2: Find new IDs (not in our cache)
-                cachedIds = obj.getKgIdsForType(typeIRI);
-                newIds = setdiff(currentIds, cachedIds);
-
-                if ~isempty(newIds)
-                    if obj.Verbose
-                        fprintf('    Found %d new identifiers, fetching details...\n', numel(newIds));
-                    end
-
-                    % Step 3: Only fetch detailed data for new IDs
-                    newIdentifiers = omkg.internal.retrieval.getControlledTermIdMap(...
-                        typeIRI, newIds, 'ApiClient', obj.ApiClient);
-                    newIdentifiers = ...
-                        omkg.internal.conversion.removeInvalidIdentifierPairs(newIdentifiers);
-
-                    % Add to our map
-                    obj.IdentifierMap = [obj.IdentifierMap, newIdentifiers];
-                else
-                    if obj.Verbose
-                        fprintf('    No new identifiers found\n');
-                    end
-                end
-            end
-
-            % Update tracking variables
-            obj.LastTypeUpdated = endIdx;
-            if endIdx >= numTypes
-                % Completed full cycle, reset
-                obj.LastTypeUpdated = 0;
-                obj.LastUpdateTime = datetime('now');
-            end
-
-            obj.saveToFile();
-            obj.clearCachedMaps()
-        end
-
-        function kgIds = getKgIdsForType(obj, ~)
-            % getKgIdsForType - Get all cached KG IDs for a specific type
-            %
-            % Note: Since we don't store type information with each identifier,
-            % we return all cached KG IDs. The comparison with current IDs from
-            % the KG will determine what's new. This is still efficient because
-            % listControlledTermIds is fast (doesn't return full payloads).
-            %
-            % Future enhancement: Store type info with each identifier for
-            % more precise per-type caching.
-
-            kgIds = string({obj.IdentifierMap.kg});
-        end
-
-        function updateIdentifiersForType(obj, ~, newIdentifiers)
-            % updateIdentifiersForType - Replace identifiers for a specific type
-
-            % Note: We can't easily determine which identifiers belong to which type
-            % from the stored data, so for incremental updates, we append new ones
-            % and rely on periodic full updates to clean up. A more sophisticated
-            % approach would store type information with each identifier.
-
-            if isempty(newIdentifiers)
-                return
-            end
-
-            % For now, append new identifiers (duplicates will be handled by lookup logic)
-            obj.IdentifierMap = [obj.IdentifierMap, newIdentifiers];
-        end
-
         function clearCachedMaps(obj)
             obj.KgToOmMap_ = [];
             obj.OmToKgMap_ = [];
@@ -483,8 +353,6 @@ classdef ControlledInstanceIdentifierRegistry < handle
             saveData = struct();
             saveData.identifiers = obj.IdentifierMap;
             saveData.lastUpdateTime = char(obj.LastUpdateTime);
-            saveData.typeUpdateOrder = obj.TypeUpdateOrder;
-            saveData.lastTypeUpdated = obj.LastTypeUpdated;
 
             fid = fopen(mapFilepath, "wt");
             fileCleanup = onCleanup(@() fclose(fid));
@@ -510,12 +378,6 @@ classdef ControlledInstanceIdentifierRegistry < handle
                     obj.IdentifierMap = data.identifiers;
                     if isfield(data, 'lastUpdateTime') && ~isempty(data.lastUpdateTime)
                         obj.LastUpdateTime = datetime(data.lastUpdateTime);
-                    end
-                    if isfield(data, 'typeUpdateOrder')
-                        obj.TypeUpdateOrder = string(data.typeUpdateOrder);
-                    end
-                    if isfield(data, 'lastTypeUpdated')
-                        obj.LastTypeUpdated = data.lastTypeUpdated;
                     end
                 else
                     % Old format - just an array of identifiers

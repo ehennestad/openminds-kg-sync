@@ -8,7 +8,7 @@ classdef ControlledInstanceRegistryTest < matlab.unittest.TestCase
     %   - Singleton pattern behavior
     %   - Identifier lookup methods (bidirectional)
     %   - Mapping retrieval and consistency
-    %   - Update mechanisms (full and incremental)
+    %   - Update mechanism
     %   - Cache persistence and loading
     %   - API interaction patterns
     %   - Performance and efficiency
@@ -229,21 +229,19 @@ classdef ControlledInstanceRegistryTest < matlab.unittest.TestCase
             registry = omkg.internal.conversion.ControlledInstanceIdentifierRegistry.instance(...
                 'ApiClient', mockClient, 'Verbose', false);
 
-            % Simulate fresh download by calling downloadAll
-            registry.downloadAll();
+            registry.update();
 
             testCase.verifyFalse(registry.needsUpdate(), ...
                 'Should not need update immediately after download');
         end
 
-        function testDownloadAllUsesRetrievalFunctions(testCase)
-            % Test that downloadAll properly calls retrieval functions
+        function testUpdateUsesRetrievalFunctions(testCase)
+            % Test that update properly calls retrieval functions
             mockClient = testCase.createConfiguredMockClient();
             registry = omkg.internal.conversion.ControlledInstanceIdentifierRegistry.instance(...
                 'ApiClient', mockClient, 'Reset', true, 'Verbose', false);
 
-            % Download all should succeed
-            registry.downloadAll();
+            registry.update();
 
             % Verify calls were made
             testCase.verifyGreaterThan(mockClient.getCallCount('listTypes'), 0, ...
@@ -252,54 +250,41 @@ classdef ControlledInstanceRegistryTest < matlab.unittest.TestCase
                 'Should call listInstances');
         end
 
-        function testIncrementalUpdate(testCase)
-            % Test incremental update mechanism
-            mockClient = testCase.createMockClient();
-            registry = omkg.internal.conversion.ControlledInstanceIdentifierRegistry.instance( ...
-                'ApiClient', mockClient, 'Verbose', false);
-
-            % Perform incremental update
-            registry.update(false);
-
-            % Verify registry still has data
-            map = registry.KgToOmMap;
-            testCase.verifyGreaterThan(getMapCount(map), 0, ...
-                'Registry should have data after incremental update');
-        end
-
-        function testIncrementalUpdateIsEfficient(testCase)
-            % Test that incremental updates don't refetch everything
-            mockClient = testCase.createConfiguredMockClient();
-            registry = omkg.internal.conversion.ControlledInstanceIdentifierRegistry.instance(...
-                'ApiClient', mockClient, 'Reset', true, 'Verbose', false);
-
-            % Initial download
-            registry.downloadAll();
-            fullDownloadCalls = mockClient.getCallCount();
-
-            % Clear and do incremental update
-            mockClient.clearCalls();
-            registry.update(false);
-            incrementalCalls = mockClient.getCallCount();
-
-            % Incremental should make fewer calls than full download
-            testCase.verifyLessThan(incrementalCalls, fullDownloadCalls, ...
-                'Incremental update should be more efficient than full download');
-        end
-
-        function testFullUpdate(testCase)
-            % Test complete update mechanism
+        function testUpdateRepopulatesMap(testCase)
+            % Test that update leaves the registry populated
             mockClient = testCase.createMockClient();
             registry = omkg.internal.conversion.ControlledInstanceIdentifierRegistry.instance(...
                 'ApiClient', mockClient, 'Verbose', false);
 
-            % Perform full update
-            registry.update(true);
+            registry.update();
 
             % Verify registry has data
             map = registry.KgToOmMap;
             testCase.verifyGreaterThan(getMapCount(map), 0, ...
                 'Registry should have data after full update');
+        end
+
+        function testUpdateDropsIdentifiersRemovedFromKnowledgeGraph(testCase)
+            % A refresh replaces the mapping, so instances that disappear
+            % from the Knowledge Graph must disappear from the map too. The
+            % per-type incremental refresh this replaced could only ever add.
+            mockClient = testCase.createMockClient();
+            registry = omkg.internal.conversion.ControlledInstanceIdentifierRegistry.instance(...
+                'ApiClient', mockClient, 'Reset', true, 'Verbose', false);
+            registry.update();
+
+            retiredKgId = "6ba7b810-9dad-11d1-80b4-00c04fd430c8";
+            testCase.assumeTrue(isKey(registry.KgToOmMap, retiredKgId), ...
+                'Precondition: the identifier is present before the update')
+
+            remainingInstances = mockClient.ListResponse;
+            remainingInstances(strcmp({remainingInstances.x_id}, retiredKgId)) = [];
+            mockClient.setListResponse(remainingInstances);
+
+            registry.update();
+
+            testCase.verifyFalse(isKey(registry.KgToOmMap, retiredKgId), ...
+                'A removed instance should no longer be in the map')
         end
 
         function testNewTypeDetectionFlow(testCase)
@@ -309,7 +294,7 @@ classdef ControlledInstanceRegistryTest < matlab.unittest.TestCase
                 'ApiClient', mockClient, 'Reset', true, 'Verbose', false);
 
             % Initial download
-            registry.downloadAll();
+            registry.update();
 
             % Add new type to mock
             newTypeIri = "https://openminds.ebrains.eu/controlledTerms/NewType";
@@ -321,8 +306,8 @@ classdef ControlledInstanceRegistryTest < matlab.unittest.TestCase
             mockClient.setListResponse([currentInstances, newInstances]);
             mockClient.setBulkResponse([currentInstances, newInstances]);
 
-            % Trigger incremental update (starting new cycle)
-            registry.update(false);
+            % A refresh re-reads the type list, so the new type is picked up
+            registry.update();
 
             % Verify new type was detected
             testCase.verifyTrue(mockClient.getCallCount('listTypes') >= 1, ...
@@ -336,14 +321,14 @@ classdef ControlledInstanceRegistryTest < matlab.unittest.TestCase
                 'ApiClient', mockClient, 'Reset', true, 'Verbose', false);
 
             % Initial download
-            registry.downloadAll();
+            registry.update();
 
             % Get a known mapping
             omId = "https://openminds.ebrains.eu/instances/species/species1";
             kgId1 = registry.getKgId(omId);
 
             % Update
-            registry.update(false);
+            registry.update();
 
             % Should still have same mapping
             kgId2 = registry.getKgId(omId);
@@ -361,7 +346,7 @@ classdef ControlledInstanceRegistryTest < matlab.unittest.TestCase
                 'ApiClient', mockClient, 'Verbose', false);
 
             % Trigger download which saves
-            registry.downloadAll();
+            registry.update();
 
             % Verify file exists
             testCase.verifyTrue(isfile(testCase.OriginalCacheFile), ...
@@ -375,7 +360,7 @@ classdef ControlledInstanceRegistryTest < matlab.unittest.TestCase
             % First instance: create and populate
             registry1 = omkg.internal.conversion.ControlledInstanceIdentifierRegistry.instance( ...
                 'ApiClient', mockClient, 'Verbose', false);
-            registry1.downloadAll();
+            registry1.update();
             omId = "https://openminds.ebrains.eu/instances/species/species1";
             kgId1 = registry1.getKgId(omId);
 
@@ -398,7 +383,7 @@ classdef ControlledInstanceRegistryTest < matlab.unittest.TestCase
             % First initialization with download
             registry1 = omkg.internal.conversion.ControlledInstanceIdentifierRegistry.instance(...
                 'ApiClient', mockClient, 'Reset', true, 'Verbose', false);
-            registry1.downloadAll();
+            registry1.update();
             firstCallCount = mockClient.getCallCount();
 
             % Clear singleton and reinitialize (should load from cache)
@@ -421,7 +406,7 @@ classdef ControlledInstanceRegistryTest < matlab.unittest.TestCase
             mockClient = testCase.createMockClient();
             registry = omkg.internal.conversion.ControlledInstanceIdentifierRegistry.instance(...
                 'ApiClient', mockClient, 'Verbose', false);
-            registry.downloadAll();
+            registry.update();
 
             % Read and verify file format
             data = jsondecode(fileread(testCase.OriginalCacheFile));
@@ -430,10 +415,6 @@ classdef ControlledInstanceRegistryTest < matlab.unittest.TestCase
                 'File should contain identifiers field');
             testCase.verifyTrue(isfield(data, 'lastUpdateTime'), ...
                 'File should contain lastUpdateTime field');
-            testCase.verifyTrue(isfield(data, 'typeUpdateOrder'), ...
-                'File should contain typeUpdateOrder field');
-            testCase.verifyTrue(isfield(data, 'lastTypeUpdated'), ...
-                'File should contain lastTypeUpdated field');
         end
     end
 
@@ -445,7 +426,7 @@ classdef ControlledInstanceRegistryTest < matlab.unittest.TestCase
             registry = omkg.internal.conversion.ControlledInstanceIdentifierRegistry.instance(...
                 'ApiClient', mockClient, 'Reset', true, 'Verbose', false);
 
-            registry.downloadAll();
+            registry.update();
             map = registry.KgToOmMap;
 
             % Check for duplicates
@@ -482,7 +463,7 @@ classdef ControlledInstanceRegistryTest < matlab.unittest.TestCase
 
             registry = omkg.internal.conversion.ControlledInstanceIdentifierRegistry.instance(...
                 'ApiClient', mockClient, 'Reset', true, 'Verbose', false);
-            registry.downloadAll();
+            registry.update();
 
             kgToOmMap = registry.KgToOmMap;
             testCase.verifyTrue(...
@@ -507,7 +488,7 @@ classdef ControlledInstanceRegistryTest < matlab.unittest.TestCase
 
             registry = omkg.internal.conversion.ControlledInstanceIdentifierRegistry.instance(...
                 'ApiClient', mockClient, 'Reset', true, 'Verbose', false);
-            registry.downloadAll();
+            registry.update();
 
             testCase.verifyError(...
                 @() registry.getKgId(""), ...
@@ -533,7 +514,7 @@ classdef ControlledInstanceRegistryTest < matlab.unittest.TestCase
 
                 registry = omkg.internal.conversion.ControlledInstanceIdentifierRegistry.instance(...
                     'ApiClient', mockClient, 'Reset', true, 'Verbose', false);
-                registry.downloadAll();
+                registry.update();
 
                 testCase.verifyEqual(registry.getOpenMindsId(aliasedKgId), ...
                     "https://openminds.ebrains.eu/instances/contributionType/metadataManagement", ...
@@ -556,7 +537,7 @@ classdef ControlledInstanceRegistryTest < matlab.unittest.TestCase
 
             registry = omkg.internal.conversion.ControlledInstanceIdentifierRegistry.instance(...
                 'ApiClient', mockClient, 'Reset', true, 'Verbose', false);
-            registry.downloadAll();
+            registry.update();
 
             testCase.verifyEqual(registry.getKgId(...
                 "https://openminds.ebrains.eu/instances/contributionType/metadataManagment"), ...
