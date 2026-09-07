@@ -44,13 +44,33 @@ classdef ConstantsTest < matlab.unittest.TestCase
 
             testCase.verifyClass(omNamespace, 'string', ...
                 'OpenMINDSNamespaceIRI should be a string');
-            testCase.verifyTrue(contains(omNamespace, "openminds.ebrains.eu"), ...
-                'OpenMINDSNamespaceIRI should reference openMINDS');
+            testCase.verifyTrue(any(contains(omNamespace, "openminds.ebrains.eu")), ...
+                'OpenMINDSNamespaceIRI should include the v3-and-below namespace');
+            testCase.verifyTrue(any(contains(omNamespace, "openminds.om-i.org")), ...
+                'OpenMINDSNamespaceIRI should include the v4-and-above namespace');
 
             testCase.verifyClass(omPrefix, 'string', ...
                 'OpenMINDSInstanceIRIPrefix should be a string');
-            testCase.verifyTrue(contains(omPrefix, "openminds.ebrains.eu"), ...
-                'OpenMINDSInstanceIRIPrefix should reference openMINDS');
+            testCase.verifyTrue(any(contains(omPrefix, "openminds.ebrains.eu")), ...
+                'OpenMINDSInstanceIRIPrefix should include the v3-and-below namespace');
+            testCase.verifyTrue(any(contains(omPrefix, "openminds.om-i.org")), ...
+                'OpenMINDSInstanceIRIPrefix should include the v4-and-above namespace');
+        end
+
+        function testOpenMINDSControlledTypeIRIPrefix(testCase)
+            % Test the controlled-term type (@type) IRI prefix constant
+            %
+            % v3-and-below uses distinct "controlledTerms/" and "core/"
+            % segments; v4-and-above collapses both into "types/".
+
+            typePrefix = omkg.constants.OpenMINDSControlledTypeIRIPrefix;
+
+            testCase.verifyClass(typePrefix, 'string', ...
+                'OpenMINDSControlledTypeIRIPrefix should be a string');
+            testCase.verifyTrue(any(strcmp(typePrefix, "https://openminds.ebrains.eu/controlledTerms/")), ...
+                'OpenMINDSControlledTypeIRIPrefix should include the v3-and-below controlledTerms namespace');
+            testCase.verifyTrue(any(strcmp(typePrefix, "https://openminds.om-i.org/types/")), ...
+                'OpenMINDSControlledTypeIRIPrefix should include the v4-and-above types namespace');
         end
 
         function testConstantRelationships(testCase)

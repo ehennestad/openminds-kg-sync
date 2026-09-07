@@ -33,7 +33,7 @@ function resolveLinks(instance, instanceIds, instanceCollection)
                     omkg.internal.resolveLinks(resolvedInstances{j}, instanceIds, instanceCollection)
                 else
                     % Check if instance is a controlled instance
-                    if startsWith(instanceId, "https://openminds.ebrains.eu/instances/")
+                    if startsWith(instanceId, omkg.constants.OpenMINDSInstanceIRIPrefix)
                         resolvedInstances{j} = openminds.instanceFromIRI(instanceId);
                     end
                 end

@@ -13,6 +13,16 @@ classdef PreferencesTest < matlab.unittest.TestCase
         DefaultSpaceValues = {"myspace", "testspace", "auto", "production"}
     end
 
+    methods (TestClassSetup)
+        function preserveRealPreferences(testCase)
+            % omkg.util.Preferences persists to a file in prefdir - the
+            % real preferences used outside of tests. Applying this
+            % fixture restores whatever was there before this class ran,
+            % regardless of what the tests below do to it.
+            testCase.applyFixture(omkg.test.fixtures.PreferencesFixture());
+        end
+    end
+
     methods (TestMethodSetup)
         function setupEach(~)
             % Setup for each test - reset preferences to defaults
@@ -74,6 +84,27 @@ classdef PreferencesTest < matlab.unittest.TestCase
 
             testCase.verifyEqual(retrievedValue, DefaultSpaceValues, ...
                 'Set and retrieved DefaultSpace values should match');
+        end
+
+        function testGetPrefKgOpenMINDSVersion(testCase)
+            % Test getting the pinned KG openMINDS version preference
+
+            version = omkg.getpref("KgOpenMINDSVersion");
+
+            testCase.verifyClass(version, 'double', ...
+                'KgOpenMINDSVersion should be a double');
+            testCase.verifyEqual(version, 4, ...
+                'Default KgOpenMINDSVersion should be 4');
+        end
+
+        function testSetPrefKgOpenMINDSVersion(testCase)
+            % Test setting the pinned KG openMINDS version preference
+
+            omkg.setpref("KgOpenMINDSVersion", 3);
+            retrievedValue = omkg.getpref("KgOpenMINDSVersion");
+
+            testCase.verifyEqual(retrievedValue, 3, ...
+                'Set and retrieved KgOpenMINDSVersion values should match');
         end
 
         function testPreferencesSingleton(testCase)

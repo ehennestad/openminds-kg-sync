@@ -61,6 +61,34 @@ classdef ResolveLinksTest < matlab.unittest.TestCase
                 'Controlled instance resolution should work');
         end
 
+        function testResolveLinksWithOmiOrgControlledInstance(testCase)
+            % Test resolution of a controlled instance tagged with the
+            % v4-and-above namespace (openminds.om-i.org), matching the
+            % KG's current schema version.
+            subject = openminds.core.Subject(...
+                'id', 'https://kg.ebrains.eu/api/instances/subject-1', ...
+                'lookupLabel', 'mouse1');
+
+            try
+                subject.species = openminds.controlledterms.Species(...
+                    'id', 'https://openminds.om-i.org/instances/species/musMusculus');
+            catch
+                % If species is not a valid property, skip this test
+                testCase.assumeFail('Property species not available');
+            end
+
+            instanceIds = "https://kg.ebrains.eu/api/instances/person-1";
+            instanceCollection = {subject};
+
+            % Should handle the om-i.org controlled instance
+            testCase.verifyWarningFree(...
+                @() omkg.internal.resolveLinks(subject, instanceIds, instanceCollection), ...
+                'Controlled instance resolution should work for the om-i.org namespace');
+
+            testCase.verifyEqual(subject.species.name, "Mus musculus", ...
+                'The controlled instance should be resolved from the KG');
+        end
+
         function testResolveLinksWithStructInput(testCase)
             % Test that struct inputs are handled (should return early)
             structInstance = struct('id', 'test', 'name', 'value');

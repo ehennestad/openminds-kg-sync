@@ -30,8 +30,14 @@ function result = processTypeResponse(typeData)
 % processTypeResponse - Extract the type name, but only for controlled term types
 %
 %   Returns a string array with names (@type IRI) of controlled term types
+%
+%   Note: for v4-and-above data, the type namespace no longer
+%   distinguishes controlled term types from other schema types (see
+%   omkg.constants.OpenMINDSControlledTypeIRIPrefix), so this filter is a
+%   no-op for those entries and correctness relies on the API call
+%   already scoping the request to the "controlled" space.
 
-    TYPE_NAMESPACE_IRI = "https://openminds.ebrains.eu/controlledTerms/";
+    TYPE_NAMESPACE_IRI = omkg.constants.OpenMINDSControlledTypeIRIPrefix;
 
     result = string.empty;
     for i = 1:numel(typeData)
