@@ -58,6 +58,13 @@ classdef ControlledInstanceRegistryTest < matlab.unittest.TestCase
     end
 
     methods (Access = private)
+        function writeCache(testCase, data)
+            % writeCache - Overwrite this test's cache file
+            fid = fopen(testCase.CacheFile, "wt");
+            fileCleanup = onCleanup(@() fclose(fid));
+            fwrite(fid, jsonencode(data, 'PrettyPrint', true));
+        end
+
         function discardCache(testCase)
             % discardCache - Remove this test's cache file
             %
@@ -402,20 +409,80 @@ classdef ControlledInstanceRegistryTest < matlab.unittest.TestCase
                 'Should still have data from cache');
         end
 
-        function testFileFormatWithMetadata(testCase)
-            % Test that file format includes metadata
+        function testFileRecordsWhatTheMappingDescribes(testCase)
+            % A KG UUID only identifies an instance within a given server,
+            % space, stage and openMINDS version, so the file has to say
+            % which. Without that it cannot be checked for applicability.
             mockClient = testCase.createMockClient();
             registry = omkg.internal.conversion.ControlledInstanceIdentifierRegistry.instance(...
                 'ApiClient', mockClient, 'Verbose', false);
             registry.update();
 
-            % Read and verify file format
             data = jsondecode(fileread(testCase.CacheFile));
 
-            testCase.verifyTrue(isfield(data, 'identifiers'), ...
-                'File should contain identifiers field');
-            testCase.verifyTrue(isfield(data, 'lastUpdateTime'), ...
-                'File should contain lastUpdateTime field');
+            testCase.verifyTrue(isfield(data, 'identifiers'))
+            testCase.verifyTrue(isfield(data, 'schemaVersion'))
+            testCase.verifyTrue(isfield(data, 'generatedAt'))
+            testCase.verifyTrue(isfield(data, 'openmindsVersion'))
+            testCase.assertTrue(isfield(data, 'kg'))
+            testCase.verifyEqual(sort(string(fieldnames(data.kg)))', ...
+                ["server", "space", "stage"])
+        end
+
+        function testGeneratedAtIsIso8601(testCase)
+            % The previous format used char(datetime), which is locale
+            % dependent and does not survive a round trip everywhere.
+            mockClient = testCase.createMockClient();
+            registry = omkg.internal.conversion.ControlledInstanceIdentifierRegistry.instance(...
+                'ApiClient', mockClient, 'Verbose', false);
+            registry.update();
+
+            data = jsondecode(fileread(testCase.CacheFile));
+
+            testCase.verifyNotEmpty(regexp(data.generatedAt, ...
+                '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$', 'once'), ...
+                sprintf('Expected ISO 8601, got "%s"', data.generatedAt))
+        end
+
+        function testRecordedScopeMatchesTheRequestsActuallyMade(testCase)
+            % The scope written to the file is a copy of what the retrieval
+            % functions ask the Knowledge Graph for. This catches the two
+            % drifting apart.
+            mockClient = testCase.createMockClient();
+            registry = omkg.internal.conversion.ControlledInstanceIdentifierRegistry.instance(...
+                'ApiClient', mockClient, 'Verbose', false);
+            registry.update();
+
+            recordedScope = jsondecode(fileread(testCase.CacheFile)).kg;
+            call = mockClient.getLastCallFor('listInstances');
+            testCase.assertNotEmpty(call)
+
+            testCase.verifyEqual(string(call.options.requiredParams.space), ...
+                string(recordedScope.space))
+            testCase.verifyEqual(string(call.options.requiredParams.stage), ...
+                string(recordedScope.stage))
+            testCase.verifyEqual(upper(string(call.options.serverOptions.Server)), ...
+                upper(string(recordedScope.server)))
+        end
+
+        function testIgnoresCacheBuiltForAnotherOpenMindsVersion(testCase)
+            % A file carries the version in its name, but a file that was
+            % copied can still claim a version it was not built for.
+            mockClient = testCase.createMockClient();
+            registry = omkg.internal.conversion.ControlledInstanceIdentifierRegistry.instance(...
+                'ApiClient', mockClient, 'Verbose', false);
+            registry.update();
+
+            data = jsondecode(fileread(testCase.CacheFile));
+            data.openmindsVersion = "v99.0";
+            testCase.writeCache(data);
+
+            testCase.verifyWarning(@() testCase.createRegistry(mockClient), ...
+                'OMKG:ControlledInstanceRegistry:VersionMismatch')
+
+            reloaded = omkg.internal.conversion.ControlledInstanceIdentifierRegistry.instance();
+            testCase.verifyEqual(getMapCount(reloaded.KgToOmMap), 0, ...
+                'A map built for another version should not be used')
         end
     end
 
@@ -517,6 +584,47 @@ classdef ControlledInstanceRegistryTest < matlab.unittest.TestCase
                     "https://openminds.ebrains.eu/instances/contributionType/metadataManagement", ...
                     'Should keep the spelling openMINDS resolves')
             end
+        end
+
+        function testLegacyFlatFileIsUpgradedOnLoad(testCase)
+            % Files written before aliases were recorded list one row per
+            % identifier, so an aliased instance appears more than once.
+            legacyPrefix = "https://openminds.ebrains.eu/instances/contributionType/";
+            testCase.writeCache([ ...
+                struct('kg', "kg:1", 'om', legacyPrefix + "dataManagment"), ...
+                struct('kg', "kg:1", 'om', legacyPrefix + "dataManagement"), ...
+                struct('kg', "kg:2", 'om', ...
+                    "https://openminds.ebrains.eu/instances/biologicalSex/male")]);
+
+            registry = testCase.createRegistry(testCase.createMockClient());
+
+            testCase.verifyEqual(registry.getOpenMindsId("kg:1"), ...
+                legacyPrefix + "dataManagement", ...
+                'The canonical identifier should win over the superseded one')
+            testCase.verifyEqual(registry.getKgId(legacyPrefix + "dataManagment"), "kg:1", ...
+                'The superseded identifier should still resolve')
+        end
+
+        function testAliasesSurviveASaveAndReload(testCase)
+            aliasedKgId = "https://kg.ebrains.eu/api/instances/aliased";
+            mockClient = testCase.createMockClient();
+            mockClient.setListResponse(...
+                struct('x_id', char(aliasedKgId), ...
+                    'http___schema_org_identifier', {{
+                        'https://openminds.ebrains.eu/instances/contributionType/metadataManagment'
+                        'https://openminds.ebrains.eu/instances/contributionType/metadataManagement'
+                    }}));
+
+            registry = testCase.createRegistry(mockClient);
+            registry.update();
+
+            reloaded = testCase.createRegistry(mockClient);
+
+            testCase.verifyEqual(reloaded.getOpenMindsId(aliasedKgId), ...
+                "https://openminds.ebrains.eu/instances/contributionType/metadataManagement")
+            testCase.verifyEqual(reloaded.getKgId(...
+                "https://openminds.ebrains.eu/instances/contributionType/metadataManagment"), ...
+                aliasedKgId, 'An alias should still resolve after a reload')
         end
 
         function testAliasedIdentifiersRemainLookupableInReverse(testCase)

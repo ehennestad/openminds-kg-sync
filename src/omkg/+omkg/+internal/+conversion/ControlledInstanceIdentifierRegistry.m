@@ -28,7 +28,7 @@ classdef ControlledInstanceIdentifierRegistry < handle
     end
 
     properties (Access = private)
-        IdentifierMap struct = struct('kg', {}, 'om', {})
+        IdentifierMap struct = struct('kg', {}, 'om', {}, 'aliases', {})
         LastUpdateTime datetime = datetime.empty
         UpdateInProgress logical = false
         FilePathOverride string = string.empty  % Injectable cache file for testing
@@ -47,6 +47,19 @@ classdef ControlledInstanceIdentifierRegistry < handle
 
     properties (Constant, Access = private)
         UPDATE_INTERVAL_HOURS = 24
+
+        % Version of the cache file layout. Raise it when a change makes an
+        % older file unreadable rather than merely missing fields.
+        SCHEMA_VERSION = "1.0"
+
+        % Knowledge Graph scope the mapping is built from. A UUID only means
+        % something for a given server, space and stage, so these are
+        % recorded with the cache. They mirror the requests made by
+        % omkg.internal.retrieval.getControlledTypes and
+        % getControlledTermIdMap, which are the source of truth.
+        KG_SOURCE_SERVER = "PROD"
+        KG_SOURCE_SPACE = "controlled"
+        KG_SOURCE_STAGE = "RELEASED"
     end
 
     methods (Access = private) % Private constructor for singleton pattern
@@ -308,9 +321,11 @@ classdef ControlledInstanceIdentifierRegistry < handle
                 instanceUuidListing{i} = identifierMap;
             end
 
-            [obj.IdentifierMap, rejectedPairs] = ...
+            [identifierPairs, rejectedPairs] = ...
                 omkg.internal.conversion.removeInvalidIdentifierPairs(...
                     [instanceUuidListing{:}]);
+            obj.IdentifierMap = ...
+                omkg.internal.conversion.collapseIdentifierAliases(identifierPairs);
 
             obj.LastUpdateTime = datetime('now');
             obj.saveToFile();
@@ -344,10 +359,10 @@ classdef ControlledInstanceIdentifierRegistry < handle
             % Output arguments:
             %   map - dictionary or containers.Map object
             %
-            %   Duplicate keys are resolved before the map is built. Both
-            %   dictionary and containers.Map silently keep the last value
-            %   for a repeated key, which would make the result depend on
-            %   the order in which the Knowledge Graph returned the data.
+            %   The canonical identifier is chosen when the records are
+            %   built, so the forward direction has one value per key. The
+            %   reverse direction also accepts every alias, so a superseded
+            %   identifier still names its Knowledge Graph instance.
 
             arguments
                 obj
@@ -356,17 +371,23 @@ classdef ControlledInstanceIdentifierRegistry < handle
 
             mapConstructorFcn = getMapConstructor();
 
-            kgIds = string({obj.IdentifierMap.kg});
-            omIds = string({obj.IdentifierMap.om});
+            % Reshape so that an empty registry still yields row vectors
+            kgIds = reshape(string({obj.IdentifierMap.kg}), 1, []);
+            omIds = reshape(string({obj.IdentifierMap.om}), 1, []);
+
+            if options.Reverse && ~isempty(obj.IdentifierMap)
+                % Every alias names the same instance as its canonical
+                % identifier, so both have to reach the reverse lookup.
+                aliasesPerRecord = {obj.IdentifierMap.aliases};
+                aliasCount = cellfun(@numel, aliasesPerRecord);
+
+                omIds = [omIds, reshape(string([aliasesPerRecord{:}]), 1, [])];
+                kgIds = [kgIds, repelem(kgIds, aliasCount)];
+            end
 
             if options.Reverse
-                % An openMINDS IRI identifies at most one Knowledge Graph
-                % instance, so a duplicate here would be a data error with
-                % no principled winner. Keep the first in sorted order.
-                [omIds, keepIdx] = unique(omIds);
-                map = mapConstructorFcn(omIds, kgIds(keepIdx));
+                map = mapConstructorFcn(omIds, kgIds);
             else
-                [kgIds, omIds] = selectCanonicalIdentifiers(kgIds, omIds);
                 map = mapConstructorFcn(kgIds, omIds);
             end
         end
@@ -384,10 +405,19 @@ classdef ControlledInstanceIdentifierRegistry < handle
                 mkdir(dirPath)
             end
 
-            % Save metadata along with identifiers
+            % Record what the mapping describes, not just the mapping. A
+            % Knowledge Graph UUID only identifies an instance within a
+            % given server, space, stage and openMINDS version, so a file
+            % without that scope cannot be checked for applicability.
             saveData = struct();
+            saveData.schemaVersion = obj.SCHEMA_VERSION;
+            saveData.openmindsVersion = obj.activeOpenMindsVersion();
+            saveData.kg = struct(...
+                'server', obj.KG_SOURCE_SERVER, ...
+                'space', obj.KG_SOURCE_SPACE, ...
+                'stage', obj.KG_SOURCE_STAGE);
+            saveData.generatedAt = obj.formatTimestamp(obj.LastUpdateTime);
             saveData.identifiers = obj.IdentifierMap;
-            saveData.lastUpdateTime = char(obj.LastUpdateTime);
 
             fid = fopen(mapFilepath, "wt");
             fileCleanup = onCleanup(@() fclose(fid));
@@ -420,59 +450,113 @@ classdef ControlledInstanceIdentifierRegistry < handle
 
                 % Handle both old and new file formats
                 if isfield(data, 'identifiers')
-                    obj.IdentifierMap = data.identifiers;
-                    if isfield(data, 'lastUpdateTime') && ~isempty(data.lastUpdateTime)
-                        obj.LastUpdateTime = datetime(data.lastUpdateTime);
-                    end
+                    identifiers = data.identifiers;
+                    obj.LastUpdateTime = obj.readTimestamp(data);
                 else
-                    % Old format - just an array of identifiers
-                    obj.IdentifierMap = data;
+                    % Oldest format - a bare array of identifier pairs
+                    identifiers = data;
                     obj.LastUpdateTime = datetime.empty;
                 end
 
+                if ~obj.isApplicable(data, mapFilepath)
+                    obj.LastUpdateTime = datetime.empty;
+                    return
+                end
+
+                % Records written before aliases were recorded list one row
+                % per identifier and have to be grouped after loading.
+                isCollapsed = isstruct(identifiers) && isfield(identifiers, 'aliases') ...
+                    || iscell(identifiers) && ~isempty(identifiers) ...
+                        && isfield(identifiers{1}, 'aliases');
+
+                identifiers = normalizeDecodedRecords(identifiers);
+
                 % The shipped resource and files written before this check
-                % existed contain pairs that openMINDS can not resolve.
+                % existed contain identifiers openMINDS can not resolve.
                 % Drop them here so they never reach the lookup maps.
-                obj.IdentifierMap = ...
-                    omkg.internal.conversion.removeInvalidIdentifierPairs(obj.IdentifierMap);
+                identifiers = ...
+                    omkg.internal.conversion.removeInvalidIdentifierPairs(identifiers);
+
+                if isCollapsed
+                    obj.IdentifierMap = identifiers;
+                else
+                    obj.IdentifierMap = ...
+                        omkg.internal.conversion.collapseIdentifierAliases(identifiers);
+                end
             catch ME
                 warning('OMKG:ControlledInstanceRegistry:LoadFailed', ...
                     'Failed to load identifier map: %s', ME.message);
             end
         end
 
-    end
-end
+        function tf = isApplicable(obj, data, mapFilepath)
+            % isApplicable - Whether a loaded file describes the active setup
+            %
+            %   The file name carries the openMINDS version, but a file that
+            %   was copied or moved can still claim a version it was not
+            %   built for. Checking the recorded scope catches that.
 
-function [uniqueKgIds, canonicalOmIds] = selectCanonicalIdentifiers(kgIds, omIds)
-% selectCanonicalIdentifiers - Reduce alias rows to one openMINDS IRI per KG id
-%
-%   Some Knowledge Graph instances carry several openMINDS schema
-%   identifiers and therefore appear as several rows with the same KG id.
+            tf = true;
+            if ~isfield(data, 'openmindsVersion')
+                % Written before the scope was recorded. The file name is
+                % the only evidence available, so take it at face value.
+                return
+            end
 
-    [uniqueKgIds, firstIdx, groupIndex] = unique(kgIds);
-    canonicalOmIds = omIds(firstIdx);
-
-    instanceCount = accumarray(groupIndex(:), 1);
-    aliasedGroups = reshape(find(instanceCount > 1), 1, []);
-
-    unresolvedKgIds = string.empty;
-    for groupNumber = aliasedGroups
-        [canonicalOmIds(groupNumber), isResolved] = ...
-            omkg.internal.conversion.selectCanonicalInstanceIRI(...
-                omIds(groupIndex == groupNumber));
-
-        if ~isResolved
-            unresolvedKgIds(end+1) = uniqueKgIds(groupNumber); %#ok<AGROW>
+            expectedVersion = obj.activeOpenMindsVersion();
+            if string(data.openmindsVersion) ~= expectedVersion
+                tf = false;
+                warning('OMKG:ControlledInstanceRegistry:VersionMismatch', ...
+                    ['Ignoring identifier map "%s": it was built for ', ...
+                    'openMINDS %s but %s is active. Run ', ...
+                    'omkg.updateControlledInstances to rebuild it.'], ...
+                    mapFilepath, string(data.openmindsVersion), expectedVersion);
+            end
         end
-    end
 
-    if ~isempty(unresolvedKgIds)
-        warning('OMKG:ControlledInstanceRegistry:AmbiguousIdentifiers', ...
-            ['%d Knowledge Graph instance(s) map to several openMINDS ', ...
-            'instances that openMINDS does not disambiguate. The ', ...
-            'alphabetically first identifier is used for:\n  %s'], ...
-            numel(unresolvedKgIds), strjoin(unresolvedKgIds, newline + "  "))
+        function timestamp = readTimestamp(~, data)
+            % readTimestamp - Read the generation time from a loaded file
+
+            timestamp = datetime.empty;
+
+            % generatedAt is ISO 8601. lastUpdateTime was written with the
+            % locale dependent default datetime format, so it is only read.
+            if isfield(data, 'generatedAt') && ~isempty(data.generatedAt)
+                timestamp = datetime(data.generatedAt, ...
+                    'InputFormat', "yyyy-MM-dd'T'HH:mm:ss", 'TimeZone', 'UTC');
+                timestamp.TimeZone = '';
+            elseif isfield(data, 'lastUpdateTime') && ~isempty(data.lastUpdateTime)
+                try
+                    timestamp = datetime(data.lastUpdateTime);
+                catch
+                    % An unparseable timestamp only means the age is
+                    % unknown, which needsUpdate already treats as stale.
+                end
+            end
+        end
+
+        function versionString = activeOpenMindsVersion(~)
+            % activeOpenMindsVersion - openMINDS version the mapping applies to
+
+            versionString = sprintf("v%d.0", omkg.getpref("KgOpenMINDSVersion"));
+        end
+
+        function timestamp = formatTimestamp(~, value)
+            % formatTimestamp - Render a timestamp as UTC ISO 8601
+
+            if isempty(value)
+                timestamp = "";
+                return
+            end
+
+            utcValue = value;
+            if isempty(utcValue.TimeZone)
+                utcValue.TimeZone = 'local';
+            end
+            utcValue.TimeZone = 'UTC';
+            timestamp = string(utcValue, "yyyy-MM-dd'T'HH:mm:ss");
+        end
+
     end
 end
 
@@ -483,5 +567,53 @@ function fcnHandle = getMapConstructor()
         fcnHandle = @dictionary;
     else
         fcnHandle = @containers.Map;
+    end
+end
+
+
+function records = normalizeDecodedRecords(records)
+% normalizeDecodedRecords - Give decoded identifier records predictable types
+%
+%   jsondecode leaves two shapes to sort out. It returns a struct array
+%   only when every element has the same fields with the same shapes, so a
+%   file where some records carry aliases and others do not decodes to a
+%   cell array of scalar structs. And a single JSON string decodes to a
+%   char row, whose numel counts characters rather than identifiers.
+
+    if iscell(records)
+        recordCell = records;
+    else
+        recordCell = num2cell(records);
+    end
+
+    if isempty(recordCell)
+        records = struct('kg', {}, 'om', {});
+        return
+    end
+
+    hasAliases = isfield(recordCell{1}, 'aliases');
+    if hasAliases
+        normalized = struct('kg', {}, 'om', {}, 'aliases', {});
+    else
+        normalized = struct('kg', {}, 'om', {});
+    end
+
+    for i = 1:numel(recordCell)
+        thisRecord = recordCell{i};
+        normalized(i).kg = string(thisRecord.kg);
+        normalized(i).om = string(thisRecord.om);
+        if hasAliases
+            normalized(i).aliases = toStringRow(thisRecord.aliases);
+        end
+    end
+    records = normalized;
+end
+
+function value = toStringRow(value)
+% toStringRow - Coerce a decoded JSON array of strings to a string row
+    if isempty(value)
+        value = string.empty;
+    else
+        value = reshape(string(value), 1, []);
     end
 end

@@ -7,7 +7,9 @@ function [identifierPairs, rejectedPairs] = removeInvalidIdentifierPairs(identif
 %
 % Input Arguments:
 %   identifierPairs - Struct array with the fields "kg" and "om", pairing a
-%       Knowledge Graph instance IRI with an openMINDS instance IRI.
+%       Knowledge Graph instance IRI with an openMINDS instance IRI. An
+%       optional "aliases" field holds further openMINDS IRIs for the same
+%       Knowledge Graph instance.
 %
 % Output Arguments:
 %   identifierPairs - The input with unresolvable pairs removed, as a row.
@@ -19,6 +21,9 @@ function [identifierPairs, rejectedPairs] = removeInvalidIdentifierPairs(identif
 %   once the IRI reaches openminds.instanceFromIRI. Pairs are also dropped
 %   when either identifier is empty, which happens for Knowledge Graph
 %   instances that carry no openMINDS schema identifier at all.
+%
+%   Aliases are held to the same rule and dropped individually, because an
+%   unresolvable alias would otherwise reach the reverse lookup.
 %
 %   The check is deliberately restricted to the shape of the IRI. Whether
 %   the type or instance exists is version dependent, and dropping pairs on
@@ -39,22 +44,41 @@ function [identifierPairs, rejectedPairs] = removeInvalidIdentifierPairs(identif
     kgIds = string({identifierPairs.kg});
     omIds = string({identifierPairs.om});
 
-    isValid = strlength(kgIds) > 0 ...
-        & startsWith(omIds, omkg.constants.OpenMINDSInstanceIRIPrefix);
-
-    % Everything after the "/instances/" segment has to be exactly a type
-    % name and an instance name. The Knowledge Graph does not escape "/" in
-    % instance names (for example "molecularEntity/GABA-A/BZ"), so such an
-    % IRI can not be split into a type and a name unambiguously.
-    instancePath = repmat("", size(omIds));
-    instancePath(isValid) = extractAfter(omIds(isValid), "/instances/");
-    isValid = isValid ...
-        & count(instancePath, "/") == 1 ...
-        & ~startsWith(instancePath, "/") ...
-        & ~endsWith(instancePath, "/");
+    isValid = strlength(kgIds) > 0 & isInstanceIRI(omIds);
 
     % Reshape to a row so that callers can concatenate results from several
     % calls. jsondecode returns a column, the API retrieval path a row.
     rejectedPairs = reshape(identifierPairs(~isValid), 1, []);
     identifierPairs = reshape(identifierPairs(isValid), 1, []);
+
+    if isfield(identifierPairs, 'aliases')
+        for i = 1:numel(identifierPairs)
+            identifierPairs(i).aliases = ...
+                identifierPairs(i).aliases(isInstanceIRI(identifierPairs(i).aliases));
+        end
+    end
+end
+
+function tf = isInstanceIRI(omIds)
+% isInstanceIRI - Whether each IRI names an openMINDS instance
+%
+%   Everything after the "/instances/" segment has to be exactly a type
+%   name and an instance name. The Knowledge Graph does not escape "/" in
+%   instance names (for example "molecularEntity/GABA-A/BZ"), so such an
+%   IRI can not be split into a type and a name unambiguously.
+
+    omIds = reshape(string(omIds), 1, []);
+    if isempty(omIds)
+        tf = false(1, 0);
+        return
+    end
+
+    tf = startsWith(omIds, omkg.constants.OpenMINDSInstanceIRIPrefix);
+
+    instancePath = repmat("", size(omIds));
+    instancePath(tf) = extractAfter(omIds(tf), "/instances/");
+    tf = tf ...
+        & count(instancePath, "/") == 1 ...
+        & ~startsWith(instancePath, "/") ...
+        & ~endsWith(instancePath, "/");
 end
