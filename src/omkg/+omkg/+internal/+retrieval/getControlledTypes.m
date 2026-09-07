@@ -33,11 +33,11 @@ function result = processTypeResponse(typeData)
 %
 %   Note: for v4-and-above data, the type namespace no longer
 %   distinguishes controlled term types from other schema types (see
-%   omkg.constants.OpenMINDSTypeIRIPrefix), so this filter is a no-op for
-%   those entries and correctness relies on the API call already scoping
-%   the request to the "controlled" space.
+%   omkg.constants.OpenMINDSControlledTypeIRIPrefix), so this filter is a
+%   no-op for those entries and correctness relies on the API call
+%   already scoping the request to the "controlled" space.
 
-    TYPE_NAMESPACE_IRI = omkg.constants.OpenMINDSTypeIRIPrefix;
+    TYPE_NAMESPACE_IRI = omkg.constants.OpenMINDSControlledTypeIRIPrefix;
 
     result = string.empty;
     for i = 1:numel(typeData)
