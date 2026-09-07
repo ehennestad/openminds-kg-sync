@@ -87,12 +87,7 @@ classdef PreferencesTest < matlab.unittest.TestCase
         end
 
         function testGetPrefKgOpenMINDSVersion(testCase)
-            % Test getting the default pinned KG openMINDS version
-            % preference. Reset explicitly rather than relying on
-            % TestMethodSetup, so this test's "the default is 4"
-            % assumption does not silently depend on external state.
-            prefs = omkg.getpref();
-            prefs.reset();
+            % Test getting the pinned KG openMINDS version preference
 
             version = omkg.getpref("KgOpenMINDSVersion");
 
