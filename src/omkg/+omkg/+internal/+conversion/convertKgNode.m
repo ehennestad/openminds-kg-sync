@@ -49,12 +49,22 @@ function omNode = convertKgNode(kgNode, omReferenceNode, options)
         return
     end
 
-    persistent controlledInstanceMap
-    if isempty(controlledInstanceMap)
-        controlledInstanceMap = omkg.internal.conversion.getIdentifierMapping();
+    % A single node may still arrive wrapped in a cell, e.g. a bulk
+    % response holding exactly one instance.
+    if iscell(kgNode)
+        kgNode = kgNode{1};
     end
 
     [identifier, type] = omkg.internal.conversion.getNodeKeywords(kgNode, "@id", "@type");
+
+    % A controlled instance is identified by its openMINDS IRI, not by the
+    % UUID the Knowledge Graph assigned it. The IRI travels in
+    % schema:identifier, which filterProperties drops, so read it first.
+    controlledInstanceIRI = omkg.internal.conversion.getControlledInstanceIRI(kgNode);
+    isControlledInstance = strlength(controlledInstanceIRI) > 0;
+    if isControlledInstance
+        identifier = controlledInstanceIRI;
+    end
 
     processedKgNode = omkg.internal.conversion.filterProperties(kgNode);
     processedKgNode = omkg.internal.conversion.removeNamespaceIRIFromPropertyNames(processedKgNode);
@@ -78,18 +88,11 @@ function omNode = convertKgNode(kgNode, omReferenceNode, options)
         % Recursively process linked/embedded nodes
         if isstruct(currentPropertyValue) || iscell(currentPropertyValue)
             if isLinkedNode(currentPropertyValue)
-                try
-                    if all(isKey(controlledInstanceMap, {currentPropertyValue.at_id}))
-                        % Todo: check and resolve one by one. What if some are
-                        % resolvable and others are not.
-                        currentPropertyValue = resolveAsControlledInstances(currentPropertyValue, controlledInstanceMap);
-                    else
-                        currentPropertyValue = createUnresolvedNode(currentPropertyValue, omDummyNode.(currentPropertyName));
-                    end
-                catch ME
-                    % TODO: Improve error handling for property conversion
-                    rethrow(ME);
-                end
+                % Every link, controlled instances included, becomes a
+                % reference that is resolved by download. The downloaded
+                % node carries the identity to use, so nothing has to be
+                % known about the target up front.
+                currentPropertyValue = createUnresolvedNode(currentPropertyValue, omDummyNode.(currentPropertyName));
 
             elseif isEmbeddedNode(currentPropertyValue)
                 currentPropertyValue = omkg.internal.conversion.convertKgNode(currentPropertyValue, "ParentNode", kgNode);
@@ -112,7 +115,11 @@ function omNode = convertKgNode(kgNode, omReferenceNode, options)
     propertyNames = propertyNames(toKeep);
     propertyValues = propertyValues(toKeep);
 
-    if ~isempty(omReferenceNode)
+    % A controlled instance is always built fresh, even when a reference
+    % node was supplied: its identifier changes from the Knowledge Graph
+    % UUID to the openMINDS IRI, and id can not be set on an existing node.
+    % Callers use the returned value, as the resolver contract requires.
+    if ~isempty(omReferenceNode) && ~isControlledInstance
         if isa(omReferenceNode, class(omDummyNode))
             % TODO: Verify this branch is working correctly
             omReferenceNode.set(propertyNames, propertyValues);
@@ -147,16 +154,6 @@ function omNode = convertKgNode(kgNode, omReferenceNode, options)
             throw(ME)
         end
     end
-end
-
-function nodes = resolveAsControlledInstances(nodes, identfierMap)
-    newNodes = cell(1, numel(nodes));
-
-    for i = 1:numel(nodes)
-        omId = identfierMap(nodes(i).at_id);
-        newNodes{i} = openminds.instanceFromIRI(omId);
-    end
-    nodes = omkg.util.concatTypesIfHomogeneous(newNodes);
 end
 
 function unresolvedNodes = createUnresolvedNode(node, expectedObject)

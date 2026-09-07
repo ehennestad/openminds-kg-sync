@@ -11,6 +11,97 @@ classdef ConvertKgNodeTest < matlab.unittest.TestCase
         end
     end
 
+    %% Controlled Instance Identity Tests
+    methods (Test)
+        function testControlledInstanceIsIdentifiedByOpenMindsIri(testCase)
+            % The KG assigns a controlled instance its own UUID and keeps
+            % the openMINDS IRI it was ingested with in schema:identifier.
+            % The converted instance must carry the openMINDS IRI: the UUID
+            % only means something inside that KG.
+            kgNode = testCase.createSpeciesKgNode(...
+                "https://openminds.om-i.org/instances/species/musMusculus");
+
+            omNode = omkg.internal.conversion.convertKgNode(kgNode);
+
+            testCase.verifyClass(omNode, 'openminds.controlledterms.Species')
+            testCase.verifyEqual(string(omNode.id), ...
+                "https://openminds.om-i.org/instances/species/musMusculus")
+            testCase.verifyEqual(omNode.name, "Mus musculus")
+        end
+
+        function testAliasedControlledInstanceGetsCanonicalIri(testCase)
+            % Some KG nodes carry a corrected spelling next to the
+            % superseded one. The one openMINDS recognises wins, whatever
+            % order the KG lists them in.
+            aliases = [ ...
+                "https://openminds.om-i.org/instances/contributionType/dataManagment", ...
+                "https://openminds.om-i.org/instances/contributionType/dataManagement"];
+
+            for order = {aliases, flip(aliases)}
+                kgNode = struct(...
+                    'x_id', 'https://kg.ebrains.eu/api/instances/aliased', ...
+                    'x_type', {{'https://openminds.om-i.org/types/ContributionType'}}, ...
+                    'http___schema_org_identifier', {cellstr(order{1})}, ...
+                    'https___openminds_ebrains_eu_vocab_name', 'data management');
+
+                omNode = omkg.internal.conversion.convertKgNode(kgNode);
+
+                testCase.verifyEqual(string(omNode.id), ...
+                    "https://openminds.om-i.org/instances/contributionType/dataManagement")
+            end
+        end
+
+        function testNodeWithoutOpenMindsIdentifierKeepsKgIri(testCase)
+            % schema:identifier holds the KG's own IRI for every node. On
+            % its own that is not an openMINDS identity.
+            kgNode = struct(...
+                'x_id', 'https://kg.ebrains.eu/api/instances/test-123', ...
+                'x_type', {{'https://openminds.ebrains.eu/core/Person'}}, ...
+                'http___schema_org_identifier', {{'https://kg.ebrains.eu/api/instances/test-123'}}, ...
+                'https___openminds_ebrains_eu_vocab_givenName', 'John');
+
+            omNode = omkg.internal.conversion.convertKgNode(kgNode);
+
+            testCase.verifyEqual(string(omNode.id), "https://kg.ebrains.eu/api/instances/test-123")
+        end
+
+        function testControlledInstanceReplacesReferenceNode(testCase)
+            % A reference node can not have its id changed, so a controlled
+            % instance is built fresh rather than populated in place.
+            kgNode = testCase.createSpeciesKgNode(...
+                "https://openminds.om-i.org/instances/species/musMusculus");
+            referenceNode = openminds.controlledterms.Species(...
+                'id', kgNode.x_id, 'IsReference', true);
+
+            omNode = omkg.internal.conversion.convertKgNode(kgNode, referenceNode);
+
+            testCase.verifyNotSameHandle(omNode, referenceNode)
+            testCase.verifyEqual(string(omNode.id), ...
+                "https://openminds.om-i.org/instances/species/musMusculus")
+            testCase.verifyFalse(omNode.isReference())
+        end
+
+        function testLinkedControlledInstanceBecomesReference(testCase)
+            % A link to a controlled instance is not resolved from the
+            % local library during conversion. It becomes a reference that
+            % is downloaded later, like any other link.
+            speciesKgIri = 'https://kg.ebrains.eu/api/instances/species-uuid';
+            kgNode = struct(...
+                'x_id', 'https://kg.ebrains.eu/api/instances/subject-1', ...
+                'x_type', {{'https://openminds.om-i.org/types/Subject'}}, ...
+                'https___openminds_ebrains_eu_vocab_lookupLabel', 'mouse1', ...
+                'https___openminds_ebrains_eu_vocab_species', struct('x_id', speciesKgIri));
+
+            omNode = omkg.internal.conversion.convertKgNode(kgNode);
+
+            % Subject.species is a mixed-type property, so the link is a
+            % MixedTypeReference. Either way it must be reported as an
+            % unresolved link under the KG IRI it will be downloaded by.
+            testCase.verifyEqual(string(omNode.getUnresolvedLinkIdentifiers()), string(speciesKgIri), ...
+                'A linked controlled instance should be left unresolved, keyed by its KG IRI')
+        end
+    end
+
     %% Basic Conversion Tests
     methods (Test)
         function testConvertSimpleNode(testCase)
@@ -314,6 +405,18 @@ classdef ConvertKgNodeTest < matlab.unittest.TestCase
                     contains(ME.message, 'Failed to create'), ...
                     'Error message should mention parent context');
             end
+        end
+    end
+
+    methods (Static, Access = private)
+        function kgNode = createSpeciesKgNode(openMindsIri)
+            % A controlled instance as the KG returns it
+            kgNode = struct(...
+                'x_id', 'https://kg.ebrains.eu/api/instances/6ba7b810-9dad-11d1-80b4-00c04fd430c8', ...
+                'x_type', {{'https://openminds.om-i.org/types/Species'}}, ...
+                'http___schema_org_identifier', {{char(openMindsIri), ...
+                    'https://kg.ebrains.eu/api/instances/6ba7b810-9dad-11d1-80b4-00c04fd430c8'}}, ...
+                'https___openminds_ebrains_eu_vocab_name', 'Mus musculus');
         end
     end
 end

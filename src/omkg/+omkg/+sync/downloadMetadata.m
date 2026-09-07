@@ -30,9 +30,6 @@ function omNode = downloadMetadata(kgIdentifier, options)
 
     uuid = omkg.util.getIdentifierUUID(kgIdentifier);
 
-    controlledTermUuidMap = omkg.internal.conversion.getIdentifierMapping();
-    controlledTermKgIds = controlledTermUuidMap.keys();
-
     % Download instance
     kgNode = options.Client.getInstance(uuid, "Server", options.Server);
 
@@ -45,7 +42,6 @@ function omNode = downloadMetadata(kgIdentifier, options)
     for i = 1:options.NumLinksToResolve
 
         linkedIRIs = omkg.internal.conversion.extractLinkedIdentifiers(newNodes);
-        linkedIRIs = setdiff(linkedIRIs, controlledTermKgIds);
         linkedIRIs = setdiff(linkedIRIs, resolvedIRIs);
 
         if ~isempty(linkedIRIs)
@@ -63,8 +59,13 @@ function omNode = downloadMetadata(kgIdentifier, options)
                 newNodes = num2cell(newNodes);
             end
 
-            % Reconstruct list of IRIs as response is not same order as request
-            linkedIRIs = cellfun(@(c) c.id, newNodes);
+            % Reconstruct the list of IRIs, as the response is not in the
+            % order of the request. Take them from the Knowledge Graph nodes
+            % rather than the converted ones: a converted controlled
+            % instance carries its openMINDS IRI, while the reference in
+            % the parent still holds the Knowledge Graph IRI that
+            % resolveLinks matches against.
+            linkedIRIs = getKnowledgeGraphIRIs(kgNodes);
 
             allNodes = [allNodes, newNodes]; %#ok<AGROW>
             resolvedIRIs = [resolvedIRIs, linkedIRIs]; %#ok<AGROW>
@@ -79,4 +80,14 @@ function omNode = downloadMetadata(kgIdentifier, options)
 
     omkg.internal.resolveLinks(allNodes{1}, resolvedIRIs(2:end), allNodes(2:end))
     omNode = allNodes{1};
+end
+
+function iris = getKnowledgeGraphIRIs(kgNodes)
+% getKnowledgeGraphIRIs - The @id of each node, in the order they were returned
+    kgNodes = omkg.internal.conversion.normalizeJsonLdKeywords(kgNodes);
+    if ~iscell(kgNodes)
+        kgNodes = num2cell(kgNodes);
+    end
+    iris = string(cellfun(@(node) node.at_id, kgNodes, 'UniformOutput', false));
+    iris = reshape(iris, 1, []);
 end

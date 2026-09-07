@@ -110,6 +110,44 @@ classdef DownloadMetadataTest < matlab.unittest.TestCase
             end
         end
 
+        function testLinkedControlledInstanceGetsOpenMindsIdentity(testCase)
+            % A linked controlled instance is downloaded in the same bulk
+            % request as any other link. The downloaded node carries the
+            % openMINDS IRI in schema:identifier, and the resolved instance
+            % is identified by that rather than by the KG UUID, so the
+            % metadata is portable beyond this Knowledge Graph.
+            speciesKgIri = "https://kg.ebrains.eu/api/instances/6ba7b810-9dad-11d1-80b4-00c04fd430c8";
+            speciesOmIri = "https://openminds.om-i.org/instances/species/musMusculus";
+
+            subjectNode = struct();
+            subjectNode.x_id = "https://kg.ebrains.eu/api/instances/" + testCase.TestUUID;
+            subjectNode.x_type = "https://openminds.om-i.org/types/Subject";
+            subjectNode.lookupLabel = "mouse1";
+            subjectNode.species = struct('x_id', speciesKgIri);
+
+            speciesNode = struct();
+            speciesNode.x_id = speciesKgIri;
+            speciesNode.x_type = "https://openminds.om-i.org/types/Species";
+            speciesNode.http___schema_org_identifier = {char(speciesOmIri), char(speciesKgIri)};
+            speciesNode.name = "Mus musculus";
+
+            testCase.MockClient.setInstanceResponse(subjectNode);
+            testCase.MockClient.setBulkResponse({speciesNode});
+
+            result = omkg.sync.downloadMetadata(testCase.TestUUID, ...
+                'Client', testCase.MockClient, ...
+                'NumLinksToResolve', 1);
+
+            testCase.verifyEqual(testCase.MockClient.getCallCount('getInstancesBulk'), 1, ...
+                'The controlled instance should be fetched in the bulk request')
+            testCase.verifyClass(result.species, 'openminds.controlledterms.Species')
+            testCase.verifyFalse(result.species.isReference(), ...
+                'The link should be resolved')
+            testCase.verifyEqual(string(result.species.id), speciesOmIri, ...
+                'The resolved controlled instance should carry its openMINDS IRI')
+            testCase.verifyEqual(result.species.name, "Mus musculus")
+        end
+
         function testDownloadMetadataErrorHandling(testCase)
             % Test error handling in downloadMetadata
 

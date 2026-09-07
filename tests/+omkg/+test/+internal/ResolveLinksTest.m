@@ -46,7 +46,7 @@ classdef ResolveLinksTest < matlab.unittest.TestCase
             % Set a controlled instance reference
             try
                 subject.species = openminds.controlledterms.Species(...
-                    'id', 'https://openminds.ebrains.eu/instances/species/musMusculus');
+                    'id', 'https://openminds.om-i.org/instances/species/musMusculus');
             catch
                 % If species is not a valid property, skip this test
                 testCase.assumeFail('Property species not available');

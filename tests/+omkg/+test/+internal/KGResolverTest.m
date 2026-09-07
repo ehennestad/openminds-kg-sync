@@ -3,14 +3,14 @@ classdef KGResolverTest < matlab.unittest.TestCase
 %
 %   Covers the openminds.interface.LinkResolver contract as implemented for
 %   the Knowledge Graph: identifier matching, in-place population of typed
-%   references, replacement of mixed-type references, local resolution of
-%   controlled instances, and registration/replacement in the openMINDS
-%   link resolver registry.
+%   references, replacement of mixed-type references, download of
+%   controlled instances under their openMINDS identity, and
+%   registration/replacement in the openMINDS link resolver registry.
 
     properties (Constant)
         PersonIri = "https://kg.ebrains.eu/api/instances/550e8400-e29b-41d4-a716-446655440000"
         ControlledIri = "https://kg.ebrains.eu/api/instances/6ba7b810-9dad-11d1-80b4-00c04fd430c8"
-        ControlledOpenMindsIri = "https://openminds.ebrains.eu/instances/species/musMusculus"
+        ControlledOpenMindsIri = "https://openminds.om-i.org/instances/species/musMusculus"
     end
 
     properties
@@ -92,16 +92,34 @@ classdef KGResolverTest < matlab.unittest.TestCase
                 'getInstance', 'Server', ebrains.kg.enum.KGServer.PREPROD))
         end
 
-        function testResolveNodeResolvesControlledInstanceLocally(testCase)
+        function testResolveNodeDownloadsControlledInstance(testCase)
+            % A controlled instance is downloaded like any other node. The
+            % downloaded node carries its openMINDS IRI in schema:identifier
+            % and the result is identified by that, not by the KG UUID.
+            testCase.MockClient.setInstanceResponse(testCase.createSpeciesKgNode());
             resolver = testCase.createResolver();
             speciesStub = openminds.controlledterms.Species('id', testCase.ControlledIri, 'IsReference', true);
 
             resolved = resolver.resolveNode(speciesStub);
 
             testCase.verifyClass(resolved, 'openminds.controlledterms.Species')
-            testCase.verifyEqual(string(resolved.id), testCase.ControlledOpenMindsIri)
-            testCase.verifyEqual(testCase.MockClient.getCallCount('getInstance'), 0, ...
-                'Controlled instances should not be downloaded')
+            testCase.verifyEqual(string(resolved.id), testCase.ControlledOpenMindsIri, ...
+                'A controlled instance should carry its openMINDS IRI')
+            testCase.verifyEqual(resolved.name, "Mus musculus")
+            testCase.verifyEqual(testCase.MockClient.getCallCount('getInstance'), 1)
+        end
+
+        function testControlledInstanceIsReplacedNotPopulatedInPlace(testCase)
+            % The identifier changes on conversion and id can not be set on
+            % an existing node, so the stub is not the result.
+            testCase.MockClient.setInstanceResponse(testCase.createSpeciesKgNode());
+            resolver = testCase.createResolver();
+            speciesStub = openminds.controlledterms.Species('id', testCase.ControlledIri, 'IsReference', true);
+
+            resolved = resolver.resolveNode(speciesStub);
+
+            testCase.verifyNotSameHandle(resolved, speciesStub)
+            testCase.verifyFalse(resolved.isReference())
         end
 
         function testTraversalStoresReplacedInstance(testCase)
@@ -147,17 +165,17 @@ classdef KGResolverTest < matlab.unittest.TestCase
             arguments
                 testCase
                 options.Server (1,1) ebrains.kg.enum.KGServer = "prod"
-                options.Client = testCase.MockClient
+                options.Client = []
             end
 
-            % Inject the identifier map to keep the test independent of the
-            % controlled instance registry.
-            identifierMap = dictionary(testCase.ControlledIri, testCase.ControlledOpenMindsIri);
+            client = options.Client;
+            if isempty(client)
+                client = testCase.MockClient;
+            end
 
             resolver = omkg.internal.KGResolver(...
                 "Server", options.Server, ...
-                "Client", options.Client, ...
-                "IdentifierMap", identifierMap);
+                "Client", client);
         end
     end
 
@@ -169,6 +187,19 @@ classdef KGResolverTest < matlab.unittest.TestCase
             kgNode.x_type = "https://openminds.ebrains.eu/core/Person";
             kgNode.https___openminds_ebrains_eu_vocab_givenName = "John";
             kgNode.https___openminds_ebrains_eu_vocab_familyName = "Doe";
+        end
+
+        function kgNode = createSpeciesKgNode()
+            % A controlled instance as the KG returns it: its own UUID as
+            % @id, and the openMINDS IRI it was ingested with alongside the
+            % KG IRI in schema:identifier.
+            kgNode = struct();
+            kgNode.x_id = omkg.test.internal.KGResolverTest.ControlledIri;
+            kgNode.x_type = "https://openminds.om-i.org/types/Species";
+            kgNode.http___schema_org_identifier = { ...
+                omkg.test.internal.KGResolverTest.ControlledOpenMindsIri, ...
+                omkg.test.internal.KGResolverTest.ControlledIri};
+            kgNode.https___openminds_ebrains_eu_vocab_name = "Mus musculus";
         end
     end
 end
