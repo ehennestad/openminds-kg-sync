@@ -3,27 +3,20 @@ classdef PreferencesFixture < matlab.unittest.fixtures.Fixture
 %
 %   omkg.util.Preferences is a singleton that persists to a file in
 %   prefdir, i.e. the real preferences used outside of tests. Applying
-%   this fixture captures the current values on setup and restores them
-%   on teardown, so a test suite that changes preferences (including
-%   resetting them to defaults) does not permanently overwrite whatever
-%   the user had configured before the tests ran.
+%   this fixture captures the current values on setup and registers a
+%   teardown that restores them, so a test suite that changes
+%   preferences (including resetting them to defaults) does not
+%   permanently overwrite whatever the user had configured before the
+%   tests ran.
 %
 %   Usage:
 %       testCase.applyFixture(omkg.test.fixtures.PreferencesFixture());
 
-    properties (Access = private)
-        OriginalValues
-    end
-
     methods
         function setup(fixture)
             prefs = omkg.getpref();
-            fixture.OriginalValues = fixture.captureValues(prefs);
-        end
-
-        function teardown(fixture)
-            prefs = omkg.getpref();
-            fixture.applyValues(prefs, fixture.OriginalValues);
+            originalValues = fixture.captureValues(prefs);
+            fixture.addTeardown(@() fixture.applyValues(prefs, originalValues));
         end
     end
 
