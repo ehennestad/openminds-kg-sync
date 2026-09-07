@@ -19,7 +19,7 @@ function omNode = downloadMetadata(kgIdentifier, options)
         options.Server (1,1) ebrains.kg.enum.KGServer = omkg.getpref("DefaultServer")
         options.Client ebrains.kg.api.InstancesClient = ebrains.kg.api.InstancesClient()
         options.Verbose (1,1) logical = false
-        options.ReferenceNode {mustBeA(options.ReferenceNode, ["double", "openminds.abstract.Schema"])} = []
+        options.ReferenceNode {mustBeA(options.ReferenceNode, ["double", "openminds.Node"])} = []
     end
 
     % Todo:

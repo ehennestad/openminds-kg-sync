@@ -33,7 +33,7 @@ classdef KGSerializer < openminds.internal.serializer.JsonLdSerializer
     end
 
     methods (Access = protected)
-        function allStructs = postProcessInstances(obj, allStructs)
+        function allStructs = postProcessDocuments(obj, allStructs)
             arguments
                 obj (1,1) openminds.internal.serializer.JsonLdSerializer
                 allStructs (1,:) {omkg.validator.mustBeCellOfStructs}
@@ -55,7 +55,7 @@ classdef KGSerializer < openminds.internal.serializer.JsonLdSerializer
                     allStructs{i} = currentStruct;
                 end
             end
-            allStructs = postProcessInstances@openminds.internal.serializer.JsonLdSerializer(obj, allStructs);
+            allStructs = postProcessDocuments@openminds.internal.serializer.JsonLdSerializer(obj, allStructs);
         end
     end
 end

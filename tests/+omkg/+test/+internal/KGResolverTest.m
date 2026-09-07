@@ -32,7 +32,7 @@ classdef KGResolverTest < matlab.unittest.TestCase
         function restoreResolverRegistry(testCase)
             % Tests that register resolvers must leave the default
             % registration behind for other tests.
-            registry = openminds.internal.resolver.LinkResolverRegistry.instance();
+            registry = openminds.internal.resolver.LinkResolverRegistry.getSingleton();
             testCase.addTeardown(@() restoreDefaultRegistration(registry))
 
             function restoreDefaultRegistration(registry)

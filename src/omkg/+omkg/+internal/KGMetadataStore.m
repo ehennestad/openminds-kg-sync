@@ -43,7 +43,7 @@ classdef KGMetadataStore < openminds.interface.MetadataStore
         function id = save(obj, instance, options)
             arguments
                 obj (1,1) omkg.internal.KGMetadataStore
-                instance (1,1) openminds.abstract.Schema
+                instance (1,1) openminds.Node
                 options.IsEmbedded (1,1) logical = false
                 options.SaveMode (1,1) string {mustBeMember(options.SaveMode, ["update", "replace"])} = "update"
             end

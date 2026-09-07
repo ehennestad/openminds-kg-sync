@@ -23,7 +23,7 @@ classdef ConvertKgNodeTest < matlab.unittest.TestCase
 
             omNode = omkg.internal.conversion.convertKgNode(kgNode);
 
-            testCase.verifyTrue(isa(omNode, 'openminds.abstract.Schema'), ...
+            testCase.verifyTrue(isa(omNode, 'openminds.Node'), ...
                 'Converted node should be an openMINDS schema object');
             testCase.verifyTrue(strcmp(omNode.id, kgNode.x_id), ...
                 'ID should be preserved');
@@ -141,14 +141,14 @@ classdef ConvertKgNodeTest < matlab.unittest.TestCase
             % Should create unresolved node reference
             omNode = omkg.internal.conversion.convertKgNode(kgNode);
 
-            testCase.verifyTrue(isa(omNode, 'openminds.abstract.Schema'), ...
+            testCase.verifyTrue(isa(omNode, 'openminds.Node'), ...
                 'Should create valid node even with unresolved links');
 
             linkedInstance = omNode.contactInformation;
             testCase.verifyEqual(string(linkedInstance.id), string(linkedNode.x_id))
             testCase.verifyTrue(linkedInstance.isReference(), ...
                 'A linked node must be an explicit reference so it is resolved later and never saved as an empty node');
-            testCase.verifyEqual(string(omNode.getUnresolvedLinks()), string(linkedNode.x_id), ...
+            testCase.verifyEqual(string(omNode.getUnresolvedLinkIdentifiers()), string(linkedNode.x_id), ...
                 'The linked node should be reported as an unresolved link');
         end
 
@@ -168,7 +168,7 @@ classdef ConvertKgNodeTest < matlab.unittest.TestCase
             % Should recursively convert embedded nodes
             omNode = omkg.internal.conversion.convertKgNode(kgNode);
 
-            testCase.verifyTrue(isa(omNode, 'openminds.abstract.Schema'), ...
+            testCase.verifyTrue(isa(omNode, 'openminds.Node'), ...
                 'Should handle embedded nodes');
         end
 
@@ -187,7 +187,7 @@ classdef ConvertKgNodeTest < matlab.unittest.TestCase
 
             omNode = omkg.internal.conversion.convertKgNode(kgNode);
 
-            testCase.verifyTrue(isa(omNode, 'openminds.abstract.Schema'), ...
+            testCase.verifyTrue(isa(omNode, 'openminds.Node'), ...
                 'Should handle arrays of linked nodes');
         end
     end
@@ -203,7 +203,7 @@ classdef ConvertKgNodeTest < matlab.unittest.TestCase
 
             omNode = omkg.internal.conversion.convertKgNode(kgNode);
 
-            testCase.verifyTrue(isa(omNode, 'openminds.abstract.Schema'), ...
+            testCase.verifyTrue(isa(omNode, 'openminds.Node'), ...
                 'Should handle char properties');
         end
 
@@ -221,7 +221,7 @@ classdef ConvertKgNodeTest < matlab.unittest.TestCase
 
             omNode = omkg.internal.conversion.convertKgNode(kgNode);
 
-            testCase.verifyTrue(isa(omNode, 'openminds.abstract.Schema'), ...
+            testCase.verifyTrue(isa(omNode, 'openminds.Node'), ...
                 'Should convert char to string when preference is set');
         end
 
@@ -234,7 +234,7 @@ classdef ConvertKgNodeTest < matlab.unittest.TestCase
 
             omNode = omkg.internal.conversion.convertKgNode(kgNode);
 
-            testCase.verifyTrue(isa(omNode, 'openminds.abstract.Schema'), ...
+            testCase.verifyTrue(isa(omNode, 'openminds.Node'), ...
                 'Should handle numeric properties');
         end
     end
@@ -274,7 +274,7 @@ classdef ConvertKgNodeTest < matlab.unittest.TestCase
 
             omNode = omkg.internal.conversion.convertKgNode(kgNode);
 
-            testCase.verifyTrue(isa(omNode, 'openminds.abstract.Schema'), ...
+            testCase.verifyTrue(isa(omNode, 'openminds.Node'), ...
                 'Should handle empty cell arrays');
         end
 

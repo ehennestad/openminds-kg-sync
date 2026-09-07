@@ -13,7 +13,7 @@ function ids = kgsave(openmindsInstance, kgOptions, options)
 %
 % Input Arguments:
 %   openmindsInstance - openMINDS schema instances to save
-%       Type: openminds.abstract.Schema (array)
+%       Type: openminds.Node (array)
 %
 %   kgOptions - Knowledge Graph options (optional)
 %       Fields:
@@ -44,7 +44,7 @@ function ids = kgsave(openmindsInstance, kgOptions, options)
 % See also: kglist, kgpull, kgdelete
 
     arguments
-        openmindsInstance (1,:) openminds.abstract.Schema
+        openmindsInstance (1,:) openminds.Node
         kgOptions.space (1,1) string = omkg.getpref("DefaultSpace")
         kgOptions.Server (1,1) ebrains.kg.enum.KGServer = omkg.getpref("DefaultServer")
         options.Client ebrains.kg.api.InstancesClient = ebrains.kg.api.InstancesClient()

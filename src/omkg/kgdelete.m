@@ -12,7 +12,7 @@ function kgdelete(target, kgOptions, options)
 %
 % Input Arguments:
 %   target - Target to delete
-%       Type: openminds.abstract.Schema array OR string array
+%       Type: openminds.Node array OR string array
 %       Description: Either openMINDS schema instances (with valid IDs) or
 %                   KG identifier strings
 %
@@ -63,7 +63,7 @@ function kgdelete(target, kgOptions, options)
     end
 
     % Extract identifier based on input type
-    if isa(target, 'openminds.abstract.Schema')
+    if isa(target, 'openminds.Node')
         instanceId = target.id;
         if options.Verbose
             targetDescription = sprintf("instance of type '%s'", class(target));

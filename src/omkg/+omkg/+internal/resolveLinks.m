@@ -6,7 +6,7 @@ function resolveLinks(instance, instanceIds, instanceCollection)
         return
     end
 
-    metaType = openminds.internal.meta.fromInstance(instance);
+    metaType = openminds.introspection.fromInstance(instance);
 
     for i = 1:metaType.NumProperties
         thisPropertyName = metaType.PropertyNames{i};
