@@ -36,7 +36,8 @@ jobs:
           command: |
             matbox.installRequirements('.')
 
-            openminds.version(3)
+            addpath(genpath( "src" ));
+            omkg.internal.checkEnvironment()
 
             setenv('EBRAINS_MATLAB_FORCE_CLIENT_CREDENTIALS_OAUTH_FLOW', 'true')
             ebrains.authenticate(...
@@ -46,7 +47,6 @@ jobs:
 
             tokenManager = ebrains.getTokenManager()
 
-            addpath(genpath( "src" ));
             addpath(genpath( "tests" ));
             addpath(genpath( "tools" ));
 
