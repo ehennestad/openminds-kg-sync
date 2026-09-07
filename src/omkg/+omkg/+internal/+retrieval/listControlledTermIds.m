@@ -19,7 +19,7 @@ function identifiers = listControlledTermIds(typeName, options)
 %    controlled terms retrieved from the API.
 
     arguments
-        typeName (1,1) string = "https://openminds.om-i.org/controlledTerms/UBERONParcellation"
+        typeName (1,1) string = "https://openminds.om-i.org/types/UBERONParcellation"
         options.ApiClient = ebrains.kg.api.InstancesClient()
     end
 

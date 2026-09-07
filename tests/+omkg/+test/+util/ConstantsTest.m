@@ -57,6 +57,22 @@ classdef ConstantsTest < matlab.unittest.TestCase
                 'OpenMINDSInstanceIRIPrefix should include the v4-and-above namespace');
         end
 
+        function testOpenMINDSTypeIRIPrefix(testCase)
+            % Test the type (@type) IRI prefix constant
+            %
+            % v3-and-below uses distinct "controlledTerms/" and "core/"
+            % segments; v4-and-above collapses both into "types/".
+
+            typePrefix = omkg.constants.OpenMINDSTypeIRIPrefix;
+
+            testCase.verifyClass(typePrefix, 'string', ...
+                'OpenMINDSTypeIRIPrefix should be a string');
+            testCase.verifyTrue(any(strcmp(typePrefix, "https://openminds.ebrains.eu/controlledTerms/")), ...
+                'OpenMINDSTypeIRIPrefix should include the v3-and-below controlledTerms namespace');
+            testCase.verifyTrue(any(strcmp(typePrefix, "https://openminds.om-i.org/types/")), ...
+                'OpenMINDSTypeIRIPrefix should include the v4-and-above types namespace');
+        end
+
         function testConstantRelationships(testCase)
             % Test relationships between constants
 
