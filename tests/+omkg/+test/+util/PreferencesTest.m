@@ -13,6 +13,16 @@ classdef PreferencesTest < matlab.unittest.TestCase
         DefaultSpaceValues = {"myspace", "testspace", "auto", "production"}
     end
 
+    methods (TestClassSetup)
+        function preserveRealPreferences(testCase)
+            % omkg.util.Preferences persists to a file in prefdir - the
+            % real preferences used outside of tests. Applying this
+            % fixture restores whatever was there before this class ran,
+            % regardless of what the tests below do to it.
+            testCase.applyFixture(omkg.test.fixtures.PreferencesFixture());
+        end
+    end
+
     methods (TestMethodSetup)
         function setupEach(~)
             % Setup for each test - reset preferences to defaults
