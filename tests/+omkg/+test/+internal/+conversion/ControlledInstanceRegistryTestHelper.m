@@ -53,7 +53,8 @@ classdef ControlledInstanceRegistryTestHelper
 
                 for instIdx = 1:instancesPerType
                     uuid = omkg.test.internal.conversion.ControlledInstanceRegistryTestHelper.generateUUID();
-                    omId = typeIri + "/" + lower(typeName) + instIdx;
+                    omId = omkg.test.internal.conversion.ControlledInstanceRegistryTestHelper...
+                        .instanceIRI(typeIri, lower(typeName) + instIdx);
 
                     instance = struct();
                     instance.x_id = uuid;
@@ -101,14 +102,49 @@ classdef ControlledInstanceRegistryTestHelper
 
             for i = 1:count
                 uuid = omkg.test.internal.conversion.ControlledInstanceRegistryTestHelper.generateUUID();
-                omId = sprintf('%s/%s%d', typeIri, lower(typeName), i);
+                omId = omkg.test.internal.conversion.ControlledInstanceRegistryTestHelper...
+                    .instanceIRI(typeIri, lower(typeName) + i);
 
                 instance = struct();
                 instance.x_id = uuid;
-                instance.http___schema_org_identifier = {omId};
+                instance.http___schema_org_identifier = {char(omId)};
 
                 instances{i} = instance;
             end
+        end
+
+        function iri = instanceIRI(typeIri, instanceName)
+            % instanceIRI - Build the instance IRI the KG reports for a controlled instance
+            %
+            % Input:
+            %   typeIri - Type IRI, e.g. "https://openminds.ebrains.eu/controlledTerms/Species"
+            %   instanceName - Name of the instance within that type
+            %
+            % Output:
+            %   iri - Instance IRI, e.g.
+            %       "https://openminds.ebrains.eu/instances/species/species1"
+            %
+            %   Controlled instances are identified by an IRI under the
+            %   "instances" segment. This differs from the type IRI, which
+            %   sits under "controlledTerms" and is what the Knowledge Graph
+            %   reports as @type; only the instance form can be parsed by
+            %   openminds.utility.parseInstanceIRI.
+            %
+            %   The type segment is lowerCamelCase for the type names used
+            %   in these fixtures. Real data is not uniform: types whose
+            %   name starts with an acronym keep it, as in
+            %   "instances/UBERONParcellation/...".
+
+            arguments
+                typeIri (1,1) string
+                instanceName (1,1) string
+            end
+
+            [namespaceIri, typeName] = fileparts(typeIri);
+            namespaceIri = fileparts(namespaceIri);
+            typeName = lower(extractBefore(typeName, 2)) + extractAfter(typeName, 1);
+
+            iri = namespaceIri + "/instances/" + typeName + "/" + instanceName;
         end
 
         function typeResponse = createTypeResponse(typeNames)

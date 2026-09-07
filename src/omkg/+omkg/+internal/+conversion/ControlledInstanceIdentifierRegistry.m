@@ -266,7 +266,10 @@ classdef ControlledInstanceIdentifierRegistry < handle
                 instanceUuidListing{i} = identifierMap;
             end
 
-            obj.IdentifierMap = [instanceUuidListing{:}];
+            [obj.IdentifierMap, rejectedPairs] = ...
+                omkg.internal.conversion.removeInvalidIdentifierPairs(...
+                    [instanceUuidListing{:}]);
+
             obj.LastUpdateTime = datetime('now');
             obj.saveToFile();
             obj.clearCachedMaps()
@@ -274,6 +277,11 @@ classdef ControlledInstanceIdentifierRegistry < handle
             if obj.Verbose
                 fprintf('Download complete. %d identifiers retrieved.\n', ...
                     numel(obj.IdentifierMap));
+                if ~isempty(rejectedPairs)
+                    fprintf(['%d identifier(s) were discarded because they ', ...
+                        'are not resolvable openMINDS instance IRIs.\n'], ...
+                        numel(rejectedPairs));
+                end
             end
         end
     end
@@ -359,6 +367,8 @@ classdef ControlledInstanceIdentifierRegistry < handle
                     % Step 3: Only fetch detailed data for new IDs
                     newIdentifiers = omkg.internal.retrieval.getControlledTermIdMap(...
                         typeIRI, newIds, 'ApiClient', obj.ApiClient);
+                    newIdentifiers = ...
+                        omkg.internal.conversion.removeInvalidIdentifierPairs(newIdentifiers);
 
                     % Add to our map
                     obj.IdentifierMap = [obj.IdentifierMap, newIdentifiers];
@@ -428,6 +438,11 @@ classdef ControlledInstanceIdentifierRegistry < handle
             %
             % Output arguments:
             %   map - dictionary or containers.Map object
+            %
+            %   Duplicate keys are resolved before the map is built. Both
+            %   dictionary and containers.Map silently keep the last value
+            %   for a repeated key, which would make the result depend on
+            %   the order in which the Knowledge Graph returned the data.
 
             arguments
                 obj
@@ -436,13 +451,18 @@ classdef ControlledInstanceIdentifierRegistry < handle
 
             mapConstructorFcn = getMapConstructor();
 
-            keys = string({obj.IdentifierMap.kg});
-            values = string({obj.IdentifierMap.om});
+            kgIds = string({obj.IdentifierMap.kg});
+            omIds = string({obj.IdentifierMap.om});
 
             if options.Reverse
-                map = mapConstructorFcn(values, keys);
+                % An openMINDS IRI identifies at most one Knowledge Graph
+                % instance, so a duplicate here would be a data error with
+                % no principled winner. Keep the first in sorted order.
+                [omIds, keepIdx] = unique(omIds);
+                map = mapConstructorFcn(omIds, kgIds(keepIdx));
             else
-                map = mapConstructorFcn(keys, values);
+                [kgIds, omIds] = selectCanonicalIdentifiers(kgIds, omIds);
+                map = mapConstructorFcn(kgIds, omIds);
             end
         end
     end
@@ -502,6 +522,12 @@ classdef ControlledInstanceIdentifierRegistry < handle
                     obj.IdentifierMap = data;
                     obj.LastUpdateTime = datetime.empty;
                 end
+
+                % The shipped resource and files written before this check
+                % existed contain pairs that openMINDS can not resolve.
+                % Drop them here so they never reach the lookup maps.
+                obj.IdentifierMap = ...
+                    omkg.internal.conversion.removeInvalidIdentifierPairs(obj.IdentifierMap);
             catch ME
                 warning('OMKG:ControlledInstanceRegistry:LoadFailed', ...
                     'Failed to load identifier map: %s', ME.message);
@@ -516,6 +542,38 @@ classdef ControlledInstanceIdentifierRegistry < handle
                 'userdata', ...
                 'kg2om_identifier_loopkup.json');
         end
+    end
+end
+
+function [uniqueKgIds, canonicalOmIds] = selectCanonicalIdentifiers(kgIds, omIds)
+% selectCanonicalIdentifiers - Reduce alias rows to one openMINDS IRI per KG id
+%
+%   Some Knowledge Graph instances carry several openMINDS schema
+%   identifiers and therefore appear as several rows with the same KG id.
+
+    [uniqueKgIds, firstIdx, groupIndex] = unique(kgIds);
+    canonicalOmIds = omIds(firstIdx);
+
+    instanceCount = accumarray(groupIndex(:), 1);
+    aliasedGroups = reshape(find(instanceCount > 1), 1, []);
+
+    unresolvedKgIds = string.empty;
+    for groupNumber = aliasedGroups
+        [canonicalOmIds(groupNumber), isResolved] = ...
+            omkg.internal.conversion.selectCanonicalInstanceIRI(...
+                omIds(groupIndex == groupNumber));
+
+        if ~isResolved
+            unresolvedKgIds(end+1) = uniqueKgIds(groupNumber); %#ok<AGROW>
+        end
+    end
+
+    if ~isempty(unresolvedKgIds)
+        warning('OMKG:ControlledInstanceRegistry:AmbiguousIdentifiers', ...
+            ['%d Knowledge Graph instance(s) map to several openMINDS ', ...
+            'instances that openMINDS does not disambiguate. The ', ...
+            'alphabetically first identifier is used for:\n  %s'], ...
+            numel(unresolvedKgIds), strjoin(unresolvedKgIds, newline + "  "))
     end
 end
 

@@ -19,8 +19,8 @@ classdef ControlledInstanceRegistryTest < matlab.unittest.TestCase
         % Test data for parameterized tests
         validKgIds = {"123e4567-e89b-12d3-a456-426614174000", ...
                       "987e6543-e21b-45c3-d654-321456987000"}
-        validOmIds = {"https://openminds.ebrains.eu/controlledTerms/Species1", ...
-                      "https://openminds.ebrains.eu/controlledTerms/Technique2"}
+        validOmIds = {"https://openminds.ebrains.eu/instances/species/species1", ...
+                      "https://openminds.ebrains.eu/instances/technique/technique1"}
     end
 
     properties
@@ -103,11 +103,11 @@ classdef ControlledInstanceRegistryTest < matlab.unittest.TestCase
             mockClient = testCase.createMockClient();
 
             registry1 = omkg.internal.conversion.ControlledInstanceIdentifierRegistry.instance('ApiClient', mockClient);
-            kgId1 = registry1.getKgId("https://openminds.ebrains.eu/controlledTerms/Species");
+            kgId1 = registry1.getKgId("https://openminds.ebrains.eu/instances/species/species1");
 
             % Get instance again without storing
             kgId2 = omkg.internal.conversion.ControlledInstanceIdentifierRegistry.instance().getKgId(...
-                "https://openminds.ebrains.eu/controlledTerms/Species");
+                "https://openminds.ebrains.eu/instances/species/species1");
 
             testCase.verifyEqual(kgId1, kgId2, ...
                 'Singleton should maintain state across calls');
@@ -121,7 +121,7 @@ classdef ControlledInstanceRegistryTest < matlab.unittest.TestCase
             mockClient = testCase.createMockClient();
             registry = omkg.internal.conversion.ControlledInstanceIdentifierRegistry.instance('ApiClient', mockClient);
 
-            omId = "https://openminds.ebrains.eu/controlledTerms/Species";
+            omId = "https://openminds.ebrains.eu/instances/species/species1";
             kgId = registry.getKgId(omId);
 
             testCase.verifyNotEqual(kgId, "", 'Should return a valid KG ID');
@@ -133,7 +133,7 @@ classdef ControlledInstanceRegistryTest < matlab.unittest.TestCase
             mockClient = testCase.createMockClient();
             registry = omkg.internal.conversion.ControlledInstanceIdentifierRegistry.instance('ApiClient', mockClient);
 
-            omId = "https://openminds.ebrains.eu/controlledTerms/NonExistent";
+            omId = "https://openminds.ebrains.eu/instances/species/nonExistent";
 
             testCase.verifyError(...
                 @() registry.getKgId(omId), ...
@@ -170,7 +170,7 @@ classdef ControlledInstanceRegistryTest < matlab.unittest.TestCase
             mockClient = testCase.createMockClient();
             registry = omkg.internal.conversion.ControlledInstanceIdentifierRegistry.instance('ApiClient', mockClient);
 
-            omId = "https://openminds.ebrains.eu/controlledTerms/Species";
+            omId = "https://openminds.ebrains.eu/instances/species/species1";
             kgId = registry.getKgId(omId);
             omIdReverse = registry.getOpenMindsId(kgId);
 
@@ -339,7 +339,7 @@ classdef ControlledInstanceRegistryTest < matlab.unittest.TestCase
             registry.downloadAll();
 
             % Get a known mapping
-            omId = "https://openminds.ebrains.eu/controlledTerms/Species/species1";
+            omId = "https://openminds.ebrains.eu/instances/species/species1";
             kgId1 = registry.getKgId(omId);
 
             % Update
@@ -376,7 +376,7 @@ classdef ControlledInstanceRegistryTest < matlab.unittest.TestCase
             registry1 = omkg.internal.conversion.ControlledInstanceIdentifierRegistry.instance( ...
                 'ApiClient', mockClient, 'Verbose', false);
             registry1.downloadAll();
-            omId = "https://openminds.ebrains.eu/controlledTerms/Species";
+            omId = "https://openminds.ebrains.eu/instances/species/species1";
             kgId1 = registry1.getKgId(omId);
 
             % Clear singleton
@@ -462,6 +462,111 @@ classdef ControlledInstanceRegistryTest < matlab.unittest.TestCase
         end
     end
 
+    %% Data Integrity Tests - unresolvable and aliased identifiers
+    methods (Test)
+        function testDiscardsUnresolvableIdentifiersOnDownload(testCase)
+            % Instances without an openMINDS identifier, and identifiers
+            % that are not openMINDS instance IRIs, must not reach the maps.
+            mockClient = testCase.createMockClient();
+            mockClient.setListResponse([
+                struct('x_id', 'https://kg.ebrains.eu/api/instances/valid', ...
+                    'http___schema_org_identifier', ...
+                    {{'https://openminds.ebrains.eu/instances/biologicalSex/male'}})
+                struct('x_id', 'https://kg.ebrains.eu/api/instances/noOpenMindsId', ...
+                    'http___schema_org_identifier', ...
+                    {{'https://example.org/some/other/identifier'}})
+                struct('x_id', 'https://kg.ebrains.eu/api/instances/typeIriNotInstance', ...
+                    'http___schema_org_identifier', ...
+                    {{'https://openminds.ebrains.eu/controlledTerms/programmingLanguage/AMPL'}})
+            ]);
+
+            registry = omkg.internal.conversion.ControlledInstanceIdentifierRegistry.instance(...
+                'ApiClient', mockClient, 'Reset', true, 'Verbose', false);
+            registry.downloadAll();
+
+            kgToOmMap = registry.KgToOmMap;
+            testCase.verifyTrue(...
+                isKey(kgToOmMap, "https://kg.ebrains.eu/api/instances/valid"), ...
+                'The resolvable identifier should be kept')
+            testCase.verifyFalse(...
+                isKey(kgToOmMap, "https://kg.ebrains.eu/api/instances/noOpenMindsId"), ...
+                'An instance without an openMINDS identifier should be dropped')
+            testCase.verifyFalse(...
+                isKey(kgToOmMap, "https://kg.ebrains.eu/api/instances/typeIriNotInstance"), ...
+                'A non-instance openMINDS IRI should be dropped')
+        end
+
+        function testEmptyOpenMindsIdentifierIsNotAKey(testCase)
+            % An instance carrying no openMINDS identifier used to add an
+            % empty key to the reverse map, so getKgId("") returned a hit.
+            mockClient = testCase.createMockClient();
+            mockClient.setListResponse(...
+                struct('x_id', 'https://kg.ebrains.eu/api/instances/noOpenMindsId', ...
+                    'http___schema_org_identifier', ...
+                    {{'https://example.org/some/other/identifier'}}));
+
+            registry = omkg.internal.conversion.ControlledInstanceIdentifierRegistry.instance(...
+                'ApiClient', mockClient, 'Reset', true, 'Verbose', false);
+            registry.downloadAll();
+
+            testCase.verifyError(...
+                @() registry.getKgId(""), ...
+                'OMKG:ControlledInstanceRegistry:IdNotFound')
+        end
+
+        function testAliasedIdentifiersResolveToSpellingKnownToOpenMinds(testCase)
+            % The Knowledge Graph lists a legacy misspelling alongside the
+            % corrected spelling for some instances. Both arrive under one
+            % KG id, and the map must keep the one openMINDS can resolve
+            % regardless of the order the Knowledge Graph returned them in.
+            aliasedKgId = "https://kg.ebrains.eu/api/instances/aliased";
+            aliases = {
+                'https://openminds.ebrains.eu/instances/contributionType/metadataManagment'
+                'https://openminds.ebrains.eu/instances/contributionType/metadataManagement'
+            };
+
+            for aliasOrder = {aliases, flip(aliases)}
+                mockClient = testCase.createMockClient();
+                mockClient.setListResponse(...
+                    struct('x_id', char(aliasedKgId), ...
+                        'http___schema_org_identifier', aliasOrder(1)));
+
+                registry = omkg.internal.conversion.ControlledInstanceIdentifierRegistry.instance(...
+                    'ApiClient', mockClient, 'Reset', true, 'Verbose', false);
+                registry.downloadAll();
+
+                testCase.verifyEqual(registry.getOpenMindsId(aliasedKgId), ...
+                    "https://openminds.ebrains.eu/instances/contributionType/metadataManagement", ...
+                    'Should keep the spelling openMINDS resolves')
+            end
+        end
+
+        function testAliasedIdentifiersRemainLookupableInReverse(testCase)
+            % Aliases are ambiguous only in the KG -> openMINDS direction.
+            % Each alias still identifies one KG instance, so both must
+            % remain usable for the reverse lookup.
+            aliasedKgId = "https://kg.ebrains.eu/api/instances/aliased";
+            mockClient = testCase.createMockClient();
+            mockClient.setListResponse(...
+                struct('x_id', char(aliasedKgId), ...
+                    'http___schema_org_identifier', {{
+                        'https://openminds.ebrains.eu/instances/contributionType/metadataManagment'
+                        'https://openminds.ebrains.eu/instances/contributionType/metadataManagement'
+                    }}));
+
+            registry = omkg.internal.conversion.ControlledInstanceIdentifierRegistry.instance(...
+                'ApiClient', mockClient, 'Reset', true, 'Verbose', false);
+            registry.downloadAll();
+
+            testCase.verifyEqual(registry.getKgId(...
+                "https://openminds.ebrains.eu/instances/contributionType/metadataManagment"), ...
+                aliasedKgId)
+            testCase.verifyEqual(registry.getKgId(...
+                "https://openminds.ebrains.eu/instances/contributionType/metadataManagement"), ...
+                aliasedKgId)
+        end
+    end
+
     %% Error Handling Tests
     methods (Test)
         function testHandlesEmptyResponse(testCase)
@@ -514,14 +619,16 @@ classdef ControlledInstanceRegistryTest < matlab.unittest.TestCase
             };
             mockClient.setListTypesResponse(typeResponse);
 
-            % Configure mock to return instance data
+            % Configure mock to return instance data. Controlled instances
+            % are identified by an IRI under the "instances" segment; the
+            % "controlledTerms" IRIs above name the types, not instances.
             instanceResponse = [
                 struct('x_id', '550e8400-e29b-41d4-a716-446655440000', ...
-                    'http___schema_org_identifier', {{'https://openminds.ebrains.eu/controlledTerms/Species'}})
+                    'http___schema_org_identifier', {{'https://openminds.ebrains.eu/instances/species/species1'}})
                 struct('x_id', '6ba7b810-9dad-11d1-80b4-00c04fd430c8', ...
-                    'http___schema_org_identifier', {{'https://openminds.ebrains.eu/controlledTerms/Technique'}})
+                    'http___schema_org_identifier', {{'https://openminds.ebrains.eu/instances/technique/technique1'}})
                 struct('x_id', '7c9e4567-e89b-12d3-a456-426614174001', ...
-                    'http___schema_org_identifier', {{'https://openminds.ebrains.eu/controlledTerms/Sex'}})
+                    'http___schema_org_identifier', {{'https://openminds.ebrains.eu/instances/sex/sex1'}})
             ];
             mockClient.setListResponse(instanceResponse);
             mockClient.setBulkResponse(instanceResponse);
