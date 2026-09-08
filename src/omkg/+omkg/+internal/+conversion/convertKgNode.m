@@ -78,19 +78,8 @@ function omNode = convertKgNode(kgNode, omReferenceNode, options)
         % Recursively process linked/embedded nodes
         if isstruct(currentPropertyValue) || iscell(currentPropertyValue)
             if isLinkedNode(currentPropertyValue)
-                try
-                    if all(isKey(controlledInstanceMap, {currentPropertyValue.at_id}))
-                        % Todo: check and resolve one by one. What if some are
-                        % resolvable and others are not.
-                        currentPropertyValue = resolveAsControlledInstances(currentPropertyValue, controlledInstanceMap);
-                    else
-                        currentPropertyValue = createUnresolvedNode(currentPropertyValue, omDummyNode.(currentPropertyName));
-                    end
-                catch ME
-                    % TODO: Improve error handling for property conversion
-                    rethrow(ME);
-                end
-
+                currentPropertyValue = convertLinkedNodes(currentPropertyValue, ...
+                    omDummyNode.(currentPropertyName), controlledInstanceMap);
             elseif isEmbeddedNode(currentPropertyValue)
                 currentPropertyValue = omkg.internal.conversion.convertKgNode(currentPropertyValue, "ParentNode", kgNode);
             end
@@ -149,14 +138,27 @@ function omNode = convertKgNode(kgNode, omReferenceNode, options)
     end
 end
 
-function nodes = resolveAsControlledInstances(nodes, identfierMap)
-    newNodes = cell(1, numel(nodes));
+function instances = convertLinkedNodes(nodes, expectedObject, controlledInstanceMap)
+% convertLinkedNodes - Turn each link into a library instance or a reference
+%
+%   Whether a link is a controlled instance is decided per link, because
+%   a property such as studyTarget can hold controlled terms next to
+%   instances that exist only in the Knowledge Graph. A controlled instance
+%   becomes the local library instance here, while the parent link is
+%   converted, since a link resolver must keep the identifier of the
+%   reference it resolves and so cannot make that swap later.
+    instances = cell(1, numel(nodes));
 
     for i = 1:numel(nodes)
-        omId = identfierMap(nodes(i).at_id);
-        newNodes{i} = openminds.instanceFromIRI(omId);
+        kgIdentifier = string(nodes(i).at_id);
+        if isKey(controlledInstanceMap, kgIdentifier)
+            openMindsIdentifier = controlledInstanceMap(kgIdentifier);
+            instances{i} = omkg.internal.conversion.getControlledInstance(openMindsIdentifier);
+        else
+            instances{i} = createUnresolvedNode(nodes(i), expectedObject);
+        end
     end
-    nodes = omkg.util.concatTypesIfHomogeneous(newNodes);
+    instances = omkg.util.concatTypesIfHomogeneous(instances);
 end
 
 function unresolvedNodes = createUnresolvedNode(node, expectedObject)

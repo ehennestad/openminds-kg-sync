@@ -152,6 +152,43 @@ classdef ConvertKgNodeTest < matlab.unittest.TestCase
                 'The linked node should be reported as an unresolved link');
         end
 
+        function testConvertLinksMixingControlledAndUnknownInstances(testCase)
+            % A property such as studyTarget can hold a controlled term next
+            % to an instance that exists only in the Knowledge Graph. Each
+            % link is decided on its own: the controlled term becomes the
+            % library instance, the other a reference. A link resolver may
+            % not change the identifier of a reference, so this is the
+            % only point where the controlled term can take its openMINDS
+            % identity.
+            epilepsyModelKgIri = 'https://kg.ebrains.eu/api/instances/ec1d39f3-411e-4a19-846b-e7a6d5a13306';
+            unknownKgIri = 'https://kg.ebrains.eu/api/instances/00000000-0000-4000-8000-000000000001';
+            kgNode = struct(...
+                'x_id', 'https://kg.ebrains.eu/api/instances/test-123', ...
+                'x_type', 'https://openminds.ebrains.eu/core/DatasetVersion', ...
+                'https___openminds_ebrains_eu_vocab_studyTarget', ...
+                    [struct('x_id', epilepsyModelKgIri), struct('x_id', unknownKgIri)]);
+
+            omNode = omkg.internal.conversion.convertKgNode(kgNode);
+
+            studyTargets = omNode.studyTarget;
+            testCase.verifyEqual(numel(studyTargets), 2)
+
+            controlledTerm = studyTargets(1).Instance;
+            testCase.verifyClass(controlledTerm, 'openminds.controlledterms.DiseaseModel')
+            testCase.verifyFalse(controlledTerm.isReference(), ...
+                'A controlled term known to the identifier map should be the library instance')
+            testCase.verifyTrue(endsWith(string(controlledTerm.id), "/diseaseModel/epilepsyModel"), ...
+                'The library instance carries its openMINDS identifier')
+
+            unknownInstance = studyTargets(2).Instance;
+            testCase.verifyTrue(unknownInstance.isReference(), ...
+                'A link not known to the identifier map stays a reference')
+            testCase.verifyEqual(string(unknownInstance.id), string(unknownKgIri))
+
+            testCase.verifyEqual(string(omNode.getUnresolvedLinkIdentifiers()), string(unknownKgIri), ...
+                'Only the unknown link should remain unresolved')
+        end
+
         function testConvertWithEmbeddedNode(testCase)
             % Test conversion of node with embedded child nodes
             embeddedNode = struct(...
