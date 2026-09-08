@@ -110,6 +110,60 @@ classdef DownloadMetadataTest < matlab.unittest.TestCase
             end
         end
 
+        function testUnknownControlledLinkIsPrefetchedAndTakesOpenMindsIdentity(testCase)
+            % Under the "openminds" identity policy a link to a controlled
+            % instance the lookup does not know is fetched before its
+            % parent is converted, so the parent's link can be built as
+            % the library instance with its openMINDS IRI. Identity is
+            % fixed here; a resolver may not change it later.
+            testCase.useIdentityPolicy("openminds");
+            [subjectNode, speciesNode, speciesKgIri, speciesOmIri] = testCase.createSubjectWithSpecies();
+            testCase.MockClient.setInstanceResponse(subjectNode);
+            testCase.MockClient.setBulkResponse({speciesNode});
+
+            result = omkg.sync.downloadMetadata(testCase.TestUUID, ...
+                'Client', testCase.MockClient, 'NumLinksToResolve', 0);
+
+            testCase.verifyEqual(testCase.MockClient.getCallCount('getInstancesBulk'), 1, ...
+                'The unknown controlled instance should be fetched once, before conversion')
+            testCase.verifyEmpty(result.getUnresolvedLinkIdentifiers(), ...
+                'A controlled instance link should not be left to resolve later')
+            species = result.species;
+            if openminds.utility.isMixedInstance(species), species = species.Instance; end
+            testCase.verifyClass(species, 'openminds.controlledterms.Species')
+            testCase.verifyEqual(string(species.id), speciesOmIri)
+            testCase.verifyTrue(omkg.internal.ControlledInstanceCache.instance().isKnown(speciesKgIri), ...
+                'The pre-fetch should have recorded the pairing for later pulls')
+        end
+
+        function testKnownControlledLinkIsNotFetchedAgain(testCase)
+            testCase.useIdentityPolicy("openminds");
+            [subjectNode, ~, speciesKgIri, speciesOmIri] = testCase.createSubjectWithSpecies();
+            omkg.internal.ControlledInstanceCache.instance().record(speciesKgIri, speciesOmIri);
+            testCase.MockClient.setInstanceResponse(subjectNode);
+
+            result = omkg.sync.downloadMetadata(testCase.TestUUID, ...
+                'Client', testCase.MockClient, 'NumLinksToResolve', 0);
+
+            testCase.verifyEqual(testCase.MockClient.getCallCount('getInstancesBulk'), 0, ...
+                'A controlled instance already known needs no request at all')
+            testCase.verifyEmpty(result.getUnresolvedLinkIdentifiers())
+        end
+
+        function testUnderKgIdentityPolicyControlledLinkStaysAReference(testCase)
+            % Under "kg" identity nothing is looked up or pre-fetched; the
+            % link keeps its Knowledge Graph identifier like any other.
+            testCase.useIdentityPolicy("kg");
+            [subjectNode, ~, speciesKgIri] = testCase.createSubjectWithSpecies();
+            testCase.MockClient.setInstanceResponse(subjectNode);
+
+            result = omkg.sync.downloadMetadata(testCase.TestUUID, ...
+                'Client', testCase.MockClient, 'NumLinksToResolve', 0);
+
+            testCase.verifyEqual(testCase.MockClient.getCallCount('getInstancesBulk'), 0)
+            testCase.verifyEqual(string(result.getUnresolvedLinkIdentifiers()), speciesKgIri)
+        end
+
         function testDownloadMetadataErrorHandling(testCase)
             % Test error handling in downloadMetadata
 
@@ -128,6 +182,40 @@ classdef DownloadMetadataTest < matlab.unittest.TestCase
                     rethrow(ME);
                 end
             end
+        end
+    end
+
+    methods (Access = private)
+        function useIdentityPolicy(testCase, policy)
+            % Select an identity policy against a temporary cache file,
+            % with the user's real preferences and cache left untouched.
+            import matlab.unittest.fixtures.TemporaryFolderFixture
+            testCase.applyFixture(omkg.test.fixtures.PreferencesFixture());
+            omkg.setpref("ControlledInstanceIdentity", policy);
+            tempFolder = testCase.applyFixture(TemporaryFolderFixture);
+            omkg.internal.ControlledInstanceCache.instance(...
+                'Reset', true, 'File', fullfile(tempFolder.Folder, "cache.json"));
+            testCase.addTeardown(@() ...
+                omkg.internal.ControlledInstanceCache.instance('Reset', true));
+        end
+    end
+
+    methods (Access = private)
+        function [subjectNode, speciesNode, speciesKgIri, speciesOmIri] = createSubjectWithSpecies(testCase)
+            speciesKgIri = "https://kg.ebrains.eu/api/instances/6ba7b810-9dad-11d1-80b4-00c04fd430c8";
+            speciesOmIri = "https://openminds.om-i.org/instances/species/musMusculus";
+
+            subjectNode = struct();
+            subjectNode.x_id = "https://kg.ebrains.eu/api/instances/" + testCase.TestUUID;
+            subjectNode.x_type = "https://openminds.om-i.org/types/Subject";
+            subjectNode.lookupLabel = "mouse1";
+            subjectNode.species = struct('x_id', speciesKgIri);
+
+            speciesNode = struct();
+            speciesNode.x_id = speciesKgIri;
+            speciesNode.x_type = "https://openminds.om-i.org/types/Species";
+            speciesNode.http___schema_org_identifier = {char(speciesOmIri), char(speciesKgIri)};
+            speciesNode.name = "Mus musculus";
         end
     end
 end

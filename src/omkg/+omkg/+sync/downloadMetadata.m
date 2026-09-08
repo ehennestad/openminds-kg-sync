@@ -29,12 +29,15 @@ function omNode = downloadMetadata(kgIdentifier, options)
     omkg.internal.checkEnvironment()
 
     uuid = omkg.util.getIdentifierUUID(kgIdentifier);
-
-    controlledTermUuidMap = omkg.internal.conversion.getIdentifierMapping();
-    controlledTermKgIds = controlledTermUuidMap.keys();
+    cache = omkg.internal.ControlledInstanceCache.instance();
 
     % Download instance
     kgNode = options.Client.getInstance(uuid, "Server", options.Server);
+
+    % A link to a controlled instance takes its openMINDS identity while
+    % its parent is converted, so the identifiers of any controlled
+    % instances the cache does not know yet are fetched first.
+    prefetchControlledInstances(kgNode, cache, options.Client, options.Server);
 
     kgIRI = omkg.internal.conversion.getNodeKeywords(kgNode, "@id");
     rootNode = omkg.internal.conversion.convertKgNode(kgNode, options.ReferenceNode);
@@ -45,7 +48,6 @@ function omNode = downloadMetadata(kgIdentifier, options)
     for i = 1:options.NumLinksToResolve
 
         linkedIRIs = omkg.internal.conversion.extractLinkedIdentifiers(newNodes);
-        linkedIRIs = setdiff(linkedIRIs, controlledTermKgIds);
         linkedIRIs = setdiff(linkedIRIs, resolvedIRIs);
 
         if ~isempty(linkedIRIs)
@@ -57,6 +59,7 @@ function omNode = downloadMetadata(kgIdentifier, options)
             kgNodes = options.Client.getInstancesBulk(linkedIRIs, ...
                 "Server", options.Server);
 
+            prefetchControlledInstances(kgNodes, cache, options.Client, options.Server);
             newNodes = omkg.internal.conversion.convertKgNode(kgNodes);
 
             if ~iscell(newNodes)
@@ -79,4 +82,75 @@ function omNode = downloadMetadata(kgIdentifier, options)
 
     omkg.internal.resolveLinks(allNodes{1}, resolvedIRIs(2:end), allNodes(2:end))
     omNode = allNodes{1};
+end
+
+function prefetchControlledInstances(kgNodes, cache, client, server)
+% prefetchControlledInstances - Learn the openMINDS IRIs of unknown controlled links
+%
+%   Only links on properties that can hold a controlled instance are
+%   considered, so persons, datasets and the like are not fetched just to
+%   look at their identifiers. Does nothing under the "kg" identity policy,
+%   where the cache answers nothing and every link stays a reference.
+
+    if ~cache.isEnabled()
+        return
+    end
+
+    candidateIRIs = listControlledInstanceLinks(kgNodes);
+    candidateIRIs = candidateIRIs(~cache.isKnown(candidateIRIs));
+    if isempty(candidateIRIs)
+        return
+    end
+
+    linkedNodes = client.getInstancesBulk(candidateIRIs, "Server", server);
+    linkedNodes = omkg.internal.conversion.normalizeJsonLdKeywords(linkedNodes);
+    if ~iscell(linkedNodes)
+        linkedNodes = num2cell(linkedNodes);
+    end
+
+    [kgIRIs, openMindsIRIs] = deal(string.empty);
+    for i = 1:numel(linkedNodes)
+        openMindsIRI = omkg.internal.conversion.getControlledInstanceIRI(linkedNodes{i});
+        if strlength(openMindsIRI) == 0
+            continue % Not a controlled instance after all
+        end
+        kgIRIs(end+1) = string(linkedNodes{i}.at_id); %#ok<AGROW>
+        openMindsIRIs(end+1) = openMindsIRI; %#ok<AGROW>
+    end
+    cache.record(kgIRIs, openMindsIRIs);
+end
+
+function linkIRIs = listControlledInstanceLinks(kgNodes)
+% listControlledInstanceLinks - KG IRIs of links that may point at controlled instances
+%
+%   A link is a candidate when the property it sits on expects a
+%   controlled term, or a mixed type, which may admit one. The expected
+%   type comes from a blank instance of the node's own type.
+
+    kgNodes = omkg.internal.conversion.normalizeJsonLdKeywords(kgNodes);
+    if ~iscell(kgNodes)
+        kgNodes = num2cell(kgNodes);
+    end
+
+    linkIRIs = string.empty;
+    for i = 1:numel(kgNodes)
+        node = kgNodes{i};
+        [identifier, type] = omkg.internal.conversion.getNodeKeywords(node, "@id", "@type");
+        properties = omkg.internal.conversion.removeNamespaceIRIFromPropertyNames(...
+            omkg.internal.conversion.filterProperties(node));
+        template = openminds.fromTypeName(type, identifier);
+
+        for propertyName = string(fieldnames(properties))'
+            value = properties.(propertyName);
+            if ~isprop(template, propertyName) || ~isstruct(value) || ~isfield(value, 'at_id')
+                continue
+            end
+            expected = template.(propertyName);
+            if isa(expected, 'openminds.controlledterms.ControlledTerm') ...
+                    || openminds.utility.isMixedInstance(expected)
+                linkIRIs = [linkIRIs, string({value.at_id})]; %#ok<AGROW>
+            end
+        end
+    end
+    linkIRIs = unique(linkIRIs);
 end

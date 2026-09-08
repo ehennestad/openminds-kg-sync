@@ -107,6 +107,44 @@ classdef PreferencesTest < matlab.unittest.TestCase
                 'Set and retrieved KgOpenMINDSVersion values should match');
         end
 
+        function testControlledInstanceIdentityDefaultsToOpenMinds(testCase)
+            % Controlled instances carry their openMINDS IRI by default:
+            % that is the portable identity, and what the toolbox has
+            % always intended.
+            policy = omkg.getpref("ControlledInstanceIdentity");
+
+            testCase.verifyClass(policy, 'string')
+            testCase.verifyEqual(policy, "openminds")
+        end
+
+        function testControlledInstanceIdentityAcceptsKg(testCase)
+            omkg.setpref("ControlledInstanceIdentity", "kg");
+
+            testCase.verifyEqual(omkg.getpref("ControlledInstanceIdentity"), "kg")
+        end
+
+        function testControlledInstanceIdentityRejectsOtherValues(testCase)
+            testCase.verifyError(...
+                @() omkg.setpref("ControlledInstanceIdentity", "cache"), ...
+                'MATLAB:validators:mustBeMember')
+        end
+
+        function testControlledInstanceCacheFolderDefaultsToEmpty(testCase)
+            % Empty means "omkg under userpath", resolved at runtime rather
+            % than baked into the stored default, since userpath can differ
+            % between sessions.
+            folder = omkg.getpref("ControlledInstanceCacheFolder");
+
+            testCase.verifyClass(folder, 'string')
+            testCase.verifyEqual(folder, "")
+        end
+
+        function testSetPrefControlledInstanceCacheFolder(testCase)
+            omkg.setpref("ControlledInstanceCacheFolder", "/some/folder");
+
+            testCase.verifyEqual(omkg.getpref("ControlledInstanceCacheFolder"), "/some/folder")
+        end
+
         function testPreferencesSingleton(testCase)
             % Test that preferences behave as a singleton
 

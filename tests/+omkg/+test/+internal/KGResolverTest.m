@@ -29,6 +29,22 @@ classdef KGResolverTest < matlab.unittest.TestCase
             testCase.MockClient.setInstanceResponse(testCase.createPersonKgNode());
         end
 
+        function seedControlledInstanceCache(testCase)
+            % The resolver consults the controlled instance cache under the
+            % "openminds" identity policy. Seed a temporary one with the
+            % controlled instance these tests use, isolating the user's
+            % real preferences and cache.
+            import matlab.unittest.fixtures.TemporaryFolderFixture
+            testCase.applyFixture(omkg.test.fixtures.PreferencesFixture());
+            omkg.setpref("ControlledInstanceIdentity", "openminds");
+            tempFolder = testCase.applyFixture(TemporaryFolderFixture);
+            cache = omkg.internal.ControlledInstanceCache.instance(...
+                'Reset', true, 'File', fullfile(tempFolder.Folder, "cache.json"));
+            cache.record(testCase.ControlledIri, testCase.ControlledOpenMindsIri);
+            testCase.addTeardown(@() ...
+                omkg.internal.ControlledInstanceCache.instance('Reset', true));
+        end
+
         function restoreResolverRegistry(testCase)
             % Tests that register resolvers must leave the default
             % registration behind for other tests.
@@ -156,6 +172,23 @@ classdef KGResolverTest < matlab.unittest.TestCase
                 'The traversal should mark the populated node as resolved')
         end
 
+        function testUnderKgIdentityPolicyControlledInstanceIsDownloaded(testCase)
+            % Under "kg" identity the cache is not consulted, so a controlled
+            % instance reference is downloaded like any other node and keeps
+            % its Knowledge Graph identifier.
+            omkg.setpref("ControlledInstanceIdentity", "kg");
+            testCase.MockClient.setInstanceResponse(testCase.createSpeciesKgNode());
+            resolver = testCase.createResolver();
+            speciesStub = openminds.controlledterms.Species('id', testCase.ControlledIri, 'IsReference', true);
+
+            resolved = resolver.resolveNode(speciesStub);
+
+            testCase.verifyEqual(string(resolved.id), testCase.ControlledIri, ...
+                'The reference identifier must be kept')
+            testCase.verifyEqual(resolved.name, "Mus musculus")
+            testCase.verifyEqual(testCase.MockClient.getCallCount('getInstance'), 1)
+        end
+
         function testTraversalStoresReplacedInstance(testCase)
             % A nested mixed-type reference resolved through the openMINDS
             % traversal must end up as the returned typed instance.
@@ -202,14 +235,9 @@ classdef KGResolverTest < matlab.unittest.TestCase
                 options.Client = testCase.MockClient
             end
 
-            % Inject the identifier map to keep the test independent of the
-            % controlled instance registry.
-            identifierMap = dictionary(testCase.ControlledIri, testCase.ControlledOpenMindsIri);
-
             resolver = omkg.internal.KGResolver(...
                 "Server", options.Server, ...
-                "Client", options.Client, ...
-                "IdentifierMap", identifierMap);
+                "Client", options.Client);
         end
     end
 
@@ -221,6 +249,19 @@ classdef KGResolverTest < matlab.unittest.TestCase
             kgNode.x_type = "https://openminds.ebrains.eu/core/Person";
             kgNode.https___openminds_ebrains_eu_vocab_givenName = "John";
             kgNode.https___openminds_ebrains_eu_vocab_familyName = "Doe";
+        end
+
+        function kgNode = createSpeciesKgNode()
+            % A controlled instance as the KG returns it: its own UUID as
+            % @id, and the openMINDS IRI it was ingested with in
+            % schema:identifier next to the KG IRI.
+            kgNode = struct();
+            kgNode.x_id = omkg.test.internal.KGResolverTest.ControlledIri;
+            kgNode.x_type = "https://openminds.om-i.org/types/Species";
+            kgNode.http___schema_org_identifier = { ...
+                'https://openminds.om-i.org/instances/species/musMusculus', ...
+                char(omkg.test.internal.KGResolverTest.ControlledIri)};
+            kgNode.https___openminds_ebrains_eu_vocab_name = "Mus musculus";
         end
     end
 end

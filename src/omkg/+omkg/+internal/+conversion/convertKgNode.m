@@ -49,10 +49,13 @@ function omNode = convertKgNode(kgNode, omReferenceNode, options)
         return
     end
 
-    persistent controlledInstanceMap
-    if isempty(controlledInstanceMap)
-        controlledInstanceMap = omkg.internal.conversion.getIdentifierMapping();
+    % A single node may still arrive wrapped in a cell, e.g. a bulk
+    % response holding exactly one instance.
+    if iscell(kgNode)
+        kgNode = kgNode{1};
     end
+
+    controlledInstanceCache = omkg.internal.ControlledInstanceCache.instance();
 
     [identifier, type] = omkg.internal.conversion.getNodeKeywords(kgNode, "@id", "@type");
 
@@ -79,7 +82,7 @@ function omNode = convertKgNode(kgNode, omReferenceNode, options)
         if isstruct(currentPropertyValue) || iscell(currentPropertyValue)
             if isLinkedNode(currentPropertyValue)
                 currentPropertyValue = convertLinkedNodes(currentPropertyValue, ...
-                    omDummyNode.(currentPropertyName), controlledInstanceMap);
+                    omDummyNode.(currentPropertyName), controlledInstanceCache);
             elseif isEmbeddedNode(currentPropertyValue)
                 currentPropertyValue = omkg.internal.conversion.convertKgNode(currentPropertyValue, "ParentNode", kgNode);
             end
@@ -138,7 +141,7 @@ function omNode = convertKgNode(kgNode, omReferenceNode, options)
     end
 end
 
-function instances = convertLinkedNodes(nodes, expectedObject, controlledInstanceMap)
+function instances = convertLinkedNodes(nodes, expectedObject, cache)
 % convertLinkedNodes - Turn each link into a library instance or a reference
 %
 %   Whether a link is a controlled instance is decided per link, because
@@ -147,16 +150,30 @@ function instances = convertLinkedNodes(nodes, expectedObject, controlledInstanc
 %   becomes the local library instance here, while the parent link is
 %   converted, since a link resolver must keep the identifier of the
 %   reference it resolves and so cannot make that swap later.
+%
+%   The cache answers only under the "openminds" identity policy; under
+%   "kg" every link stays a reference and keeps its Knowledge Graph
+%   identifier. A controlled instance the Knowledge Graph knows but the
+%   local openMINDS library does not also stays a reference, with a
+%   warning, rather than failing the conversion of its parent.
     instances = cell(1, numel(nodes));
 
     for i = 1:numel(nodes)
         kgIdentifier = string(nodes(i).at_id);
-        if isKey(controlledInstanceMap, kgIdentifier)
-            openMindsIdentifier = controlledInstanceMap(kgIdentifier);
-            instances{i} = omkg.internal.conversion.getControlledInstance(openMindsIdentifier);
-        else
-            instances{i} = createUnresolvedNode(nodes(i), expectedObject);
+        if cache.isKnown(kgIdentifier)
+            openMindsIdentifier = cache.lookup(kgIdentifier);
+            try
+                instances{i} = omkg.internal.conversion.getControlledInstance(openMindsIdentifier);
+                continue
+            catch ME
+                warning('OMKG:ConvertKgNode:ControlledInstanceNotInLibrary', ...
+                    ['The controlled instance "%s" is not in the local openMINDS ', ...
+                    'library (%s). The link keeps its Knowledge Graph identifier ', ...
+                    '"%s" and will be resolved by download.'], ...
+                    openMindsIdentifier, ME.message, kgIdentifier)
+            end
         end
+        instances{i} = createUnresolvedNode(nodes(i), expectedObject);
     end
     instances = omkg.util.concatTypesIfHomogeneous(instances);
 end
