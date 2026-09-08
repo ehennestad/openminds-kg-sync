@@ -89,6 +89,35 @@ classdef ResolveLinksTest < matlab.unittest.TestCase
                 'The controlled instance should be resolved from the KG');
         end
 
+        function testResolveLinksKeepsUnresolvedEntriesNextToResolvedOnes(testCase)
+            % A property can hold a library instance next to references
+            % that were not downloaded, as a dataset version's keywords do
+            % when a controlled term sits next to term suggestions. The
+            % references must survive the rewrite of the property.
+            diseaseModelIri = "https://openminds.om-i.org/instances/diseaseModel/epilepsyModel";
+            suggestionIris = [
+                "https://kg.ebrains.eu/api/instances/00000000-0000-4000-8000-000000000001", ...
+                "https://kg.ebrains.eu/api/instances/00000000-0000-4000-8000-000000000002"];
+
+            datasetVersion = openminds.core.products.DatasetVersion(...
+                'id', 'https://kg.ebrains.eu/api/instances/dataset-version-1');
+            datasetVersion.keyword = {...
+                omkg.internal.conversion.getControlledInstance(diseaseModelIri), ...
+                openminds.internal.MixedTypeReference(suggestionIris(1)), ...
+                openminds.internal.MixedTypeReference(suggestionIris(2))};
+
+            omkg.internal.resolveLinks(datasetVersion, string.empty, {})
+
+            keywords = datasetVersion.keyword;
+            testCase.verifyEqual(numel(keywords), 3, ...
+                'No keyword should be dropped')
+            testCase.verifyClass(keywords(1).Instance, 'openminds.controlledterms.DiseaseModel')
+            testCase.verifyEqual(string(keywords(2).Instance.id), suggestionIris(1))
+            testCase.verifyEqual(string(keywords(3).Instance.id), suggestionIris(2))
+            testCase.verifyEqual(string(datasetVersion.getUnresolvedLinkIdentifiers()), suggestionIris, ...
+                'The term suggestions should still be reported as unresolved links')
+        end
+
         function testResolveLinksWithStructInput(testCase)
             % Test that struct inputs are handled (should return early)
             structInstance = struct('id', 'test', 'name', 'value');
