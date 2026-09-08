@@ -34,7 +34,7 @@ function resolveLinks(instance, instanceIds, instanceCollection)
                 else
                     % Check if instance is a controlled instance
                     if startsWith(instanceId, omkg.constants.OpenMINDSInstanceIRIPrefix)
-                        resolvedInstances{j} = openminds.instanceFromIRI(instanceId);
+                        resolvedInstances{j} = omkg.internal.conversion.getControlledInstance(instanceId);
                     end
                 end
             end
