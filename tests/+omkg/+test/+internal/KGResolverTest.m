@@ -4,8 +4,8 @@ classdef KGResolverTest < matlab.unittest.TestCase
 %   Covers the openminds.interface.LinkResolver contract as implemented for
 %   the Knowledge Graph: identifier matching, in-place population of typed
 %   references, replacement of mixed-type references, local resolution of
-%   controlled instances, and registration/replacement in the openMINDS
-%   link resolver registry.
+%   controlled instances that keeps the reference identifier, and
+%   registration/replacement in the openMINDS link resolver registry.
 
     properties (Constant)
         PersonIri = "https://kg.ebrains.eu/api/instances/550e8400-e29b-41d4-a716-446655440000"
@@ -92,16 +92,68 @@ classdef KGResolverTest < matlab.unittest.TestCase
                 'getInstance', 'Server', ebrains.kg.enum.KGServer.PREPROD))
         end
 
-        function testResolveNodeResolvesControlledInstanceLocally(testCase)
+        function testResolveNodePopulatesControlledInstanceInPlace(testCase)
+            % A typed controlled-instance reference is filled from the local
+            % library and keeps the KG identifier it was created with. The
+            % resolver contract forbids returning a node with another
+            % identifier, since every link to the node carries this one.
             resolver = testCase.createResolver();
             speciesStub = openminds.controlledterms.Species('id', testCase.ControlledIri, 'IsReference', true);
+            libraryInstance = omkg.internal.conversion.getControlledInstance(testCase.ControlledOpenMindsIri);
 
             resolved = resolver.resolveNode(speciesStub);
 
-            testCase.verifyClass(resolved, 'openminds.controlledterms.Species')
-            testCase.verifyEqual(string(resolved.id), testCase.ControlledOpenMindsIri)
+            testCase.verifySameHandle(resolved, speciesStub, ...
+                'A typed controlled-instance reference should be populated in place')
+            testCase.verifyEqual(string(resolved.id), testCase.ControlledIri, ...
+                'The resolved node must keep the identifier of the reference')
+            testCase.verifyEqual(resolved.name, libraryInstance.name)
+            testCase.verifyEqual(resolved.definition, libraryInstance.definition)
             testCase.verifyEqual(testCase.MockClient.getCallCount('getInstance'), 0, ...
                 'Controlled instances should not be downloaded')
+        end
+
+        function testResolveNodeReplacesMixedTypeControlledReference(testCase)
+            resolver = testCase.createResolver();
+            reference = openminds.internal.MixedTypeReference(testCase.ControlledIri);
+            libraryInstance = omkg.internal.conversion.getControlledInstance(testCase.ControlledOpenMindsIri);
+
+            resolved = resolver.resolveNode(reference);
+
+            testCase.verifyClass(resolved, 'openminds.controlledterms.Species', ...
+                'A mixed type reference should be replaced by an instance of the library type')
+            testCase.verifyEqual(string(resolved.id), testCase.ControlledIri, ...
+                'The replacement must carry the identifier of the reference')
+            testCase.verifyEqual(resolved.name, libraryInstance.name)
+            testCase.verifyEqual(testCase.MockClient.getCallCount('getInstance'), 0, ...
+                'Controlled instances should not be downloaded')
+        end
+
+        function testResolveNodeRejectsControlledInstanceOfOtherType(testCase)
+            resolver = testCase.createResolver();
+            wrongTypeStub = openminds.controlledterms.BiologicalSex('id', testCase.ControlledIri, 'IsReference', true);
+
+            testCase.verifyError(@() resolver.resolveNode(wrongTypeStub), ...
+                'OMKG:KGResolver:ControlledInstanceTypeMismatch')
+        end
+
+        function testTraversalKeepsControlledInstanceIdentity(testCase)
+            % Resolving through the openMINDS traversal checks that the
+            % resolver did not change the identifier of the reference.
+            openminds.registerLinkResolver(testCase.createResolver(), "Replace", true)
+            libraryInstance = omkg.internal.conversion.getControlledInstance(testCase.ControlledOpenMindsIri);
+
+            subject = openminds.core.research.Subject();
+            subject.species = openminds.controlledterms.Species('id', testCase.ControlledIri, 'IsReference', true);
+
+            subject.resolve('NumLinksToResolve', 1);
+
+            species = subject.species;
+            testCase.verifyClass(species, 'openminds.controlledterms.Species')
+            testCase.verifyEqual(string(species.id), testCase.ControlledIri)
+            testCase.verifyEqual(species.name, libraryInstance.name)
+            testCase.verifyFalse(species.isReference(), ...
+                'The traversal should mark the populated node as resolved')
         end
 
         function testTraversalStoresReplacedInstance(testCase)

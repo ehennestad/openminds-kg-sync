@@ -23,6 +23,9 @@ classdef KGResolver < openminds.interface.LinkResolver
 %   Controlled instances (e.g. controlled terms) exist both in the KG and in
 %   the local openMINDS instance library. These are resolved from the local
 %   library using the KG to openMINDS identifier map, without any download.
+%   The resolved node keeps the KG identifier of the reference, as the
+%   resolver contract requires; only the property values come from the
+%   library instance.
 %
 %   See also openminds.registerLinkResolver, omkg.sync.downloadMetadata
 
@@ -98,7 +101,7 @@ classdef KGResolver < openminds.interface.LinkResolver
 
             if isKey(identifierMap, identifier) % Controlled instance
                 openMindsIdentifier = identifierMap(identifier);
-                instance = openminds.instanceFromIRI(openMindsIdentifier);
+                instance = obj.resolveControlledInstance(instance, openMindsIdentifier);
             else
                 if openminds.interface.LinkResolver.isTypeKnown(instance)
                     % The instance is populated with the downloaded values.
@@ -125,6 +128,37 @@ classdef KGResolver < openminds.interface.LinkResolver
         end
     end
 
+    methods (Static, Access = private)
+        function instance = resolveControlledInstance(instance, openMindsIdentifier)
+        % resolveControlledInstance - Populate a reference from the local library
+        %
+        %   The library instance is identified by its openMINDS IRI, while
+        %   the reference is identified by its KG IRI and every link to it
+        %   is written with that IRI. A resolver must not change the
+        %   identifier of the reference it resolves, so the library
+        %   instance is not returned as is. Its property values are copied
+        %   onto a node that carries the identifier of the reference.
+
+            libraryInstance = omkg.internal.conversion.getControlledInstance(openMindsIdentifier);
+            [propertyNames, propertyValues] = getPropertyValues(libraryInstance);
+
+            if openminds.interface.LinkResolver.isTypeKnown(instance)
+                if ~isa(instance, class(libraryInstance))
+                    error('OMKG:KGResolver:ControlledInstanceTypeMismatch', ...
+                        ['The reference "%s" is a %s, but its identifier maps to ', ...
+                         'the controlled instance "%s", which is a %s.'], ...
+                        instance.id, class(instance), openMindsIdentifier, ...
+                        class(libraryInstance))
+                end
+                instance.set(propertyNames, propertyValues);
+            else
+                nvPairs = [propertyNames; propertyValues];
+                instance = feval(class(libraryInstance), ...
+                    'id', string(instance.id), nvPairs{:});
+            end
+        end
+    end
+
     methods (Access = private)
         function identifierMap = getIdentifierMap(obj)
         % getIdentifierMap - Return the identifier map, loading it on first use
@@ -135,4 +169,19 @@ classdef KGResolver < openminds.interface.LinkResolver
             identifierMap = obj.IdentifierMap;
         end
     end
+end
+
+function [propertyNames, propertyValues] = getPropertyValues(instance)
+% getPropertyValues - Names and values of the properties holding a value
+%
+%   Empty values are left out: they add nothing, and an empty of the wrong
+%   class would fail property validation when set on the target.
+    propertyStruct = instance.toStruct();
+
+    propertyNames = fieldnames(propertyStruct)';
+    propertyValues = struct2cell(propertyStruct)';
+
+    hasValue = ~cellfun(@isempty, propertyValues);
+    propertyNames = propertyNames(hasValue);
+    propertyValues = propertyValues(hasValue);
 end
