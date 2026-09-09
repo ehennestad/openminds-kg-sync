@@ -154,30 +154,16 @@ classdef ControlledInstanceCacheTest < matlab.unittest.TestCase
         end
 
         function testFileRecordsKnowledgeGraphScope(testCase)
-            % A UUID only identifies an instance within one server, space
-            % and stage, so the file says which it was built against.
+            % The space and stage a fill requested are recorded for
+            % provenance. Not the server: preprod mirrors prod, so a UUID
+            % names the same instance regardless of which was queried.
             omkg.setpref("ControlledInstanceIdentity", "openminds");
-            omkg.setpref("DefaultServer", ebrains.kg.enum.KGServer.PROD);
             testCase.createCache().record(testCase.KgIri, testCase.OmIri);
 
             data = jsondecode(fileread(testCase.CacheFile));
 
-            testCase.verifyEqual(string(data.kg.server), "prod")
             testCase.verifyEqual(string(data.kg.space), "controlled")
             testCase.verifyEqual(string(data.kg.stage), "RELEASED")
-        end
-
-        function testFileBuiltAgainstAnotherServerIsIgnored(testCase)
-            omkg.setpref("ControlledInstanceIdentity", "openminds");
-            omkg.setpref("DefaultServer", ebrains.kg.enum.KGServer.PROD);
-            testCase.createCache().record(testCase.KgIri, testCase.OmIri);
-
-            omkg.setpref("DefaultServer", ebrains.kg.enum.KGServer.PREPROD);
-            cache = testCase.createCache();
-
-            testCase.verifyWarning(@() cache.isKnown(testCase.KgIri), ...
-                'OMKG:ControlledInstanceCache:ServerMismatch')
-            testCase.verifyFalse(cache.isKnown(testCase.KgIri))
         end
 
         function testMalformedEntriesAreDroppedOnLoad(testCase)
@@ -186,11 +172,10 @@ classdef ControlledInstanceCacheTest < matlab.unittest.TestCase
             % slash inside the instance name. None can be resolved.
             omkg.setpref("ControlledInstanceIdentity", "openminds");
             omkg.setpref("KgOpenMINDSVersion", 4);
-            omkg.setpref("DefaultServer", ebrains.kg.enum.KGServer.PROD);
             data = struct(...
                 'schemaVersion', "1.0", ...
                 'openmindsVersion', "v4.0", ...
-                'kg', struct('server', "prod", 'space', "controlled", 'stage', "RELEASED"), ...
+                'kg', struct('space', "controlled", 'stage', "RELEASED"), ...
                 'generatedAt', "2026-09-08T00:00:00Z", ...
                 'entries', struct('kg', ...
                     {testCase.KgIri, ...
@@ -243,7 +228,9 @@ classdef ControlledInstanceCacheTest < matlab.unittest.TestCase
             testCase.verifyFalse(startsWith(filePath, string(prefdir)))
         end
 
-        function testFileIsKeyedByServer(testCase)
+        function testFileIsNotKeyedByServer(testCase)
+            % preprod is a daily-refreshed mirror of prod, so the cache
+            % file for a given openMINDS version is shared across servers.
             omkg.setpref("ControlledInstanceCacheFolder", "");
             omkg.setpref("DefaultServer", ebrains.kg.enum.KGServer.PROD);
             prodPath = omkg.internal.ControlledInstanceCache.instance('Reset', true).getFilePath();
@@ -251,9 +238,7 @@ classdef ControlledInstanceCacheTest < matlab.unittest.TestCase
             omkg.setpref("DefaultServer", ebrains.kg.enum.KGServer.PREPROD);
             preprodPath = omkg.internal.ControlledInstanceCache.instance('Reset', true).getFilePath();
 
-            testCase.verifyNotEqual(prodPath, preprodPath)
-            testCase.verifyTrue(contains(prodPath, "prod") && ~contains(prodPath, "preprod"))
-            testCase.verifyTrue(contains(preprodPath, "preprod"))
+            testCase.verifyEqual(prodPath, preprodPath)
         end
 
         function testFolderPreferenceIsHonoured(testCase)

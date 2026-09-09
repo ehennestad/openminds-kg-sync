@@ -20,10 +20,11 @@ classdef ControlledInstanceCache < handle
 %
 %   Persisted as JSON in the folder named by the
 %   ControlledInstanceCacheFolder preference, or under userpath when that
-%   is empty. The file is keyed by Knowledge Graph server and openMINDS
-%   version, and records both with the KG space and stage: a UUID only
-%   identifies an instance within one server, and an openMINDS IRI carries
-%   a version specific namespace.
+%   is empty. The file is keyed by openMINDS version, since an openMINDS
+%   IRI carries a version specific namespace. It is not keyed by Knowledge
+%   Graph server: preprod is a daily-refreshed mirror of prod, so a UUID
+%   names the same instance on either. The KG space and stage a fill
+%   requested are recorded for provenance.
 %
 % Usage:
 %   cache = omkg.internal.ControlledInstanceCache.instance();
@@ -44,7 +45,7 @@ classdef ControlledInstanceCache < handle
 
     properties (Constant, Access = private)
         SCHEMA_VERSION = "1.0"
-        FILE_NAME_PATTERN = "controlled_instance_cache_%s_v%d.json"
+        FILE_NAME_PATTERN = "controlled_instance_cache_v%d.json"
         DEFAULT_SUBFOLDER = "omkg"
 
         % Controlled instances live in the "controlled" space at the
@@ -202,8 +203,7 @@ classdef ControlledInstanceCache < handle
                 folder = fullfile(userpath, obj.DEFAULT_SUBFOLDER);
             end
 
-            fileName = sprintf(obj.FILE_NAME_PATTERN, ...
-                obj.activeServerName(), omkg.getpref("KgOpenMINDSVersion"));
+            fileName = sprintf(obj.FILE_NAME_PATTERN, omkg.getpref("KgOpenMINDSVersion"));
             filePath = fullfile(folder, fileName);
         end
     end
@@ -250,18 +250,6 @@ classdef ControlledInstanceCache < handle
                 return
             end
 
-            % The file name carries the server, but a file that was copied
-            % or moved can still claim a server it was not built against.
-            expectedServer = obj.activeServerName();
-            if isfield(data, 'kg') && isfield(data.kg, 'server') ...
-                    && lower(string(data.kg.server)) ~= expectedServer
-                warning('OMKG:ControlledInstanceCache:ServerMismatch', ...
-                    ['Ignoring controlled instance cache "%s": it was built ', ...
-                    'against the "%s" server but "%s" is configured.'], ...
-                    obj.FilePath, string(data.kg.server), expectedServer)
-                return
-            end
-
             if ~isfield(data, 'entries') || isempty(data.entries)
                 return
             end
@@ -296,7 +284,6 @@ classdef ControlledInstanceCache < handle
             data.schemaVersion = obj.SCHEMA_VERSION;
             data.openmindsVersion = obj.activeOpenMindsVersion();
             data.kg = struct(...
-                'server', obj.activeServerName(), ...
                 'space', obj.KG_SOURCE_SPACE, ...
                 'stage', obj.KG_SOURCE_STAGE);
             data.generatedAt = string(datetime('now', 'TimeZone', 'UTC'), "yyyy-MM-dd'T'HH:mm:ss'Z'");
@@ -309,14 +296,6 @@ classdef ControlledInstanceCache < handle
 
         function versionString = activeOpenMindsVersion(~)
             versionString = sprintf("v%d.0", omkg.getpref("KgOpenMINDSVersion"));
-        end
-
-        function serverName = activeServerName(~)
-            % activeServerName - The configured KG server, as a lower case name
-            %
-            %   Entries are recorded from whatever server a pull used, which
-            %   is the DefaultServer preference unless a call overrides it.
-            serverName = lower(string(omkg.getpref("DefaultServer")));
         end
     end
 end
