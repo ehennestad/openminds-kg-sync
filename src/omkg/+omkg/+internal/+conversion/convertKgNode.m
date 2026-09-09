@@ -155,25 +155,34 @@ function instances = convertLinkedNodes(nodes, expectedObject, cache)
 %   "kg" every link stays a reference and keeps its Knowledge Graph
 %   identifier. A controlled instance the Knowledge Graph knows but the
 %   local openMINDS library does not also stays a reference, with a
-%   warning, rather than failing the conversion of its parent.
+%   warning, rather than failing the conversion of its parent. Library
+%   membership is checked before the instance is requested: openMINDS
+%   admits user-defined terms, so asking it for an unknown name yields an
+%   empty instance and a warning rather than an error.
     instances = cell(1, numel(nodes));
 
     for i = 1:numel(nodes)
         kgIdentifier = string(nodes(i).at_id);
+
+        isLibraryInstance = false;
         if cache.isKnown(kgIdentifier)
             openMindsIdentifier = cache.lookup(kgIdentifier);
-            try
-                instances{i} = omkg.internal.conversion.getControlledInstance(openMindsIdentifier);
-                continue
-            catch ME
+            isLibraryInstance = ...
+                omkg.internal.conversion.isControlledInstanceName(openMindsIdentifier);
+            if ~isLibraryInstance
                 warning('OMKG:ConvertKgNode:ControlledInstanceNotInLibrary', ...
                     ['The controlled instance "%s" is not in the local openMINDS ', ...
-                    'library (%s). The link keeps its Knowledge Graph identifier ', ...
+                    'library. The link keeps its Knowledge Graph identifier ', ...
                     '"%s" and will be resolved by download.'], ...
-                    openMindsIdentifier, ME.message, kgIdentifier)
+                    openMindsIdentifier, kgIdentifier)
             end
         end
-        instances{i} = createUnresolvedNode(nodes(i), expectedObject);
+
+        if isLibraryInstance
+            instances{i} = omkg.internal.conversion.getControlledInstance(openMindsIdentifier);
+        else
+            instances{i} = createUnresolvedNode(nodes(i), expectedObject);
+        end
     end
     instances = omkg.util.concatTypesIfHomogeneous(instances);
 end

@@ -34,7 +34,8 @@ function [canonicalIRI, isResolved] = selectCanonicalInstanceIRI(candidateIRIs)
 %   Repeated occurrences of the same IRI are not aliases and are collapsed
 %   before the choice is made.
 %
-% See also: omkg.internal.conversion.removeInvalidIdentifierPairs
+% See also: omkg.internal.conversion.isControlledInstanceName,
+%   omkg.internal.conversion.removeInvalidIdentifierPairs
 
     arguments
         candidateIRIs (1,:) string
@@ -51,10 +52,7 @@ function [canonicalIRI, isResolved] = selectCanonicalInstanceIRI(candidateIRIs)
         return
     end
 
-    isKnownInstance = false(size(candidateIRIs));
-    for i = 1:numel(candidateIRIs)
-        isKnownInstance(i) = isControlledInstanceName(candidateIRIs(i));
-    end
+    isKnownInstance = omkg.internal.conversion.isControlledInstanceName(candidateIRIs);
 
     if nnz(isKnownInstance) == 1
         canonicalIRI = candidateIRIs(isKnownInstance);
@@ -63,37 +61,4 @@ function [canonicalIRI, isResolved] = selectCanonicalInstanceIRI(candidateIRIs)
         canonicalIRI = candidateIRIs(1);
         isResolved = false;
     end
-end
-
-function tf = isControlledInstanceName(instanceIRI)
-% isControlledInstanceName - Whether openMINDS declares this name for its type
-
-    tf = false;
-
-    pathSegments = split(extractAfter(instanceIRI, "/instances/"), "/");
-    if numel(pathSegments) ~= 2
-        return
-    end
-
-    try
-        typeEnum = openminds.enum.Types(pathSegments(1));
-        metaClass = meta.class.fromName(typeEnum.ClassName);
-    catch
-        % The type is not part of the openMINDS version currently on the
-        % path, so its instance names are unknown rather than invalid.
-        return
-    end
-
-    if isempty(metaClass)
-        return
-    end
-
-    controlledInstancesProperty = findobj(metaClass.PropertyList, ...
-        "Name", "CONTROLLED_INSTANCES");
-    if isempty(controlledInstancesProperty)
-        % Not every controlled term type enumerates its instances.
-        return
-    end
-
-    tf = any(string(controlledInstancesProperty.DefaultValue) == pathSegments(2));
 end
