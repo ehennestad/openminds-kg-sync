@@ -140,7 +140,7 @@ classdef KGResolver < openminds.interface.LinkResolver
         %   onto a node that carries the identifier of the reference.
 
             libraryInstance = omkg.internal.conversion.getControlledInstance(openMindsIdentifier);
-            [propertyNames, propertyValues] = getPropertyValues(libraryInstance);
+            [propertyNames, propertyValues] = omkg.internal.getPropertyValues(libraryInstance);
 
             if openminds.interface.LinkResolver.isTypeKnown(instance)
                 if ~isa(instance, class(libraryInstance))
@@ -169,19 +169,4 @@ classdef KGResolver < openminds.interface.LinkResolver
             identifierMap = obj.IdentifierMap;
         end
     end
-end
-
-function [propertyNames, propertyValues] = getPropertyValues(instance)
-% getPropertyValues - Names and values of the properties holding a value
-%
-%   Empty values are left out: they add nothing, and an empty of the wrong
-%   class would fail property validation when set on the target.
-    propertyStruct = instance.toStruct();
-
-    propertyNames = fieldnames(propertyStruct)';
-    propertyValues = struct2cell(propertyStruct)';
-
-    hasValue = ~cellfun(@isempty, propertyValues);
-    propertyNames = propertyNames(hasValue);
-    propertyValues = propertyValues(hasValue);
 end
