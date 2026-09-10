@@ -197,6 +197,52 @@ classdef ControlledInstanceCacheTest < matlab.unittest.TestCase
             testCase.verifyTrue(cache.isKnown(testCase.KgIri))
         end
 
+        function testEntryMissingAFieldIsDroppedNotFatal(testCase)
+            % jsondecode returns a cell array of structs, not a struct
+            % array, when entries do not all share the same fields -- as a
+            % hand edited file, missing one, easily would. Concatenating
+            % those into one array before reading would throw; entries
+            % must be read one at a time so a single bad one cannot take
+            % the rest of the file down with it.
+            omkg.setpref("ControlledInstanceIdentity", "openminds");
+            omkg.setpref("KgOpenMINDSVersion", 4);
+            json = sprintf(['{"schemaVersion":"1.0","openmindsVersion":"v4.0",', ...
+                '"kg":{"space":"controlled","stage":"RELEASED"},', ...
+                '"generatedAt":"2026-09-08T00:00:00Z","entries":[', ...
+                '{"kg":"%s","om":"%s"},', ...
+                '{"kg":"https://kg.ebrains.eu/api/instances/missingOm"}]}'], ...
+                testCase.KgIri, testCase.OmIri);
+            fid = fopen(testCase.CacheFile, "wt"); fwrite(fid, json); fclose(fid);
+
+            cache = testCase.createCache();
+
+            testCase.verifyWarning(@() cache.numEntries(), ...
+                'OMKG:ControlledInstanceCache:InvalidEntries')
+            testCase.verifyEqual(cache.numEntries(), 1)
+            testCase.verifyTrue(cache.isKnown(testCase.KgIri))
+        end
+
+        function testEveryEntryMissingTheSameFieldIsDroppedNotFatal(testCase)
+            % Unlike the mixed-fields case above, entries that all share
+            % one field set decode to a uniform struct array rather than a
+            % cell array. A field missing from every entry must be caught
+            % the same way.
+            omkg.setpref("ControlledInstanceIdentity", "openminds");
+            omkg.setpref("KgOpenMINDSVersion", 4);
+            json = sprintf(['{"schemaVersion":"1.0","openmindsVersion":"v4.0",', ...
+                '"kg":{"space":"controlled","stage":"RELEASED"},', ...
+                '"generatedAt":"2026-09-08T00:00:00Z","entries":[', ...
+                '{"kg":"https://kg.ebrains.eu/api/instances/a"},', ...
+                '{"kg":"https://kg.ebrains.eu/api/instances/b"}]}']);
+            fid = fopen(testCase.CacheFile, "wt"); fwrite(fid, json); fclose(fid);
+
+            cache = testCase.createCache();
+
+            testCase.verifyWarning(@() cache.numEntries(), ...
+                'OMKG:ControlledInstanceCache:InvalidEntries')
+            testCase.verifyEqual(cache.numEntries(), 0)
+        end
+
         function testFileBuiltForAnotherVersionIsIgnored(testCase)
             % An openMINDS IRI carries a version specific namespace, so a
             % cache built for one version must not be used under another.
@@ -268,6 +314,29 @@ classdef ControlledInstanceCacheTest < matlab.unittest.TestCase
 
             omkg.setpref("ControlledInstanceCacheFolder", folderA);
             testCase.verifyTrue(cache.isKnown(testCase.KgIri))
+        end
+    end
+
+    methods (Test) % Save failure
+        function testSaveFailureWarnsAndKeepsEntryInMemory(testCase)
+            % The cache is a convenience; a write failure must not
+            % propagate out of record() and abort whatever pull triggered
+            % it. A path component that is an existing plain file can
+            % never be treated as a folder, so mkdir/fopen fail here in a
+            % way that does not depend on filesystem permissions.
+            omkg.setpref("ControlledInstanceIdentity", "openminds");
+            blockingFile = [tempname, '.txt'];
+            fid = fopen(blockingFile, 'w'); fclose(fid);
+            testCase.addTeardown(@() delete(blockingFile));
+            unwritablePath = string(fullfile(blockingFile, "subdir", "cache.json"));
+            cache = omkg.internal.ControlledInstanceCache.instance(...
+                'Reset', true, 'File', unwritablePath);
+
+            testCase.verifyWarning(@() cache.record(testCase.KgIri, testCase.OmIri), ...
+                'OMKG:ControlledInstanceCache:SaveFailed')
+            testCase.verifyTrue(cache.isKnown(testCase.KgIri), ...
+                'The entry should still be usable for the rest of the session')
+            testCase.verifyFalse(isfile(unwritablePath))
         end
     end
 

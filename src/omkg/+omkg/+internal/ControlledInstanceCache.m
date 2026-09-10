@@ -254,30 +254,48 @@ classdef ControlledInstanceCache < handle
                 return
             end
 
+            % A hand edited or older file can hold entries openMINDS can not
+            % resolve, or ones missing a field entirely: jsondecode returns
+            % a struct array only when every entry shares the same fields,
+            % and a cell array of structs otherwise. Reading each entry on
+            % its own, rather than concatenating them into one array first,
+            % means one malformed entry cannot take the whole file down
+            % with it; it is just dropped, like any other invalid entry.
             entries = data.entries;
-            if iscell(entries)
-                entries = [entries{:}];
+            if ~iscell(entries)
+                entries = num2cell(entries);
             end
-            kgIRIs = string({entries.kg});
-            omIRIs = string({entries.om});
 
-            % A hand edited or older file can hold pairs that openMINDS can
-            % not resolve. Drop them here so they never reach a lookup.
+            numEntries = numel(entries);
+            kgIRIs = strings(1, numEntries);
+            omIRIs = strings(1, numEntries);
+            for i = 1:numEntries
+                try
+                    kgIRIs(i) = string(entries{i}.kg);
+                    omIRIs(i) = string(entries{i}.om);
+                catch
+                    % Left as "": the isValid filter below drops it.
+                end
+            end
+
             isValid = strlength(kgIRIs) > 0 ...
                 & omkg.internal.conversion.isOpenMindsInstanceIRI(omIRIs);
             if ~all(isValid)
                 warning('OMKG:ControlledInstanceCache:InvalidEntries', ...
-                    'Ignoring %d entries of "%s" that do not name an openMINDS instance.', ...
+                    'Ignoring %d entries of "%s" that are malformed or do not name an openMINDS instance.', ...
                     nnz(~isValid), obj.FilePath)
             end
             obj.Entries(kgIRIs(isValid)) = omIRIs(isValid);
         end
 
         function save(obj)
-            folder = fileparts(obj.FilePath);
-            if strlength(folder) > 0 && ~isfolder(folder)
-                mkdir(folder)
-            end
+            % save - Write the cache to disk
+            %
+            %   The cache is a convenience: a failure to persist it must not
+            %   abort whatever pull triggered the write. A folder that
+            %   cannot be created, or a file that cannot be opened, is
+            %   reported with a warning; the new entry stands in memory for
+            %   the rest of the session either way.
 
             kgIRIs = keys(obj.Entries);
             data = struct();
@@ -289,9 +307,25 @@ classdef ControlledInstanceCache < handle
             data.generatedAt = string(datetime('now', 'TimeZone', 'UTC'), "yyyy-MM-dd'T'HH:mm:ss'Z'");
             data.entries = struct('kg', cellstr(kgIRIs), 'om', cellstr(obj.Entries(kgIRIs)));
 
-            fid = fopen(obj.FilePath, "wt");
-            fileCleanup = onCleanup(@() fclose(fid));
-            fwrite(fid, jsonencode(data, 'PrettyPrint', true));
+            try
+                folder = fileparts(obj.FilePath);
+                if strlength(folder) > 0 && ~isfolder(folder)
+                    mkdir(folder)
+                end
+
+                fid = fopen(obj.FilePath, "wt");
+                if fid == -1
+                    error('OMKG:ControlledInstanceCache:CannotOpenFile', ...
+                        'Could not open "%s" for writing.', obj.FilePath)
+                end
+                fileCleanup = onCleanup(@() fclose(fid));
+                fwrite(fid, jsonencode(data, 'PrettyPrint', true));
+            catch ME
+                warning('OMKG:ControlledInstanceCache:SaveFailed', ...
+                    ['Could not write the controlled instance cache to "%s": %s. ', ...
+                    'The new entry is kept in memory for this session but will not survive it.'], ...
+                    obj.FilePath, ME.message)
+            end
         end
 
         function versionString = activeOpenMindsVersion(~)
