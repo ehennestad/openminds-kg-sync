@@ -22,6 +22,7 @@ classdef DownloadMetadataTest < matlab.unittest.TestCase
 
         function testBasicDownloadMetadata(testCase)
             % Test the downloadMetadata function directly with controlled inputs
+            testCase.useIdentityPolicy("openminds");
 
             % Create a simple mock KG node
             mockKgNode = struct();
@@ -56,6 +57,7 @@ classdef DownloadMetadataTest < matlab.unittest.TestCase
 
         function testDownloadMetadataWithLinkResolution(testCase)
             % Test downloadMetadata with link resolution
+            testCase.useIdentityPolicy("openminds");
 
             % Create mock nodes with links
             mainNode = struct();
@@ -166,6 +168,7 @@ classdef DownloadMetadataTest < matlab.unittest.TestCase
 
         function testDownloadMetadataErrorHandling(testCase)
             % Test error handling in downloadMetadata
+            testCase.useIdentityPolicy("openminds");
 
             % Configure mock to throw error
             testCase.MockClient.setError("getInstance", MException('TEST:Error', 'Mock error'));
