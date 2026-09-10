@@ -145,7 +145,4 @@ classdef KGResolver < openminds.interface.LinkResolver
             end
         end
     end
-
-    methods (Access = private)
-    end
 end

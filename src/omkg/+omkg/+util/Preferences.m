@@ -25,10 +25,10 @@ classdef Preferences < matlab.mixin.CustomDisplay & handle
 %                                       openMINDS IRI, looked up before its
 %                                       parent is converted and resolved
 %                                       from the local library. "kg": the
-%                                       KG UUID, resolved by download.
-%                                       Read once per pull and applied to
-%                                       every link in it, so a graph never
-%                                       mixes the two.
+%                                       KG UUID, resolved by download. Read
+%                                       fresh for every link; changing it
+%                                       mid-pull is not guarded against and
+%                                       would mix the two within one graph.
 %       ControlledInstanceCacheFolder (string) : Folder the lookup used in
 %                                       "openminds" mode is kept in. Empty
 %                                       (default) means the "omkg" folder

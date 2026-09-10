@@ -34,8 +34,7 @@ function [canonicalIRI, isResolved] = selectCanonicalInstanceIRI(candidateIRIs)
 %   Repeated occurrences of the same IRI are not aliases and are collapsed
 %   before the choice is made.
 %
-% See also: omkg.internal.conversion.isControlledInstanceName,
-%   omkg.internal.conversion.removeInvalidIdentifierPairs
+% See also: omkg.internal.conversion.isControlledInstanceName
 
     arguments
         candidateIRIs (1,:) string

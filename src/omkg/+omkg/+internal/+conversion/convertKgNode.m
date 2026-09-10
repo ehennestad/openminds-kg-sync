@@ -187,23 +187,21 @@ function instances = convertLinkedNodes(nodes, expectedObject, cache)
     instances = omkg.util.concatTypesIfHomogeneous(instances);
 end
 
-function unresolvedNodes = createUnresolvedNode(node, expectedObject)
-    numNodes = numel(node);
-    unresolvedNodes = cell(1, numNodes); % todo, init correct type
-    for iNode = 1:numNodes
-        thisNode = node(iNode);
+function unresolvedNode = createUnresolvedNode(node, expectedObject)
+% createUnresolvedNode - A reference that download can resolve later
+%
+%   node is a single KG link (convertLinkedNodes calls this once per
+%   element), never an array.
 
-        if openminds.utility.isMixedInstance( expectedObject )
-            unresolvedNodes{iNode} = feval(class(expectedObject), thisNode);
-        else
-            % An id alone creates a node; the link must be an explicit
-            % reference so that it is resolved later and never saved as
-            % an empty node.
-            unresolvedNodes{iNode} = feval(class(expectedObject), ...
-                'id', thisNode.at_id, 'IsReference', true);
-        end
+    if openminds.utility.isMixedInstance(expectedObject)
+        unresolvedNode = feval(class(expectedObject), node);
+    else
+        % An id alone creates a node; the link must be an explicit
+        % reference so that it is resolved later and never saved as
+        % an empty node.
+        unresolvedNode = feval(class(expectedObject), ...
+            'id', node.at_id, 'IsReference', true);
     end
-    unresolvedNodes = [unresolvedNodes{:}];
 end
 
 function tf = isLinkedNode(node)
