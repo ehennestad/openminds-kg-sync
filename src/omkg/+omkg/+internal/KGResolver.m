@@ -138,6 +138,11 @@ classdef KGResolver < openminds.interface.LinkResolver
         %   identifier of the reference it resolves, so the library
         %   instance is not returned as is. Its property values are copied
         %   onto a node that carries the identifier of the reference.
+        %
+        %   getPropertyValues leaves out id and IsReference, so the typed
+        %   path below (instance.set(...)) cannot touch the reference's
+        %   identifier even though it sets in place; the mixed-type path
+        %   sets id explicitly from the reference for the same reason.
 
             libraryInstance = omkg.internal.conversion.getControlledInstance(openMindsIdentifier);
             [propertyNames, propertyValues] = omkg.internal.getPropertyValues(libraryInstance);

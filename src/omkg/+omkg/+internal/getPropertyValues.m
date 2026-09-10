@@ -19,6 +19,14 @@ function [propertyNames, propertyValues] = getPropertyValues(instance)
 %   property while dropping unset lists. The rule applied here is the one
 %   openMINDS uses for the same question in ControlledTerm.isEmptyValue,
 %   which is private there.
+%
+%   toStruct() itself already leaves out id and IsReference, both Hidden
+%   properties: a caller that copies these values onto another instance to
+%   resolve it, as omkg.internal.KGResolver does, relies on that exclusion
+%   to never change the identifier of the instance it is populating. This
+%   function adds no logic of its own to protect that; it is a property of
+%   toStruct()'s default IncludeHidden=false, noted here because a caller
+%   depends on it.
 
     arguments
         instance (1,1) openminds.Node
