@@ -9,6 +9,9 @@ function downloadControlledInstances(options)
 %   Client   - API client to download with. Default: a new
 %              ebrains.kg.api.InstancesClient.
 %   PageSize - Instances requested per call. Default: 500.
+%   Server   - KG server to download from. Default: the "DefaultServer"
+%              preference. The cache is not keyed by server, since preprod
+%              mirrors prod.
 %   Verbose  - Print progress. Default: true.
 %
 %   Records the openMINDS IRI of every controlled instance in the Knowledge
@@ -23,7 +26,9 @@ function downloadControlledInstances(options)
 %   as atlas annotations, of which there are thousands.
 %
 %   Each type is fetched in pages, so a large type does not become one
-%   oversized response.
+%   oversized response. The offset advances by what each page held, so a
+%   server that returns fewer instances than asked for is paged through
+%   completely.
 %
 %   Requires the ControlledInstanceIdentity preference to be "openminds",
 %   because the lookup is unused under "kg". Needs valid EBRAINS
@@ -34,6 +39,7 @@ function downloadControlledInstances(options)
     arguments
         options.Client (1,1) ebrains.kg.api.InstancesClient = ebrains.kg.api.InstancesClient()
         options.PageSize (1,1) double {mustBePositive, mustBeInteger} = 500
+        options.Server (1,1) ebrains.kg.enum.KGServer = omkg.getpref("DefaultServer")
         options.Verbose (1,1) logical = true
     end
 
@@ -56,7 +62,8 @@ function downloadControlledInstances(options)
             fprintf('Fetching "%s" (%d/%d)\n', typeIRIs(i), i, numTypes);
         end
 
-        kgNodes = listAllInstances(options.Client, typeIRIs(i), options.PageSize);
+        kgNodes = listAllInstances(options.Client, typeIRIs(i), ...
+            options.PageSize, options.Server);
 
         for j = 1:numel(kgNodes)
             openMindsIRI = omkg.internal.conversion.getControlledInstanceIRI(kgNodes{j});
@@ -84,17 +91,20 @@ function typeIRIs = listControlledTermTypeIRIs()
     typeIRIs = reshape(typeIRIs, 1, []);
 end
 
-function kgNodes = listAllInstances(client, typeIRI, pageSize)
+function kgNodes = listAllInstances(client, typeIRI, pageSize, server)
 % listAllInstances - Every instance of a type, one page at a time
 %
-%   The client returns only the data of a page, not the total, so a page
-%   shorter than the page size marks the end.
+%   The client returns only the data of a page, not the total. A page
+%   shorter than requested does not mark the end either, since the server
+%   may cap the page size below what was asked for. The listing therefore
+%   runs until a page comes back empty, and the offset advances by the
+%   number of instances each page actually held.
 
-    kgNodes = {};
+    kgNodes = cell(1, 0);
     from = 0;
     while true
         page = client.listInstances(typeIRI, ...
-            "space", "controlled", "stage", "RELEASED", "Server", "PROD", ...
+            "space", "controlled", "stage", "RELEASED", "Server", server, ...
             "from", from, "size", pageSize);
         page = omkg.internal.conversion.normalizeJsonLdKeywords(page);
         if ~iscell(page)
@@ -102,11 +112,10 @@ function kgNodes = listAllInstances(client, typeIRI, pageSize)
         end
         page = reshape(page, 1, []);
 
-        kgNodes = [kgNodes, page]; %#ok<AGROW>
-
-        if numel(page) < pageSize
+        if isempty(page)
             break
         end
-        from = from + pageSize;
+        kgNodes = [kgNodes, page]; %#ok<AGROW>
+        from = from + numel(page);
     end
 end

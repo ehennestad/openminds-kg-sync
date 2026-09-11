@@ -1,11 +1,12 @@
 classdef DownloadControlledInstancesTest < matlab.unittest.TestCase
 % DownloadControlledInstancesTest - Tests for omkg.downloadControlledInstances
 %
-%   Uses the mock API client. The mock returns the same list for every
-%   listInstances call regardless of paging parameters, so multi-page
-%   behaviour can not be exercised here; what is checked is that the
-%   request is paged at all, that only controlled term types are asked
-%   for, and that the openMINDS IRIs of the returned nodes end up cached.
+%   Uses the mock API client in its paged mode, where the configured list
+%   stands for every instance of a type and each request gets the slice
+%   it asks for. Checked here: only controlled term types are asked for,
+%   the listing is paged until a page comes back empty and copes with a
+%   server that caps the page size, and the openMINDS IRIs of the returned
+%   nodes end up cached.
 
     properties (Access = private)
         MockClient omkg.test.helper.mock.KGIntancesAPIMockClient
@@ -23,7 +24,7 @@ classdef DownloadControlledInstancesTest < matlab.unittest.TestCase
                 omkg.internal.ControlledInstanceCache.instance('Reset', true));
 
             testCase.MockClient = omkg.test.helper.mock.KGIntancesAPIMockClient();
-            testCase.MockClient.setListResponse({testCase.createSpeciesKgNode()});
+            testCase.MockClient.setPagedListResponse({testCase.createSpeciesKgNode()});
         end
     end
 
@@ -72,6 +73,48 @@ classdef DownloadControlledInstancesTest < matlab.unittest.TestCase
                 'Each request should carry the offset')
         end
 
+        function testPagingContinuesUntilAnEmptyPage(testCase)
+            % The client hands back only the data of a page, not a total,
+            % so the listing has to run until a page is empty.
+            omkg.setpref("ControlledInstanceIdentity", "openminds");
+            testCase.MockClient.setPagedListResponse(testCase.createSpeciesKgNodes(3));
+
+            omkg.downloadControlledInstances('Client', testCase.MockClient, ...
+                'Verbose', false, 'PageSize', 2);
+
+            testCase.verifyTrue(testCase.MockClient.wasCalledWithOptionalParam('listInstances', 'from', uint64(2)), ...
+                'The second page should start where the first ended')
+            testCase.verifyTrue(testCase.MockClient.wasCalledWithOptionalParam('listInstances', 'from', uint64(3)), ...
+                'The listing should ask for one more page and find it empty')
+            testCase.verifyEqual(omkg.internal.ControlledInstanceCache.instance().numEntries(), 3)
+        end
+
+        function testShortPageDoesNotEndTheListing(testCase)
+            % A server may cap the page size below what was asked for. A
+            % page shorter than requested is then not the last one, and the
+            % offset has to advance by what the page actually held.
+            omkg.setpref("ControlledInstanceIdentity", "openminds");
+            testCase.MockClient.setPagedListResponse(testCase.createSpeciesKgNodes(3), 'PageSizeCap', 1);
+
+            omkg.downloadControlledInstances('Client', testCase.MockClient, ...
+                'Verbose', false, 'PageSize', 500);
+
+            testCase.verifyTrue(testCase.MockClient.wasCalledWithOptionalParam('listInstances', 'from', uint64(1)))
+            testCase.verifyTrue(testCase.MockClient.wasCalledWithOptionalParam('listInstances', 'from', uint64(2)))
+            testCase.verifyEqual(omkg.internal.ControlledInstanceCache.instance().numEntries(), 3, ...
+                'Every instance should be cached even though each page held one')
+        end
+
+        function testRequestsGoToTheGivenServer(testCase)
+            omkg.setpref("ControlledInstanceIdentity", "openminds");
+
+            omkg.downloadControlledInstances('Client', testCase.MockClient, ...
+                'Verbose', false, 'Server', "preprod");
+
+            testCase.verifyTrue(testCase.MockClient.wasCalledWithOption('listInstances', 'Server', ...
+                ebrains.kg.enum.KGServer.PREPROD))
+        end
+
         function testCachesTheOpenMindsIriOfEachInstance(testCase)
             omkg.setpref("ControlledInstanceIdentity", "openminds");
             node = testCase.createSpeciesKgNode();
@@ -86,14 +129,24 @@ classdef DownloadControlledInstancesTest < matlab.unittest.TestCase
     end
 
     methods (Static, Access = private)
-        function kgNode = createSpeciesKgNode()
+        function kgNode = createSpeciesKgNode(instanceName)
+            arguments
+                instanceName (1,1) string = "musMusculus"
+            end
+            kgIri = "https://kg.ebrains.eu/api/instances/species-" + instanceName;
             kgNode = struct();
-            kgNode.x_id = 'https://kg.ebrains.eu/api/instances/6ba7b810-9dad-11d1-80b4-00c04fd430c8';
+            kgNode.x_id = char(kgIri);
             kgNode.x_type = 'https://openminds.om-i.org/types/Species';
             kgNode.http___schema_org_identifier = { ...
-                'https://openminds.om-i.org/instances/species/musMusculus', ...
-                'https://kg.ebrains.eu/api/instances/6ba7b810-9dad-11d1-80b4-00c04fd430c8'};
-            kgNode.https___openminds_ebrains_eu_vocab_name = 'Mus musculus';
+                char("https://openminds.om-i.org/instances/species/" + instanceName), ...
+                char(kgIri)};
+            kgNode.https___openminds_ebrains_eu_vocab_name = char(instanceName);
+        end
+
+        function kgNodes = createSpeciesKgNodes(numNodes)
+            kgNodes = arrayfun(@(i) ...
+                omkg.test.DownloadControlledInstancesTest.createSpeciesKgNode("species" + i), ...
+                1:numNodes, 'UniformOutput', false);
         end
     end
 end

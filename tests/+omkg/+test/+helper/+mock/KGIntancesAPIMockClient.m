@@ -16,6 +16,14 @@ classdef KGIntancesAPIMockClient < ebrains.kg.api.InstancesClient
     properties
         % Response data for different methods
         ListResponse = []
+
+        % When true, ListResponse stands for the complete result set of a
+        % type and listInstances returns the slice a paged request (from,
+        % size) asks for, at most ListPageSizeCap long, the way a server
+        % that caps the page size would. Off by default: most tests want
+        % the same list back for every call.
+        PagedListResponse = false
+        ListPageSizeCap = Inf
         ListTypesResponse = []
         InstanceResponse = []
         BulkResponse = []
@@ -45,6 +53,23 @@ classdef KGIntancesAPIMockClient < ebrains.kg.api.InstancesClient
         %% Response Configuration Methods
         function setListResponse(obj, response)
             obj.ListResponse = response;
+            obj.PagedListResponse = false;
+        end
+
+        function setPagedListResponse(obj, response, options)
+            % setPagedListResponse - Serve a response one page at a time
+            %
+            %   Name-Value Arguments:
+            %     PageSizeCap - Largest page the mock server will return,
+            %                   whatever size a request asks for. Default: Inf.
+            arguments
+                obj (1,1) omkg.test.helper.mock.KGIntancesAPIMockClient
+                response
+                options.PageSizeCap (1,1) double {mustBePositive} = Inf
+            end
+            obj.ListResponse = response;
+            obj.PagedListResponse = true;
+            obj.ListPageSizeCap = options.PageSizeCap;
         end
 
         function setListTypesResponse(obj, response)
@@ -77,6 +102,8 @@ classdef KGIntancesAPIMockClient < ebrains.kg.api.InstancesClient
 
         function clearResponses(obj)
             obj.ListResponse = [];
+            obj.PagedListResponse = false;
+            obj.ListPageSizeCap = Inf;
             obj.ListTypesResponse = [];
             obj.InstanceResponse = [];
             obj.BulkResponse = [];
@@ -129,7 +156,11 @@ classdef KGIntancesAPIMockClient < ebrains.kg.api.InstancesClient
             obj.checkForError('listInstances');
             obj.simulateDelay();
 
-            result = obj.ListResponse;
+            if obj.PagedListResponse
+                result = obj.selectPage(obj.ListResponse, optionalParams);
+            else
+                result = obj.ListResponse;
+            end
         end
 
         function result = getInstance(obj, identifier, stage, optionalParams, serverOptions)
@@ -472,6 +503,32 @@ classdef KGIntancesAPIMockClient < ebrains.kg.api.InstancesClient
     end
 
     methods (Access = private)
+        function page = selectPage(obj, list, optionalParams)
+            % selectPage - The slice of the full list a paged request asks for
+            if ~iscell(list)
+                list = num2cell(list);
+            end
+            list = reshape(list, 1, []);
+
+            from = 0;
+            if isfield(optionalParams, 'from')
+                from = double(optionalParams.from);
+            end
+            pageSize = numel(list);
+            if isfield(optionalParams, 'size')
+                pageSize = double(optionalParams.size);
+            end
+            pageSize = min(pageSize, obj.ListPageSizeCap);
+
+            first = from + 1;
+            last = min(from + pageSize, numel(list));
+            if first > numel(list)
+                page = cell(1, 0);
+            else
+                page = list(first:last);
+            end
+        end
+
         function checkForError(obj, methodName)
             if ~isempty(obj.ErrorToThrow) && (isempty(obj.MethodsToError) || any(obj.MethodsToError == methodName))
                 throw(obj.ErrorToThrow);
