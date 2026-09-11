@@ -166,6 +166,45 @@ classdef DownloadMetadataTest < matlab.unittest.TestCase
             testCase.verifyEqual(string(result.getUnresolvedLinkIdentifiers()), speciesKgIri)
         end
 
+        function testPrefetchedNodesAreReusedByLinkResolution(testCase)
+            % A mixed-type link may hold a controlled instance, so the
+            % pre-fetch retrieves it to look at its identifiers. When it
+            % turns out to be an ordinary node it is an unresolved link
+            % like any other, and must be reused rather than downloaded
+            % again. A link the Knowledge Graph did not return is not
+            % requested a second time either, so it is reported once.
+            testCase.useIdentityPolicy("openminds");
+            subjectKgIri = "https://kg.ebrains.eu/api/instances/6ba7b810-9dad-11d1-80b4-00c04fd430c8";
+            missingKgIri = "https://kg.ebrains.eu/api/instances/00000000-0000-4000-8000-00000000dead";
+
+            datasetVersionNode = struct();
+            datasetVersionNode.x_id = "https://kg.ebrains.eu/api/instances/" + testCase.TestUUID;
+            datasetVersionNode.x_type = "https://openminds.om-i.org/types/DatasetVersion";
+            datasetVersionNode.studiedSpecimen = struct('x_id', {subjectKgIri, missingKgIri});
+
+            subjectNode = struct();
+            subjectNode.x_id = subjectKgIri;
+            subjectNode.x_type = "https://openminds.om-i.org/types/Subject";
+            subjectNode.lookupLabel = "mouse1";
+
+            testCase.MockClient.setInstanceResponse(datasetVersionNode);
+            testCase.MockClient.setBulkResponse({subjectNode});
+
+            result = omkg.sync.downloadMetadata(testCase.TestUUID, ...
+                'Client', testCase.MockClient, 'NumLinksToResolve', 1);
+
+            testCase.verifyEqual(testCase.MockClient.getCallCount('getInstancesBulk'), 1, ...
+                'The links should be requested once, by the pre-fetch, and then reused')
+            testCase.verifyEqual(string(result.getUnresolvedLinkIdentifiers()), missingKgIri, ...
+                'Only the link the Knowledge Graph did not return should remain unresolved')
+
+            specimens = result.studiedSpecimen;
+            subject = specimens(1).Instance;
+            testCase.verifyClass(subject, 'openminds.core.Subject')
+            testCase.verifyEqual(subject.lookupLabel, "mouse1", ...
+                'The pre-fetched node should be resolved with its downloaded values')
+        end
+
         function testDownloadMetadataErrorHandling(testCase)
             % Test error handling in downloadMetadata
             testCase.useIdentityPolicy("openminds");

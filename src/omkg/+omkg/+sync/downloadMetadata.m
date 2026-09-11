@@ -36,8 +36,13 @@ function omNode = downloadMetadata(kgIdentifier, options)
 
     % A link to a controlled instance takes its openMINDS identity while
     % its parent is converted, so the identifiers of any controlled
-    % instances the cache does not know yet are fetched first.
-    prefetchControlledInstances(kgNode, cache, options.Client, options.Server);
+    % instances the cache does not know yet are fetched first. The nodes
+    % that fetch returns are kept: a link that turns out not to be a
+    % controlled instance is an ordinary linked node, which the link
+    % resolution below would otherwise download a second time.
+    prefetched = emptyPrefetchedNodes();
+    prefetched = prefetchControlledInstances(kgNode, cache, ...
+        options.Client, options.Server, prefetched);
 
     kgIRI = omkg.internal.conversion.getNodeKeywords(kgNode, "@id");
     rootNode = omkg.internal.conversion.convertKgNode(kgNode, options.ReferenceNode);
@@ -51,15 +56,31 @@ function omNode = downloadMetadata(kgIdentifier, options)
         linkedIRIs = setdiff(linkedIRIs, resolvedIRIs);
 
         if ~isempty(linkedIRIs)
-            if options.Verbose
-                fprintf(['Following links of %s order. ', ...
-                    'Please wait while downloading %d new metadata instances...\n'], ...
-                    omkg.util.getOrdinalNumberString(i), numel(linkedIRIs));
-            end
-            kgNodes = options.Client.getInstancesBulk(linkedIRIs, ...
-                "Server", options.Server);
+            % Links the pre-fetch already asked for are not requested
+            % again, whether it retrieved them or found them missing.
+            kgNodes = prefetched.Nodes(ismember(prefetched.IRIs, linkedIRIs));
+            linkedIRIs = linkedIRIs(~ismember(linkedIRIs, prefetched.RequestedIRIs));
 
-            prefetchControlledInstances(kgNodes, cache, options.Client, options.Server);
+            if ~isempty(linkedIRIs)
+                if options.Verbose
+                    fprintf(['Following links of %s order. ', ...
+                        'Please wait while downloading %d new metadata instances...\n'], ...
+                        omkg.util.getOrdinalNumberString(i), numel(linkedIRIs));
+                end
+                fetchedNodes = options.Client.getInstancesBulk(linkedIRIs, ...
+                    "Server", options.Server);
+                if ~iscell(fetchedNodes)
+                    fetchedNodes = num2cell(fetchedNodes);
+                end
+                kgNodes = [kgNodes, fetchedNodes]; %#ok<AGROW>
+            end
+
+            if isempty(kgNodes)
+                continue % None of the links could be retrieved
+            end
+
+            prefetched = prefetchControlledInstances(kgNodes, cache, ...
+                options.Client, options.Server, prefetched);
             newNodes = omkg.internal.conversion.convertKgNode(kgNodes);
 
             if ~iscell(newNodes)
@@ -84,13 +105,30 @@ function omNode = downloadMetadata(kgIdentifier, options)
     omNode = allNodes{1};
 end
 
-function prefetchControlledInstances(kgNodes, cache, client, server)
+function prefetched = emptyPrefetchedNodes()
+% emptyPrefetchedNodes - What the pre-fetch has asked for and what it got
+%
+%   RequestedIRIs holds every link the pre-fetch requested, so that a link
+%   the Knowledge Graph did not return is not requested a second time and
+%   reported missing twice. IRIs and Nodes hold the links that were
+%   returned, in the same order.
+    prefetched = struct(...
+        'RequestedIRIs', string.empty(1, 0), ...
+        'IRIs', string.empty(1, 0), ...
+        'Nodes', {cell(1, 0)});
+end
+
+function prefetched = prefetchControlledInstances(kgNodes, cache, client, server, prefetched)
 % prefetchControlledInstances - Learn the openMINDS IRIs of unknown controlled links
 %
 %   Only links on properties that can hold a controlled instance are
 %   considered, so persons, datasets and the like are not fetched just to
 %   look at their identifiers. Does nothing under the "kg" identity policy,
 %   where the cache answers nothing and every link stays a reference.
+%
+%   The nodes retrieved are added to prefetched, so that the caller can
+%   reuse those which are not controlled instances instead of downloading
+%   them again.
 
     if ~cache.isEnabled()
         return
@@ -98,6 +136,7 @@ function prefetchControlledInstances(kgNodes, cache, client, server)
 
     candidateIRIs = listControlledInstanceLinks(kgNodes);
     candidateIRIs = candidateIRIs(~cache.isKnown(candidateIRIs));
+    candidateIRIs = candidateIRIs(~ismember(candidateIRIs, prefetched.RequestedIRIs));
     if isempty(candidateIRIs)
         return
     end
@@ -107,6 +146,10 @@ function prefetchControlledInstances(kgNodes, cache, client, server)
     if ~iscell(linkedNodes)
         linkedNodes = num2cell(linkedNodes);
     end
+
+    prefetched.RequestedIRIs = [prefetched.RequestedIRIs, candidateIRIs];
+    prefetched.IRIs = [prefetched.IRIs, cellfun(@(n) string(n.at_id), linkedNodes)];
+    prefetched.Nodes = [prefetched.Nodes, linkedNodes];
 
     [kgIRIs, openMindsIRIs] = deal(string.empty);
     for i = 1:numel(linkedNodes)
