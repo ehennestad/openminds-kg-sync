@@ -1,10 +1,10 @@
 classdef IsControlledInstanceNameTest < matlab.unittest.TestCase
 % IsControlledInstanceNameTest - Unit tests for isControlledInstanceName
 %
-%   The function under test answers whether the active openMINDS version
-%   declares the instance an IRI names. Its contract is defined against
-%   the generated CONTROLLED_INSTANCES constants, so these tests run with a
-%   pinned openMINDS version and use names taken from those constants.
+%   The function under test answers whether the instance library of the
+%   active openMINDS version holds the instance an IRI names. These tests
+%   run with a pinned openMINDS version and use names taken from that
+%   version's library.
 
     properties (Constant, Access = private)
         InstancePrefix = "https://openminds.om-i.org/instances/"
@@ -45,6 +45,24 @@ classdef IsControlledInstanceNameTest < matlab.unittest.TestCase
             iri = testCase.InstancePrefix + "molecularEntity/Halothane";
 
             testCase.verifyFalse(omkg.internal.conversion.isControlledInstanceName(iri))
+        end
+
+        function testPluralTypeSegmentIsResolved(testCase)
+            % A few instance IRIs name their type in the plural, such as
+            % "licenses", which is not the type name. openMINDS resolves
+            % those from the library, so the lookup must go through it.
+            iri = testCase.InstancePrefix + "licenses/CC-BY-4.0";
+
+            testCase.verifyTrue(omkg.internal.conversion.isControlledInstanceName(iri))
+        end
+
+        function testInstanceOfNonControlledTermTypeIsRecognised(testCase)
+            % The library holds instances of types outside the controlled
+            % terms, which declare no CONTROLLED_INSTANCES constant.
+            iri = testCase.InstancePrefix + ...
+                "parcellationEntityVersion/AMBA_CCFv3-2017_hippocampalRegion";
+
+            testCase.verifyTrue(omkg.internal.conversion.isControlledInstanceName(iri))
         end
 
         function testSchemaVersionOfIriDoesNotMatter(testCase)
