@@ -81,8 +81,21 @@ classdef KGResolver < openminds.interface.LinkResolver
             identifier = string(instance.id);
             cache = omkg.internal.ControlledInstanceCache.instance();
 
-            if cache.isKnown(identifier) % Controlled instance, openMINDS identity policy
+            % Under the "openminds" identity policy a controlled instance
+            % the cache knows is populated from the local library. One the
+            % Knowledge Graph has but the library does not is downloaded
+            % like any other node, which is how convertKgNode left it:
+            % asking the library for it would yield an empty instance and
+            % a warning, not an error, and the reference would be marked
+            % resolved with nothing in it.
+            isLibraryInstance = false;
+            if cache.isKnown(identifier)
                 openMindsIdentifier = cache.lookup(identifier);
+                isLibraryInstance = ...
+                    omkg.internal.conversion.isControlledInstanceName(openMindsIdentifier);
+            end
+
+            if isLibraryInstance
                 instance = obj.resolveControlledInstance(instance, openMindsIdentifier);
             else
                 if openminds.interface.LinkResolver.isTypeKnown(instance)

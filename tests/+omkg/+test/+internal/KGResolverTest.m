@@ -189,6 +189,27 @@ classdef KGResolverTest < matlab.unittest.TestCase
             testCase.verifyEqual(testCase.MockClient.getCallCount('getInstance'), 1)
         end
 
+        function testControlledInstanceMissingFromLibraryIsDownloaded(testCase)
+            % The cache can know a controlled instance the local library
+            % does not hold: the KG has terms openMINDS has not released.
+            % convertKgNode leaves such a link a reference to be resolved by
+            % download, and the resolver must do that rather than fill the
+            % reference from a library instance that does not exist, which
+            % would leave it empty and marked resolved.
+            omkg.internal.ControlledInstanceCache.instance().record(testCase.ControlledIri, ...
+                "https://openminds.om-i.org/instances/species/notAnInstanceInTheLibrary");
+            testCase.MockClient.setInstanceResponse(testCase.createSpeciesKgNode());
+            resolver = testCase.createResolver();
+            speciesStub = openminds.controlledterms.Species('id', testCase.ControlledIri, 'IsReference', true);
+
+            resolved = resolver.resolveNode(speciesStub);
+
+            testCase.verifyEqual(testCase.MockClient.getCallCount('getInstance'), 1, ...
+                'A term the library does not hold must be downloaded')
+            testCase.verifyEqual(string(resolved.id), testCase.ControlledIri)
+            testCase.verifyEqual(resolved.name, "Mus musculus")
+        end
+
         function testTraversalStoresReplacedInstance(testCase)
             % A nested mixed-type reference resolved through the openMINDS
             % traversal must end up as the returned typed instance.
