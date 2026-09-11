@@ -205,6 +205,68 @@ classdef DownloadMetadataTest < matlab.unittest.TestCase
                 'The pre-fetched node should be resolved with its downloaded values')
         end
 
+        function testControlledLinkInsideEmbeddedNodeIsPrefetched(testCase)
+            % A controlled term is often linked from an embedded node rather
+            % than from the node being converted: the unit of a quantity
+            % sits inside the QuantitativeValue that holds it. The pre-fetch
+            % must find it there, or the unit keeps its KG identifier while
+            % terms linked directly take their openMINDS one.
+            testCase.useIdentityPolicy("openminds");
+            unitKgIri = "https://kg.ebrains.eu/api/instances/11111111-1111-4111-8111-111111111111";
+            unitOmIri = "https://openminds.om-i.org/instances/unitOfMeasurement/month";
+
+            stateNode = struct();
+            stateNode.x_id = "https://kg.ebrains.eu/api/instances/" + testCase.TestUUID;
+            stateNode.x_type = "https://openminds.om-i.org/types/SubjectState";
+            stateNode.age = struct(...
+                'x_type', "https://openminds.om-i.org/types/QuantitativeValue", ...
+                'value', 12, ...
+                'unit', struct('x_id', unitKgIri));
+
+            unitNode = struct();
+            unitNode.x_id = unitKgIri;
+            unitNode.x_type = "https://openminds.om-i.org/types/UnitOfMeasurement";
+            unitNode.http___schema_org_identifier = {char(unitOmIri), char(unitKgIri)};
+            unitNode.name = "month";
+
+            testCase.MockClient.setInstanceResponse(stateNode);
+            testCase.MockClient.setBulkResponse({unitNode});
+
+            result = omkg.sync.downloadMetadata(testCase.TestUUID, ...
+                'Client', testCase.MockClient, 'NumLinksToResolve', 0);
+
+            testCase.verifyEqual(testCase.MockClient.getCallCount('getInstancesBulk'), 1, ...
+                'The unit should be fetched once, before its parent is converted')
+            unit = result.age.unit;
+            if openminds.utility.isMixedInstance(unit), unit = unit.Instance; end
+            testCase.verifyClass(unit, 'openminds.controlledterms.UnitOfMeasurement')
+            testCase.verifyEqual(string(unit.id), unitOmIri, ...
+                'The unit should take its openMINDS identity like a directly linked term')
+            testCase.verifyFalse(unit.isReference())
+        end
+
+        function testMissingSingleControlledCandidateDoesNotAbortThePull(testCase)
+            % The API client answers a request for one identifier with an
+            % error when the KG has no such instance, where a request for
+            % several silently leaves the missing ones out. A dead link on
+            % a property that could hold a controlled term must not abort
+            % the pull; it is warned about and left a reference.
+            testCase.useIdentityPolicy("openminds");
+            [subjectNode, ~, speciesKgIri] = testCase.createSubjectWithSpecies();
+            testCase.MockClient.setInstanceResponse(subjectNode);
+            testCase.MockClient.setError("getInstancesBulk", ...
+                MException('EBRAINS:KG_API:getInstance:NotFound', 'NotFound'));
+
+            result = testCase.verifyWarning(...
+                @() omkg.sync.downloadMetadata(testCase.TestUUID, ...
+                    'Client', testCase.MockClient, 'NumLinksToResolve', 0), ...
+                'OMKG:DownloadMetadata:LinkedInstanceNotFound');
+
+            testCase.verifyClass(result, 'openminds.core.research.Subject')
+            testCase.verifyEqual(string(result.getUnresolvedLinkIdentifiers()), speciesKgIri, ...
+                'The link that could not be retrieved should stay a reference')
+        end
+
         function testDownloadMetadataErrorHandling(testCase)
             % Test error handling in downloadMetadata
             testCase.useIdentityPolicy("openminds");

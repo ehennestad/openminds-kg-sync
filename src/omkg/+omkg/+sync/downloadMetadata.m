@@ -67,11 +67,7 @@ function omNode = downloadMetadata(kgIdentifier, options)
                         'Please wait while downloading %d new metadata instances...\n'], ...
                         omkg.util.getOrdinalNumberString(i), numel(linkedIRIs));
                 end
-                fetchedNodes = options.Client.getInstancesBulk(linkedIRIs, ...
-                    "Server", options.Server);
-                if ~iscell(fetchedNodes)
-                    fetchedNodes = num2cell(fetchedNodes);
-                end
+                fetchedNodes = fetchNodes(options.Client, linkedIRIs, options.Server);
                 kgNodes = [kgNodes, fetchedNodes]; %#ok<AGROW>
             end
 
@@ -141,11 +137,8 @@ function prefetched = prefetchControlledInstances(kgNodes, cache, client, server
         return
     end
 
-    linkedNodes = client.getInstancesBulk(candidateIRIs, "Server", server);
+    linkedNodes = fetchNodes(client, candidateIRIs, server);
     linkedNodes = omkg.internal.conversion.normalizeJsonLdKeywords(linkedNodes);
-    if ~iscell(linkedNodes)
-        linkedNodes = num2cell(linkedNodes);
-    end
 
     prefetched.RequestedIRIs = [prefetched.RequestedIRIs, candidateIRIs];
     prefetched.IRIs = [prefetched.IRIs, cellfun(@(n) string(n.at_id), linkedNodes)];
@@ -163,12 +156,43 @@ function prefetched = prefetchControlledInstances(kgNodes, cache, client, server
     cache.record(kgIRIs, openMindsIRIs);
 end
 
+function kgNodes = fetchNodes(client, kgIRIs, server)
+% fetchNodes - Download the given nodes, leaving out any the KG does not return
+%
+%   A request for several identifiers silently leaves out those the
+%   Knowledge Graph cannot return, while a request for a single identifier
+%   is answered with an error. A link that cannot be retrieved is treated
+%   the same way in both cases: reported with a warning and left out, so
+%   that one dead link does not abort the pull.
+
+    try
+        kgNodes = client.getInstancesBulk(kgIRIs, "Server", server);
+    catch ME
+        if strcmp(ME.identifier, 'EBRAINS:KG_API:getInstance:NotFound')
+            warning('OMKG:DownloadMetadata:LinkedInstanceNotFound', ...
+                'Failed to retrieve the linked instance "%s": %s', ...
+                strjoin(kgIRIs, ", "), ME.message)
+            kgNodes = cell(1, 0);
+            return
+        end
+        rethrow(ME)
+    end
+
+    if ~iscell(kgNodes)
+        kgNodes = num2cell(kgNodes);
+    end
+    kgNodes = reshape(kgNodes, 1, []);
+end
+
 function linkIRIs = listControlledInstanceLinks(kgNodes)
 % listControlledInstanceLinks - KG IRIs of links that may point at controlled instances
 %
 %   A link is a candidate when the property it sits on expects a
 %   controlled term, or a mixed type, which may admit one. The expected
-%   type comes from a blank instance of the node's own type.
+%   type comes from a blank instance of the node's own type. Embedded
+%   nodes are searched the same way, because a controlled term often sits
+%   one level down: the unit of a quantity is a link inside the
+%   QuantitativeValue that holds it, not on the node being converted.
 
     kgNodes = omkg.internal.conversion.normalizeJsonLdKeywords(kgNodes);
     if ~iscell(kgNodes)
@@ -185,15 +209,38 @@ function linkIRIs = listControlledInstanceLinks(kgNodes)
 
         for propertyName = string(fieldnames(properties))'
             value = properties.(propertyName);
-            if ~isprop(template, propertyName) || ~isstruct(value) || ~isfield(value, 'at_id')
+            if ~isprop(template, propertyName)
                 continue
             end
-            expected = template.(propertyName);
-            if isa(expected, 'openminds.controlledterms.ControlledTerm') ...
-                    || openminds.utility.isMixedInstance(expected)
-                linkIRIs = [linkIRIs, string({value.at_id})]; %#ok<AGROW>
+
+            if isLinkedNode(value)
+                expected = template.(propertyName);
+                if isa(expected, 'openminds.controlledterms.ControlledTerm') ...
+                        || openminds.utility.isMixedInstance(expected)
+                    linkIRIs = [linkIRIs, string({value.at_id})]; %#ok<AGROW>
+                end
+            elseif isEmbeddedNode(value)
+                linkIRIs = [linkIRIs, listControlledInstanceLinks(value)]; %#ok<AGROW>
             end
         end
     end
     linkIRIs = unique(linkIRIs);
+end
+
+function tf = isLinkedNode(value)
+    tf = isstruct(value) && isfield(value, 'at_id');
+end
+
+function tf = isEmbeddedNode(value)
+% isEmbeddedNode - Whether a property value is one or more embedded nodes
+%
+%   An embedded node declares its type but is not a link; a list of them
+%   arrives as a struct array, or as a cell when the types differ.
+    isEmbedded = @(x) isstruct(x) && isfield(x, 'at_type') && ~isfield(x, 'at_id');
+
+    if iscell(value)
+        tf = ~isempty(value) && all(cellfun(isEmbedded, value));
+    else
+        tf = isEmbedded(value);
+    end
 end
