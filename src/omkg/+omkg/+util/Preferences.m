@@ -19,11 +19,28 @@ classdef Preferences < matlab.mixin.CustomDisplay & handle
 %                                       detected at runtime. Used to set
 %                                       the active openMINDS_MATLAB model
 %                                       version before uploading metadata.
+%       ControlledInstanceIdentity (string) : Which identifier a controlled
+%                                       instance downloaded from the KG
+%                                       carries. "openminds" (default): its
+%                                       openMINDS IRI, looked up before its
+%                                       parent is converted and resolved
+%                                       from the local library. "kg": the
+%                                       KG UUID, resolved by download. Read
+%                                       fresh for every link; changing it
+%                                       mid-pull is not guarded against and
+%                                       would mix the two within one graph.
+%       ControlledInstanceCacheFolder (string) : Folder the lookup used in
+%                                       "openminds" mode is kept in. Empty
+%                                       (default) means the "omkg" folder
+%                                       under userpath.
 
     properties (SetObservable)
         DefaultServer (1,1) ebrains.kg.enum.KGServer = "preprod"
         DefaultSpace (1,1) string = "myspace"
         KgOpenMINDSVersion (1,1) double = 4
+        ControlledInstanceIdentity (1,1) string ...
+            {mustBeMember(ControlledInstanceIdentity, ["openminds", "kg"])} = "openminds"
+        ControlledInstanceCacheFolder (1,1) string = ""
     end
 
     properties (Constant, Access = private)

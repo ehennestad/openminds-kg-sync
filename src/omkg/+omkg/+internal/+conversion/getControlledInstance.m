@@ -13,22 +13,14 @@ function instance = getControlledInstance(openMindsIdentifier)
 %   instance - The instance from the local openMINDS instance library,
 %       identified by the IRI in the namespace of the active model version.
 %
-%   The identifier map can hold IRIs of either namespace, while
-%   openminds.instanceFromIRI recognises only the namespace of the active
-%   model version: given the other one, openMINDS_MATLAB v0.11.0 goes on to
-%   treat the IRI as a file path and fails. The IRI is therefore rewritten
-%   to the active namespace before the library is asked for it.
+%   openminds.instanceFromIRI resolves an instance IRI by the name it
+%   carries, not by its namespace, so an IRI from another schema version
+%   than the one active resolves to the same instance under its active
+%   namespace identifier (openMINDS_MATLAB v0.12.0 and later,
+%   openMetadataInitiative/openMINDS_MATLAB#179).
 
     arguments
         openMindsIdentifier (1,1) string
-    end
-
-    activeNamespaceIRI = openminds.constant.BaseIRI() + "/";
-    for namespaceIRI = omkg.constants.OpenMINDSNamespaceIRI
-        if startsWith(openMindsIdentifier, namespaceIRI)
-            openMindsIdentifier = replace(openMindsIdentifier, namespaceIRI, activeNamespaceIRI);
-            break
-        end
     end
 
     instance = openminds.instanceFromIRI(openMindsIdentifier);

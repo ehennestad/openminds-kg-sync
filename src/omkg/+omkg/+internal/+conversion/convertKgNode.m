@@ -49,10 +49,13 @@ function omNode = convertKgNode(kgNode, omReferenceNode, options)
         return
     end
 
-    persistent controlledInstanceMap
-    if isempty(controlledInstanceMap)
-        controlledInstanceMap = omkg.internal.conversion.getIdentifierMapping();
+    % A single node may still arrive wrapped in a cell, e.g. a bulk
+    % response holding exactly one instance.
+    if iscell(kgNode)
+        kgNode = kgNode{1};
     end
+
+    controlledInstanceCache = omkg.internal.ControlledInstanceCache.instance();
 
     [identifier, type] = omkg.internal.conversion.getNodeKeywords(kgNode, "@id", "@type");
 
@@ -79,7 +82,7 @@ function omNode = convertKgNode(kgNode, omReferenceNode, options)
         if isstruct(currentPropertyValue) || iscell(currentPropertyValue)
             if isLinkedNode(currentPropertyValue)
                 currentPropertyValue = convertLinkedNodes(currentPropertyValue, ...
-                    omDummyNode.(currentPropertyName), controlledInstanceMap);
+                    omDummyNode.(currentPropertyName), controlledInstanceCache);
             elseif isEmbeddedNode(currentPropertyValue)
                 currentPropertyValue = omkg.internal.conversion.convertKgNode(currentPropertyValue, "ParentNode", kgNode);
             end
@@ -138,7 +141,7 @@ function omNode = convertKgNode(kgNode, omReferenceNode, options)
     end
 end
 
-function instances = convertLinkedNodes(nodes, expectedObject, controlledInstanceMap)
+function instances = convertLinkedNodes(nodes, expectedObject, cache)
 % convertLinkedNodes - Turn each link into a library instance or a reference
 %
 %   Whether a link is a controlled instance is decided per link, because
@@ -147,12 +150,35 @@ function instances = convertLinkedNodes(nodes, expectedObject, controlledInstanc
 %   becomes the local library instance here, while the parent link is
 %   converted, since a link resolver must keep the identifier of the
 %   reference it resolves and so cannot make that swap later.
+%
+%   The cache answers only under the "openminds" identity policy; under
+%   "kg" every link stays a reference and keeps its Knowledge Graph
+%   identifier. A controlled instance the Knowledge Graph knows but the
+%   local openMINDS library does not also stays a reference, with a
+%   warning, rather than failing the conversion of its parent. Library
+%   membership is checked before the instance is requested: openMINDS
+%   admits user-defined terms, so asking it for an unknown name yields an
+%   empty instance and a warning rather than an error.
     instances = cell(1, numel(nodes));
 
     for i = 1:numel(nodes)
         kgIdentifier = string(nodes(i).at_id);
-        if isKey(controlledInstanceMap, kgIdentifier)
-            openMindsIdentifier = controlledInstanceMap(kgIdentifier);
+
+        isLibraryInstance = false;
+        if cache.isKnown(kgIdentifier)
+            openMindsIdentifier = cache.lookup(kgIdentifier);
+            isLibraryInstance = ...
+                omkg.internal.conversion.isControlledInstanceName(openMindsIdentifier);
+            if ~isLibraryInstance
+                warning('OMKG:ConvertKgNode:ControlledInstanceNotInLibrary', ...
+                    ['The controlled instance "%s" is not in the local openMINDS ', ...
+                    'library. The link keeps its Knowledge Graph identifier ', ...
+                    '"%s" and will be resolved by download.'], ...
+                    openMindsIdentifier, kgIdentifier)
+            end
+        end
+
+        if isLibraryInstance
             instances{i} = omkg.internal.conversion.getControlledInstance(openMindsIdentifier);
         else
             instances{i} = createUnresolvedNode(nodes(i), expectedObject);
@@ -161,23 +187,21 @@ function instances = convertLinkedNodes(nodes, expectedObject, controlledInstanc
     instances = omkg.util.concatTypesIfHomogeneous(instances);
 end
 
-function unresolvedNodes = createUnresolvedNode(node, expectedObject)
-    numNodes = numel(node);
-    unresolvedNodes = cell(1, numNodes); % todo, init correct type
-    for iNode = 1:numNodes
-        thisNode = node(iNode);
+function unresolvedNode = createUnresolvedNode(node, expectedObject)
+% createUnresolvedNode - A reference that download can resolve later
+%
+%   node is a single KG link (convertLinkedNodes calls this once per
+%   element), never an array.
 
-        if openminds.utility.isMixedInstance( expectedObject )
-            unresolvedNodes{iNode} = feval(class(expectedObject), thisNode);
-        else
-            % An id alone creates a node; the link must be an explicit
-            % reference so that it is resolved later and never saved as
-            % an empty node.
-            unresolvedNodes{iNode} = feval(class(expectedObject), ...
-                'id', thisNode.at_id, 'IsReference', true);
-        end
+    if openminds.utility.isMixedInstance(expectedObject)
+        unresolvedNode = feval(class(expectedObject), node);
+    else
+        % An id alone creates a node; the link must be an explicit
+        % reference so that it is resolved later and never saved as
+        % an empty node.
+        unresolvedNode = feval(class(expectedObject), ...
+            'id', node.at_id, 'IsReference', true);
     end
-    unresolvedNodes = [unresolvedNodes{:}];
 end
 
 function tf = isLinkedNode(node)

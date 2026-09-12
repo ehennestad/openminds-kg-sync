@@ -60,7 +60,16 @@ classdef KGMetadataStore < openminds.interface.MetadataStore
             for i = 1:numel(linkedTypes)
                 currentValue = linkedTypes{i};
                 if openminds.utility.isControlledInstance(currentValue)
-                    % Check that the id is part of the KG 2 OM map?
+                    % A controlled instance already exists in the KG's
+                    % "controlled" space and is not saved again. The link
+                    % to it goes out with the term's openMINDS IRI as @id,
+                    % and that is enough: the KG resolves a link's @id
+                    % against every schema:identifier alias of its
+                    % instances, and each controlled instance lists its
+                    % openMINDS IRI there. Verified on preprod, 2026-09-12:
+                    % a Subject created with species @id
+                    % .../instances/species/musMusculus was stored linking
+                    % to the KG UUID of that instance.
                     continue
                 end
                 currentValue.save(obj);
