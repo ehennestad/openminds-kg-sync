@@ -75,6 +75,17 @@ function omNode = convertKgNode(kgNode, omReferenceNode, options)
             continue
         end
 
+        if isEmptyValue(currentPropertyValue)
+            % A KG node can carry an optional property as an explicit null,
+            % decoded by jsondecode as []. Passing that through as a
+            % Name=Value pair fails validation for scalar-typed properties
+            % that have no tolerance for an explicit empty (e.g. a (1,1)
+            % string property), so absent values are dropped instead of
+            % forwarded.
+            toKeep(i) = false;
+            continue
+        end
+
         % Recursively process linked/embedded nodes
         if isstruct(currentPropertyValue) || iscell(currentPropertyValue)
             if isLinkedNode(currentPropertyValue)
@@ -182,6 +193,16 @@ end
 
 function tf = isLinkedNode(node)
     tf = isstruct(node) && isfield(node, 'at_id');
+end
+
+function tf = isEmptyValue(value)
+    if isempty(value)
+        tf = true;
+    elseif isstring(value)
+        tf = all(ismissing(value) | value == "");
+    else
+        tf = false;
+    end
 end
 
 function tf = isEmbeddedNode(node)
