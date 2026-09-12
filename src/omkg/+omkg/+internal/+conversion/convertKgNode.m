@@ -75,7 +75,7 @@ function omNode = convertKgNode(kgNode, omReferenceNode, options)
             continue
         end
 
-        if isEmptyValue(currentPropertyValue)
+        if omkg.internal.isEmptyValue(currentPropertyValue)
             % A KG node can carry an optional property as an explicit null,
             % decoded by jsondecode as []. Passing that through as a
             % Name=Value pair fails validation for scalar-typed properties
@@ -193,16 +193,6 @@ end
 
 function tf = isLinkedNode(node)
     tf = isstruct(node) && isfield(node, 'at_id');
-end
-
-function tf = isEmptyValue(value)
-    if isempty(value)
-        tf = true;
-    elseif isstring(value)
-        tf = all(ismissing(value) | value == "");
-    else
-        tf = false;
-    end
 end
 
 function tf = isEmbeddedNode(node)
