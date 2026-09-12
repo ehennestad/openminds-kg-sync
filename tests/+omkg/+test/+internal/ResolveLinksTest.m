@@ -8,6 +8,14 @@ classdef ResolveLinksTest < matlab.unittest.TestCase
         function setupTestEnvironment(testCase) %#ok<MANU>
             % Ensure openMINDS environment is available
             omkg.internal.checkEnvironment();
+
+            % The first lookup in the openMINDS instance library builds its
+            % table, which can warn about the state of the library (e.g.
+            % instance folders that the loaded model version does not
+            % declare). That has nothing to do with link resolution, so
+            % the table is built here rather than inside a test that
+            % verifies resolution to be warning-free.
+            openminds.internal.listControlledInstances();
         end
     end
 
@@ -116,6 +124,32 @@ classdef ResolveLinksTest < matlab.unittest.TestCase
             testCase.verifyEqual(string(keywords(3).Instance.id), suggestionIris(2))
             testCase.verifyEqual(string(datasetVersion.getUnresolvedLinkIdentifiers()), suggestionIris, ...
                 'The term suggestions should still be reported as unresolved links')
+        end
+
+        function testResolveLinksKeepsLinkToInstanceMissingFromLibrary(testCase)
+            % The KG links to some nodes by an IRI in the openMINDS instance
+            % namespace that has no instance behind it, in the KG or in the
+            % library. A viewer specification's display colour is one. Such
+            % a link must be kept as a reference instead of aborting the
+            % resolution of the whole download.
+            colorIri = "https://openminds.ebrains.eu/instances/singleColor/#FF909F";
+            viewerSpecification = openminds.sands.miscellaneous.ViewerSpecification(...
+                'id', 'https://kg.ebrains.eu/api/instances/viewer-specification-1');
+            % Built the way convertKgNode builds a linked node: an id and
+            % nothing else, marked as a reference.
+            viewerSpecification.preferredDisplayColor = ...
+                openminds.sands.miscellaneous.SingleColor(...
+                    'id', colorIri, 'IsReference', true);
+
+            omkg.internal.resolveLinks(viewerSpecification, string.empty, {})
+
+            color = viewerSpecification.preferredDisplayColor;
+            testCase.verifyClass(color, 'openminds.sands.miscellaneous.SingleColor')
+            testCase.verifyEqual(string(color.id), colorIri, ...
+                'The link should keep the identifier the KG gave it')
+            testCase.verifyEqual( ...
+                string(viewerSpecification.getUnresolvedLinkIdentifiers()), colorIri, ...
+                'The colour should still be reported as an unresolved link')
         end
 
         function testResolveLinksWithStructInput(testCase)

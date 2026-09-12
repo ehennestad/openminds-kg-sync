@@ -32,8 +32,12 @@ function resolveLinks(instance, instanceIds, instanceCollection)
                     resolvedInstances{j} = instanceCollection{isMatchedInstance};
                     omkg.internal.resolveLinks(resolvedInstances{j}, instanceIds, instanceCollection)
                 else
-                    % Check if instance is a controlled instance
-                    if startsWith(instanceId, omkg.constants.OpenMINDSInstanceIRIPrefix)
+                    % A controlled instance is taken from the local library.
+                    % The library is asked first, because the KG also links
+                    % to nodes by an IRI in the openMINDS instance namespace
+                    % that has no instance behind it (e.g. a viewer
+                    % specification's display colour).
+                    if omkg.internal.conversion.hasControlledInstance(instanceId)
                         resolvedInstances{j} = omkg.internal.conversion.getControlledInstance(instanceId);
                     else
                         % Neither downloaded nor in the library. The entry
