@@ -17,6 +17,15 @@ classdef KGMetadataStore < openminds.interface.MetadataStore
         DefaultSpace (1,1) string
     end
 
+    properties
+        % How an instance that already has a KG identifier is written. The
+        % mode lives on the store rather than on save() because
+        % openminds.Node.save forwards nothing but IsEmbedded, and linked
+        % instances are reached through that method. A store-level mode
+        % therefore applies to every instance a single save reaches.
+        SaveMode (1,1) omkg.enum.SaveMode = omkg.enum.SaveMode.Update
+    end
+
     properties (Access = private)
         InstanceClient = ebrains.kg.api.InstancesClient()
         SpaceConfiguration omkg.util.SpaceConfiguration
@@ -34,6 +43,7 @@ classdef KGMetadataStore < openminds.interface.MetadataStore
                 propValues.DefaultSpace (1,1) string
                 propValues.SpaceConfiguration = omkg.util.SpaceConfiguration.loadDefault()
                 propValues.Verbose (1,1) logical = true
+                propValues.SaveMode (1,1) omkg.enum.SaveMode = omkg.enum.SaveMode.Update
             end
             obj.set(propValues)
         end
@@ -45,7 +55,6 @@ classdef KGMetadataStore < openminds.interface.MetadataStore
                 obj (1,1) omkg.internal.KGMetadataStore
                 instance (1,1) openminds.Node
                 options.IsEmbedded (1,1) logical = false
-                options.SaveMode (1,1) string {mustBeMember(options.SaveMode, ["update", "replace"])} = "update"
             end
 
             if instance.isReference()
@@ -92,20 +101,20 @@ classdef KGMetadataStore < openminds.interface.MetadataStore
                         fwrite(fid, jsonDoc)
                     end
 
-                    if options.SaveMode == "update"
+                    if obj.SaveMode == omkg.enum.SaveMode.Update
                         obj.InstanceClient.updateInstance(uuid, jsonDoc, "returnPayload", false, "Server", obj.DefaultServer);
                         if obj.Verbose
                             fprintf('Updated instance "%s" of type "%s".\n', string(instance), class(instance))
                         end
 
-                    elseif options.SaveMode == "replace"
+                    elseif obj.SaveMode == omkg.enum.SaveMode.Replace
                         obj.InstanceClient.replaceInstance(uuid, jsonDoc, "returnPayload", false, "Server", obj.DefaultServer);
                         if obj.Verbose
                             fprintf('Replaced instance "%s" of type "%s".\n', string(instance), class(instance))
                         end
                     else
                         error("OMKG:KGMetadataStore:UnsupportedSaveMode", ...
-                            "Unsupported save mode: %s", options.SaveMode)
+                            "Unsupported save mode: %s", obj.SaveMode.Name)
                     end
                     id = instanceID; % Return the existing ID
 

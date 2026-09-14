@@ -23,9 +23,12 @@ function ids = kgsave(openmindsInstance, kgOptions, options)
 %   options - Additional options (optional)
 %       Fields:
 %         - Client: API client instance (default: new InstancesClient)
-%         - SaveMode: How to handle existing instances (default: "update")
-%                    "update" - merge with existing data
-%                    "replace" - completely replace existing data
+%         - SaveMode: How to handle instances that already have a KG
+%                    identifier (default: Update). The mode also applies to
+%                    linked instances reached from the saved instance, and
+%                    to a MetadataStore passed in through options.
+%                    Update - merge with existing data
+%                    Replace - completely replace existing data
 %
 % Output Arguments:
 %   ids - KG identifiers of saved instances
@@ -70,9 +73,11 @@ function ids = kgsave(openmindsInstance, kgOptions, options)
             'InstanceClient', options.Client, ...
             'DefaultServer', kgOptions.Server, ...
             'DefaultSpace', kgOptions.space, ...
+            'SaveMode', options.SaveMode, ...
             'Verbose', options.Verbose);
     else
         metadataStore = options.MetadataStore;
+        metadataStore.SaveMode = options.SaveMode;
     end
 
     % Save instances and collect IDs
@@ -81,11 +86,7 @@ function ids = kgsave(openmindsInstance, kgOptions, options)
 
     for i = 1:numInstances
         try
-            % Convert SaveMode enum to string for KGMetadataStore
-            % Todo: saveModeStr = string(options.SaveMode.Name);
-            ids(i) = openmindsInstance(i).save(metadataStore); %, 'SaveMode', saveModeStr);
-            % id = openmindsInstance(i).save(metadataStore, 'SaveMode', saveModeStr);
-            % ids(i) = id;
+            ids(i) = openmindsInstance(i).save(metadataStore);
         catch ME
             % Add context to error and re-throw
             error('OMKG:kgsave:SaveFailed', ...
