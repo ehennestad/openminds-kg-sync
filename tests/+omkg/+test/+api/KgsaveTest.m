@@ -118,28 +118,93 @@ classdef KgsaveTest < matlab.unittest.TestCase
                 'Expected createNewInstance called once per instance');
         end
 
-        function testSaveMode_Update(testCase)
-            % Test saving with Update mode (default)
-            instance = testCase.TestInstances(1);
+        function testSaveMode_DefaultIsUpdate(testCase)
+            % An existing instance is patched when no SaveMode is given
+            instance = testCase.withKgIdentifier(testCase.TestInstances(1), "person-1");
 
-            ids = kgsave(instance, ...
+            ids = kgsave(instance, 'Client', testCase.MockClient, 'Verbose', false);
+
+            testCase.verifyEqual(ids, string(instance.id), ...
+                'Expected the existing KG identifier to be returned');
+            testCase.verifyEqual(testCase.MockClient.getCallCount('updateInstance'), 1, ...
+                'Expected updateInstance to be called once');
+            testCase.verifyEqual(testCase.MockClient.getCallCount('replaceInstance'), 0, ...
+                'Expected replaceInstance not to be called');
+            testCase.verifyEqual(testCase.MockClient.getCallCount('createNewInstanceWithId'), 0, ...
+                'Expected no new instance to be created');
+        end
+
+        function testSaveMode_Update(testCase)
+            % Test saving an existing instance with Update mode
+            instance = testCase.withKgIdentifier(testCase.TestInstances(1), "person-1");
+
+            kgsave(instance, ...
                 'Client', testCase.MockClient, ...
                 'SaveMode', omkg.enum.SaveMode.Update, ...
                 'Verbose', false);
 
-            testCase.verifyNotEmpty(ids, 'Expected successful save with Update mode');
+            testCase.verifyEqual(testCase.MockClient.getCallCount('updateInstance'), 1, ...
+                'Expected updateInstance to be called once');
+            testCase.verifyEqual(testCase.MockClient.getCallCount('replaceInstance'), 0, ...
+                'Expected replaceInstance not to be called');
         end
 
         function testSaveMode_Replace(testCase)
-            % Test saving with Replace mode
-            instance = testCase.TestInstances(1);
+            % Test saving an existing instance with Replace mode
+            instance = testCase.withKgIdentifier(testCase.TestInstances(1), "person-1");
 
-            ids = kgsave(instance, ...
+            kgsave(instance, ...
                 'Client', testCase.MockClient, ...
                 'SaveMode', omkg.enum.SaveMode.Replace, ...
                 'Verbose', false);
 
-            testCase.verifyNotEmpty(ids, 'Expected successful save with Replace mode');
+            testCase.verifyEqual(testCase.MockClient.getCallCount('replaceInstance'), 1, ...
+                'Expected replaceInstance to be called once');
+            testCase.verifyEqual(testCase.MockClient.getCallCount('updateInstance'), 0, ...
+                'Expected updateInstance not to be called');
+        end
+
+        function testSaveMode_AppliesToLinkedInstances(testCase)
+            % Replace mode reaches linked instances that already exist in the KG
+            contact = openminds.core.actors.ContactInformation();
+            contact.email = "john.doe@example.org";
+            contact = testCase.withKgIdentifier(contact, "contact-1");
+
+            person = testCase.withKgIdentifier(testCase.TestInstances(1), "person-1");
+            person.contactInformation = contact;
+
+            kgsave(person, ...
+                'Client', testCase.MockClient, ...
+                'SaveMode', omkg.enum.SaveMode.Replace, ...
+                'Verbose', false);
+
+            testCase.verifyEqual(testCase.MockClient.getCallCount('replaceInstance'), 2, ...
+                'Expected both the person and the linked contact to be replaced');
+            testCase.verifyEqual(testCase.MockClient.getCallCount('updateInstance'), 0, ...
+                'Expected updateInstance not to be called');
+        end
+
+        function testSaveMode_AppliesToProvidedMetadataStore(testCase)
+            % SaveMode passed to kgsave takes precedence over the mode a
+            % caller-supplied store was created with
+            instance = testCase.withKgIdentifier(testCase.TestInstances(1), "person-1");
+            store = omkg.internal.KGMetadataStore( ...
+                'InstanceClient', testCase.MockClient, ...
+                'DefaultServer', testCase.TestServer, ...
+                'DefaultSpace', testCase.TestSpace, ...
+                'Verbose', false);
+            testCase.assumeEqual(store.SaveMode, omkg.enum.SaveMode.Update);
+
+            kgsave(instance, ...
+                'Client', testCase.MockClient, ...
+                'MetadataStore', store, ...
+                'SaveMode', omkg.enum.SaveMode.Replace, ...
+                'Verbose', false);
+
+            testCase.verifyEqual(store.SaveMode, omkg.enum.SaveMode.Replace, ...
+                'Expected kgsave to set the save mode on the provided store');
+            testCase.verifyEqual(testCase.MockClient.getCallCount('replaceInstance'), 1, ...
+                'Expected replaceInstance to be called once');
         end
 
         function testCustomSpaceAndServer(testCase)
@@ -364,6 +429,12 @@ classdef KgsaveTest < matlab.unittest.TestCase
             replaceResponse.data = struct();
             replaceResponse.data.x_id = "550e8400-e29b-41d4-a716-446655440002";
             testCase.MockClient.setReplaceResponse(replaceResponse);
+        end
+
+        function instance = withKgIdentifier(~, instance, uuid)
+            % Give an instance a KG identifier so that saving it takes the
+            % update/replace path instead of creating a new instance
+            instance.id = omkg.constants.KgInstanceIRIPrefix + "/" + uuid;
         end
 
         function wasMethodCalled = methodWasCalled(testCase, methodName)
