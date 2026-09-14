@@ -27,7 +27,9 @@ function ids = kgsave(openmindsInstance, kgOptions, options)
 %                    identifier (default: Update). The mode also applies to
 %                    linked instances reached from the saved instance, and
 %                    to a MetadataStore passed in through options.
-%                    Update - merge with existing data
+%                    Update - merge with existing data. Empty local
+%                             properties are not sent, so Update never
+%                             clears a value in the KG.
 %                    Replace - completely replace existing data
 %
 % Output Arguments:
