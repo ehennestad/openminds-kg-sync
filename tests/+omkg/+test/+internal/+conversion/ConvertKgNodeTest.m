@@ -279,10 +279,8 @@ classdef ConvertKgNodeTest < matlab.unittest.TestCase
 
         function testConvertCharWithConversionPreference(testCase)
             % Test char to string conversion when preference is set
-            originalPref = getpref('omkg', 'ConvertChar', false);
-            setpref('omkg', 'ConvertChar', true);
-
-            cleanupObj = onCleanup(@() setpref('omkg', 'ConvertChar', originalPref));
+            testCase.applyFixture(omkg.test.fixtures.PreferencesFixture());
+            omkg.setpref("ConvertChar", true);
 
             kgNode = struct(...
                 'x_id', 'https://kg.ebrains.eu/api/instances/test-123', ...

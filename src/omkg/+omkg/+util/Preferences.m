@@ -33,6 +33,11 @@ classdef Preferences < matlab.mixin.CustomDisplay & handle
 %                                       "openminds" mode is kept in. Empty
 %                                       (default) means the "omkg" folder
 %                                       under userpath.
+%       ConvertChar         (logical) : Whether char property values of
+%                                       downloaded KG nodes are converted
+%                                       to string before they are assigned
+%                                       to an openMINDS instance. Default:
+%                                       false.
 
     properties (SetObservable)
         DefaultServer (1,1) ebrains.kg.enum.KGServer = "preprod"
@@ -41,6 +46,7 @@ classdef Preferences < matlab.mixin.CustomDisplay & handle
         ControlledInstanceIdentity (1,1) string ...
             {mustBeMember(ControlledInstanceIdentity, ["openminds", "kg"])} = "openminds"
         ControlledInstanceCacheFolder (1,1) string = ""
+        ConvertChar (1,1) logical = false
     end
 
     properties (Constant, Access = private)
