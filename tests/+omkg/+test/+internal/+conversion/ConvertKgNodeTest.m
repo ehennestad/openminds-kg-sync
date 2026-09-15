@@ -162,6 +162,9 @@ classdef ConvertKgNodeTest < matlab.unittest.TestCase
             % identity.
             epilepsyModelKgIri = 'https://kg.ebrains.eu/api/instances/ec1d39f3-411e-4a19-846b-e7a6d5a13306';
             unknownKgIri = 'https://kg.ebrains.eu/api/instances/00000000-0000-4000-8000-000000000001';
+            cache = testCase.useOpenMindsIdentityWithTemporaryCache();
+            cache.record(string(epilepsyModelKgIri), ...
+                "https://openminds.om-i.org/instances/diseaseModel/epilepsyModel");
             kgNode = struct(...
                 'x_id', 'https://kg.ebrains.eu/api/instances/test-123', ...
                 'x_type', 'https://openminds.ebrains.eu/core/DatasetVersion', ...
@@ -187,6 +190,36 @@ classdef ConvertKgNodeTest < matlab.unittest.TestCase
 
             testCase.verifyEqual(string(omNode.getUnresolvedLinkIdentifiers()), string(unknownKgIri), ...
                 'Only the unknown link should remain unresolved')
+        end
+
+        function testControlledTermMissingFromLibraryStaysAReference(testCase)
+            % The Knowledge Graph can hold a controlled term the local
+            % library does not. Rather than fail the parent, the link
+            % keeps its KG identifier and is resolved by download.
+            kgIri = 'https://kg.ebrains.eu/api/instances/00000000-0000-4000-8000-00000000abcd';
+            cache = testCase.useOpenMindsIdentityWithTemporaryCache();
+            cache.record(string(kgIri), ...
+                "https://openminds.om-i.org/instances/species/notAnInstanceInTheLibrary");
+            kgNode = testCase.createSubjectKgNode(kgIri);
+
+            omNode = testCase.verifyWarning(...
+                @() omkg.internal.conversion.convertKgNode(kgNode), ...
+                'OMKG:ConvertKgNode:ControlledInstanceNotInLibrary');
+
+            testCase.verifyEqual(string(omNode.getUnresolvedLinkIdentifiers()), string(kgIri))
+        end
+
+        function testUnderKgIdentityPolicyLinksStayReferences(testCase)
+            % Under "kg" identity the lookup is never consulted, even for a
+            % term it holds, so every link keeps its KG identifier.
+            kgIri = 'https://kg.ebrains.eu/api/instances/species-uuid';
+            cache = testCase.useOpenMindsIdentityWithTemporaryCache();
+            cache.record(string(kgIri), "https://openminds.om-i.org/instances/species/musMusculus");
+            omkg.setpref("ControlledInstanceIdentity", "kg");
+
+            omNode = omkg.internal.conversion.convertKgNode(testCase.createSubjectKgNode(kgIri));
+
+            testCase.verifyEqual(string(omNode.getUnresolvedLinkIdentifiers()), string(kgIri))
         end
 
         function testConvertWithEmbeddedNode(testCase)
@@ -351,6 +384,31 @@ classdef ConvertKgNodeTest < matlab.unittest.TestCase
                     contains(ME.message, 'Failed to create'), ...
                     'Error message should mention parent context');
             end
+        end
+    end
+
+    methods (Access = private)
+        function cache = useOpenMindsIdentityWithTemporaryCache(testCase)
+            % Select the "openminds" identity policy against a temporary
+            % cache file, with the user's real preferences restored after.
+            import matlab.unittest.fixtures.TemporaryFolderFixture
+            testCase.applyFixture(omkg.test.fixtures.PreferencesFixture());
+            omkg.setpref("ControlledInstanceIdentity", "openminds");
+            tempFolder = testCase.applyFixture(TemporaryFolderFixture);
+            cache = omkg.internal.ControlledInstanceCache.instance(...
+                'Reset', true, 'File', fullfile(tempFolder.Folder, "cache.json"));
+            testCase.addTeardown(@() ...
+                omkg.internal.ControlledInstanceCache.instance('Reset', true));
+        end
+    end
+
+    methods (Static, Access = private)
+        function kgNode = createSubjectKgNode(speciesKgIri)
+            kgNode = struct(...
+                'x_id', 'https://kg.ebrains.eu/api/instances/subject-1', ...
+                'x_type', {{'https://openminds.om-i.org/types/Subject'}}, ...
+                'https___openminds_ebrains_eu_vocab_lookupLabel', 'mouse1', ...
+                'https___openminds_ebrains_eu_vocab_species', struct('x_id', char(speciesKgIri)));
         end
     end
 end

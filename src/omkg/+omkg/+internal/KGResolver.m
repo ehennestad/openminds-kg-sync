@@ -6,8 +6,8 @@ classdef KGResolver < openminds.interface.LinkResolver
 %   exactly one thing: fetch or populate a single reference node. Traversal,
 %   link depth and cycle detection belong to openMINDS_MATLAB.
 %
-%   The resolver holds its configuration (server, API client, and the KG to
-%   openMINDS identifier map for controlled instances) as instance state.
+%   The resolver holds its configuration (server and API client) as
+%   instance state.
 %   To reconfigure, construct a new resolver and re-register it:
 %
 %       openminds.registerLinkResolver(omkg.internal.KGResolver(Server="prod"), Replace=true)
@@ -22,7 +22,11 @@ classdef KGResolver < openminds.interface.LinkResolver
 %
 %   Controlled instances (e.g. controlled terms) exist both in the KG and in
 %   the local openMINDS instance library. These are resolved from the local
-%   library using the KG to openMINDS identifier map, without any download.
+%   library, without any download, when the ControlledInstanceIdentity
+%   preference is "openminds" and the controlled instance cache knows the
+%   reference. The reference keeps its Knowledge Graph identifier: the
+%   library instance's values are copied onto it. Under the "kg" policy a
+%   controlled instance is downloaded like any other node.
 %   The resolved node keeps the KG identifier of the reference, as the
 %   resolver contract requires; only the property values come from the
 %   library instance.
@@ -41,19 +45,6 @@ classdef KGResolver < openminds.interface.LinkResolver
         Client (1,1) ebrains.kg.api.InstancesClient
     end
 
-    properties (Access = private)
-        % IdentifierMap - Map from KG identifiers to openMINDS identifiers
-        % for controlled instances (dictionary or containers.Map).
-        IdentifierMap = []
-
-        % The identifier map is loaded from the controlled instance registry
-        % on first use rather than in the constructor. Registering the
-        % resolver at startup must be cheap and offline, and the registry
-        % itself calls omkg.internal.checkEnvironment (which constructs a
-        % resolver), so loading eagerly would recurse.
-        IsIdentifierMapLoaded (1,1) logical = false
-    end
-
     methods
         function obj = KGResolver(options)
         % KGResolver - Create a resolver for KG identifiers
@@ -66,23 +57,14 @@ classdef KGResolver < openminds.interface.LinkResolver
         %   Server (ebrains.kg.enum.KGServer) - KG server to resolve from.
         %       Default: the "DefaultServer" preference.
         %   Client (ebrains.kg.api.InstancesClient) - API client to use.
-        %   IdentifierMap - Map from KG identifiers to openMINDS identifiers
-        %       for controlled instances. Default: loaded on first use from
-        %       omkg.internal.conversion.getIdentifierMapping.
 
             arguments
                 options.Server (1,1) ebrains.kg.enum.KGServer = omkg.getpref("DefaultServer")
                 options.Client (1,1) ebrains.kg.api.InstancesClient = ebrains.kg.api.InstancesClient()
-                options.IdentifierMap {mustBeA(options.IdentifierMap, ["double", "dictionary", "containers.Map"])} = []
             end
 
             obj.Server = options.Server;
             obj.Client = options.Client;
-
-            if ~isnumeric(options.IdentifierMap)
-                obj.IdentifierMap = options.IdentifierMap;
-                obj.IsIdentifierMapLoaded = true;
-            end
         end
 
         function instance = resolveNode(obj, instance)
@@ -97,10 +79,23 @@ classdef KGResolver < openminds.interface.LinkResolver
             end
 
             identifier = string(instance.id);
-            identifierMap = obj.getIdentifierMap();
+            cache = omkg.internal.ControlledInstanceCache.instance();
 
-            if isKey(identifierMap, identifier) % Controlled instance
-                openMindsIdentifier = identifierMap(identifier);
+            % Under the "openminds" identity policy a controlled instance
+            % the cache knows is populated from the local library. One the
+            % Knowledge Graph has but the library does not is downloaded
+            % like any other node, which is how convertKgNode left it:
+            % asking the library for it would yield an empty instance and
+            % a warning, not an error, and the reference would be marked
+            % resolved with nothing in it.
+            isLibraryInstance = false;
+            if cache.isKnown(identifier)
+                openMindsIdentifier = cache.lookup(identifier);
+                isLibraryInstance = ...
+                    omkg.internal.conversion.isControlledInstanceName(openMindsIdentifier);
+            end
+
+            if isLibraryInstance
                 instance = obj.resolveControlledInstance(instance, openMindsIdentifier);
             else
                 if openminds.interface.LinkResolver.isTypeKnown(instance)
@@ -161,17 +156,6 @@ classdef KGResolver < openminds.interface.LinkResolver
                 instance = feval(class(libraryInstance), ...
                     'id', string(instance.id), nvPairs{:});
             end
-        end
-    end
-
-    methods (Access = private)
-        function identifierMap = getIdentifierMap(obj)
-        % getIdentifierMap - Return the identifier map, loading it on first use
-            if ~obj.IsIdentifierMapLoaded
-                obj.IdentifierMap = omkg.internal.conversion.getIdentifierMapping();
-                obj.IsIdentifierMapLoaded = true;
-            end
-            identifierMap = obj.IdentifierMap;
         end
     end
 end
