@@ -99,9 +99,17 @@ function kgNodes = listAllInstances(client, typeIRI, pageSize, server)
 %   may cap the page size below what was asked for. The listing therefore
 %   runs until a page comes back empty, and the offset advances by the
 %   number of instances each page actually held.
+%
+%   An empty page is the only natural end, so a server that does not honour
+%   "from" would answer with the same page for ever and the listing would
+%   never terminate. Each page is therefore checked against the one before
+%   it: identical first identifiers mean the offset had no effect, which is
+%   reported rather than looped on. A stable listing cannot repeat a page,
+%   since every page starts one page further into the same collection.
 
     kgNodes = cell(1, 0);
     from = 0;
+    previousFirstIRI = string.empty;
     while true
         page = client.listInstances(typeIRI, ...
             "space", "controlled", "stage", "RELEASED", "Server", server, ...
@@ -115,7 +123,28 @@ function kgNodes = listAllInstances(client, typeIRI, pageSize, server)
         if isempty(page)
             break
         end
+
+        firstIRI = nodeIdentifier(page{1});
+        if ~isempty(previousFirstIRI) && strlength(firstIRI) > 0 ...
+                && firstIRI == previousFirstIRI
+            error('OMKG:DownloadControlledInstances:OffsetIgnored', ...
+                ['Listing "%s" returned the same page twice at offset %d, so ', ...
+                'the server is not honouring the "from" offset. Stopped after ', ...
+                '%d instances to avoid an endless listing.'], ...
+                typeIRI, from, numel(kgNodes))
+        end
+        previousFirstIRI = firstIRI;
+
         kgNodes = [kgNodes, page]; %#ok<AGROW>
         from = from + numel(page);
+    end
+end
+
+function iri = nodeIdentifier(node)
+% nodeIdentifier - The @id of a node, or "" when it carries none
+    if isstruct(node) && isfield(node, 'at_id')
+        iri = string(node.at_id);
+    else
+        iri = "";
     end
 end
