@@ -1,0 +1,73 @@
+{
+  "@context": "https://doi.org/10.5063/schema/codemeta-2.0",
+  "@type": "SoftwareSourceCode",
+  "license": "https://spdx.org/licenses/MIT",
+  "codeRepository": "https://github.com/ehennestad/openminds-kg-sync",
+  "readme": "https://github.com/ehennestad/openminds-kg-sync/blob/main/README.md",
+  "installUrl": "https://www.mathworks.com/matlabcentral/fileexchange/182309-openminds-kg-sync-toolbox",
+  "contIntegration": "https://github.com/ehennestad/openminds-kg-sync/actions",
+  "issueTracker": "https://github.com/ehennestad/openminds-kg-sync/issues",
+  "name": "openMINDS KG Sync",
+  "description": "openMINDS KG Sync is a MATLAB toolbox for syncing openMINDS metadata to and from the EBRAINS Knowledge Graph. It provides functions for authenticating with EBRAINS services and for listing, pulling, saving and deleting openMINDS metadata instances in the Knowledge Graph.",
+  "applicationCategory": "neuroscience",
+  "keywords": [
+    "openMINDS",
+    "EBRAINS",
+    "Knowledge Graph",
+    "metadata",
+    "linked-data",
+    "neuroscience"
+  ],
+  "releaseNotes": "https://github.com/ehennestad/openminds-kg-sync/releases/tag/v0.1.0",
+  "developmentStatus": "active",
+  "programmingLanguage": [
+    "MATLAB"
+  ],
+  "operatingSystem": [
+    "Linux",
+    "Windows",
+    "macOS"
+  ],
+  "runtimePlatform": "MATLAB R2021b or later",
+  "softwareRequirements": [
+    {
+      "@type": "SoftwareApplication",
+      "name": "openMINDS MATLAB",
+      "codeRepository": "https://github.com/openMetadataInitiative/openMINDS_MATLAB",
+      "installUrl": "https://www.mathworks.com/matlabcentral/fileexchange/134212-openminds-metadata-models-for-matlab"
+    },
+    {
+      "@type": "SoftwareApplication",
+      "name": "EBRAINS Services Toolbox",
+      "codeRepository": "https://github.com/ehennestad/EBRAINS-MATLAB",
+      "installUrl": "https://www.mathworks.com/matlabcentral/fileexchange/182284-ebrains-services-toolbox"
+    }
+  ],
+  "relatedLink": [
+    "https://openminds-documentation.readthedocs.io",
+    "https://github.com/ehennestad/openminds-kg-sync/blob/main/docs/GettingStarted.md"
+  ],
+  "author": [
+    {
+      "@type": "Person",
+      "@id": "https://orcid.org/0000-0002-8297-1753",
+      "givenName": "Eivind",
+      "familyName": "Hennestad",
+      "affiliation": {
+        "@type": "Organization",
+        "name": "University of Oslo"
+      }
+    }
+  ],
+  "maintainer": {
+    "@type": "Person",
+    "@id": "https://orcid.org/0000-0002-8297-1753",
+    "givenName": "Eivind",
+    "familyName": "Hennestad"
+  },
+  "version": "0.1.0",
+  "downloadUrl": "https://github.com/ehennestad/openminds-kg-sync/releases/download/v0.1.0/openMINDS_KG_Sync_v0_1_0.mltbx",
+  "dateCreated": "2025-09-10",
+  "datePublished": "2025-10-14",
+  "dateModified": "2026-09-14"
+}
