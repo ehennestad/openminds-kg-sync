@@ -142,7 +142,7 @@ function omNode = convertKgNode(kgNode, omReferenceNode, options)
                 errorMessage = sprintf(...
                     ['Failed to create embedded instance for type "%s" with ', ...
                     'identifier "%s".'], ...
-                    parentType{1}, parentIdentifier);
+                    formatNodeType(parentType), parentIdentifier);
             end
 
             ME = MException(errorId, errorMessage);
@@ -212,6 +212,28 @@ function unresolvedNode = createUnresolvedNode(node, expectedObject)
         % an empty node.
         unresolvedNode = feval(class(expectedObject), ...
             'id', node.at_id, 'IsReference', true);
+    end
+end
+
+function typeStr = formatNodeType(nodeType)
+% formatNodeType - One printable type name for a node's @type
+%
+%   getNodeKeywords returns @type as whatever jsondecode made of it: a cell
+%   array when the KG sent a list, a char vector when it sent a single type,
+%   and '' when the node carries none. Only the first form can be indexed
+%   with braces, so a message built that way throws for the other two and
+%   replaces the conversion error it was meant to report with an indexing
+%   error.
+
+    typeStr = string(nodeType);
+    typeStr = typeStr(:)';
+    % string('') is "" rather than an empty string array, so a node with no
+    % @type has to be filtered on text length, not on isempty alone.
+    typeStr = typeStr(strlength(typeStr) > 0);
+    if isempty(typeStr)
+        typeStr = "<unknown type>";
+    else
+        typeStr = strjoin(typeStr, ", ");
     end
 end
 
