@@ -7,8 +7,9 @@ function omNode = downloadMetadata(kgIdentifier, options)
 % Input Arguments:
 %   identifier (1,1) string - The unique identifier for the metadata
 %   options (1,1) struct - Struct containing options for downloading
-%       options.NumLinksToResolve (1,1) double - Number of links to resolve (default: 2)
-%       options.Server (1,1) string - "prod" (default) or "preprod"
+%       options.NumLinksToResolve (1,1) double - Number of links to resolve (default: 0)
+%       options.Server (1,1) string - KG server to download from
+%           (default: the "DefaultServer" preference)
 %
 % Output Arguments:
 %   metadataInstance - The instance of the metadata corresponding to the identifier

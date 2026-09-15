@@ -15,7 +15,7 @@ This tutorial will guide you through the essential steps of working with the EBR
 
 **Prerequisites:**
 
--  MATLAB R2019b or later 
+-  MATLAB R2021b or later 
 -  openMINDS and EBRAINS\-MATLAB toolboxes installed 
 -  EBRAINS account and authentication setup 
 # Step 1: Prepare Environment
