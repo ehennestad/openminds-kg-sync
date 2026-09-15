@@ -9,8 +9,8 @@ function omNode = downloadMetadata(kgIdentifier, options)
 %   options (1,1) struct - Struct containing options for downloading
 %       options.NumLinksToResolve (1,1) double - Number of links to resolve (default: 0)
 %       options.Stage (1,:) ebrains.kg.enum.KGStage - Stages to look in, in order
-%           of preference (default: "IN_PROGRESS"). Applies to the instance
-%           itself and to every linked instance downloaded with it.
+%           of preference (default: ["RELEASED", "IN_PROGRESS"]). Applies to the
+%           instance itself and to every linked instance downloaded with it.
 %       options.Server (1,1) string - "prod" (default) or "preprod"
 %
 % Output Arguments:
@@ -19,7 +19,7 @@ function omNode = downloadMetadata(kgIdentifier, options)
     arguments
         kgIdentifier (1,1) string {omkg.validator.mustBeValidKGIdentifier}
         options.NumLinksToResolve = 0
-        options.Stage (1,:) ebrains.kg.enum.KGStage {mustBeNonempty} = "IN_PROGRESS"
+        options.Stage (1,:) ebrains.kg.enum.KGStage {mustBeNonempty} = ["RELEASED", "IN_PROGRESS"]
         options.Server (1,1) ebrains.kg.enum.KGServer = omkg.getpref("DefaultServer")
         options.Client ebrains.kg.api.InstancesClient = ebrains.kg.api.InstancesClient()
         options.Verbose (1,1) logical = false
