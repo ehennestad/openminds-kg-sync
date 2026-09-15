@@ -112,6 +112,40 @@ classdef DownloadMetadataTest < matlab.unittest.TestCase
             end
         end
 
+        function testLinkedInstancesAreDownloadedFromTheSameStage(testCase)
+            % The stage chosen for the instance also applies to the linked
+            % instances downloaded with it, so a pull never mixes stages.
+            testCase.useIdentityPolicy("openminds");
+
+            linkedNodeId = "123e4567-e89b-12d3-a456-426614174000";
+
+            mainNode = struct();
+            mainNode.x_id = "https://kg.ebrains.eu/api/instances/" + testCase.TestUUID;
+            mainNode.x_type = "https://openminds.ebrains.eu/core/Person";
+            mainNode.givenName = "John";
+            mainNode.contactInformation = struct('x_id', "https://kg.ebrains.eu/api/instances/" + linkedNodeId);
+
+            linkedNode = struct();
+            linkedNode.x_id = "https://kg.ebrains.eu/api/instances/" + linkedNodeId;
+            linkedNode.x_type = "https://openminds.ebrains.eu/core/ContactInformation";
+            linkedNode.email = "john.doe@example.com";
+
+            testCase.MockClient.setInstanceResponse(mainNode);
+            testCase.MockClient.setBulkResponse({linkedNode});
+
+            omkg.sync.downloadMetadata(testCase.TestUUID, ...
+                'Client', testCase.MockClient, ...
+                'NumLinksToResolve', 1, ...
+                'Stage', "RELEASED");
+
+            bulkCalls = testCase.MockClient.getCallsFor('getInstancesBulk');
+            testCase.assertNotEmpty(bulkCalls, 'The linked instance should be downloaded in bulk');
+            for i = 1:numel(bulkCalls)
+                testCase.verifyEqual(bulkCalls(i).args{2}, ebrains.kg.enum.KGStage.RELEASED, ...
+                    'Linked instances should be requested from the stage given to the pull');
+            end
+        end
+
         function testUnknownControlledLinkIsPrefetchedAndTakesOpenMindsIdentity(testCase)
             % Under the "openminds" identity policy a link to a controlled
             % instance the lookup does not know is fetched before its

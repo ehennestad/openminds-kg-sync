@@ -122,6 +122,28 @@ classdef KgpullTest < matlab.unittest.TestCase
             testCase.verifyNotEmpty(result, 'Should accept server option');
         end
 
+        function testStageDefaultsToInProgress(testCase)
+            % A pull is the first step of an edit-and-save workflow, so the
+            % draft is what the lookup asks for unless told otherwise.
+
+            kgpull(testCase.TestIdentifier, 'Client', testCase.MockClient);
+
+            call = testCase.MockClient.getLastCallFor('getInstance');
+            testCase.verifyEqual(call.options.stage, ebrains.kg.enum.KGStage.IN_PROGRESS, ...
+                'The instance should be looked up in the IN_PROGRESS stage by default');
+        end
+
+        function testStageOptionIsForwarded(testCase)
+            % The stages, and their order of preference, reach the client as given
+
+            stages = [ebrains.kg.enum.KGStage.RELEASED, ebrains.kg.enum.KGStage.IN_PROGRESS];
+            kgpull(testCase.TestIdentifier, 'Stage', stages, 'Client', testCase.MockClient);
+
+            call = testCase.MockClient.getLastCallFor('getInstance');
+            testCase.verifyEqual(call.options.stage, stages, ...
+                'The Stage option should be passed to getInstance unchanged');
+        end
+
         function testEmptyResponse(testCase)
             % Test handling of empty response from KG
 
