@@ -122,25 +122,26 @@ classdef KgpullTest < matlab.unittest.TestCase
             testCase.verifyNotEmpty(result, 'Should accept server option');
         end
 
-        function testStageDefaultsToInProgress(testCase)
-            % A pull is the first step of an edit-and-save workflow, so the
-            % draft is what the lookup asks for unless told otherwise.
+        function testStageDefaultsToReleasedThenInProgress(testCase)
+            % The published version is preferred, and an instance that is
+            % not released yet is still found as a draft.
 
             kgpull(testCase.TestIdentifier, 'Client', testCase.MockClient);
 
+            expected = [ebrains.kg.enum.KGStage.RELEASED, ebrains.kg.enum.KGStage.IN_PROGRESS];
             call = testCase.MockClient.getLastCallFor('getInstance');
-            testCase.verifyEqual(call.options.stage, ebrains.kg.enum.KGStage.IN_PROGRESS, ...
-                'The instance should be looked up in the IN_PROGRESS stage by default');
+            testCase.verifyEqual(call.options.stage, expected, ...
+                'The instance should be looked up in RELEASED, then IN_PROGRESS, by default');
         end
 
         function testStageOptionIsForwarded(testCase)
-            % The stages, and their order of preference, reach the client as given
+            % The stage reaches the client as given, so a caller who edits a
+            % released instance can ask for its draft.
 
-            stages = [ebrains.kg.enum.KGStage.RELEASED, ebrains.kg.enum.KGStage.IN_PROGRESS];
-            kgpull(testCase.TestIdentifier, 'Stage', stages, 'Client', testCase.MockClient);
+            kgpull(testCase.TestIdentifier, 'Stage', "IN_PROGRESS", 'Client', testCase.MockClient);
 
             call = testCase.MockClient.getLastCallFor('getInstance');
-            testCase.verifyEqual(call.options.stage, stages, ...
+            testCase.verifyEqual(call.options.stage, ebrains.kg.enum.KGStage.IN_PROGRESS, ...
                 'The Stage option should be passed to getInstance unchanged');
         end
 
