@@ -203,9 +203,20 @@ function linkIRIs = listControlledInstanceLinks(kgNodes)
     for i = 1:numel(kgNodes)
         node = kgNodes{i};
         [identifier, type] = omkg.internal.conversion.getNodeKeywords(node, "@id", "@type");
-        properties = omkg.internal.conversion.removeNamespaceIRIFromPropertyNames(...
-            omkg.internal.conversion.filterProperties(node));
-        template = openminds.fromTypeName(type, identifier);
+
+        % A node whose type the active openMINDS version does not know
+        % cannot be introspected for controlled term properties, and
+        % openminds.fromTypeName errors on it. That must not end the pull:
+        % this is the pre-fetch, an optimisation that decides which links
+        % to look up early, and the node is converted properly further
+        % down, where a failure is reported against the node itself.
+        try
+            properties = omkg.internal.conversion.removeNamespaceIRIFromPropertyNames(...
+                omkg.internal.conversion.filterProperties(node));
+            template = openminds.fromTypeName(type, identifier);
+        catch
+            continue
+        end
 
         for propertyName = string(fieldnames(properties))'
             value = properties.(propertyName);
