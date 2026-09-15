@@ -7,8 +7,8 @@ classdef GetControlledInstanceTest < matlab.unittest.TestCase
     end
 
     methods (TestClassSetup)
-        function setupEnvironment(~)
-            omkg.internal.checkEnvironment()
+        function setupEnvironment(testCase)
+            testCase.applyFixture(omkg.test.fixtures.KgOpenMindsVersionFixture());
         end
     end
 

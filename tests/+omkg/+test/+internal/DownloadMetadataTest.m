@@ -13,6 +13,7 @@ classdef DownloadMetadataTest < matlab.unittest.TestCase
 
     methods (TestMethodSetup)
         function setupTest(testCase)
+            testCase.applyFixture(omkg.test.fixtures.KgOpenMindsVersionFixture());
             testCase.TestUUID = "550e8400-e29b-41d4-a716-446655440000";
             testCase.MockClient = omkg.test.helper.mock.KGIntancesAPIMockClient();
         end

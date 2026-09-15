@@ -16,9 +16,11 @@ classdef Preferences < matlab.mixin.CustomDisplay & handle
 %                                       to use. The KG does not expose this
 %                                       via an API, so it is a pinned
 %                                       preference rather than something
-%                                       detected at runtime. Used to set
+%                                       detected at runtime. KG sync
+%                                       operations refuse to run unless
 %                                       the active openMINDS_MATLAB model
-%                                       version before uploading metadata.
+%                                       version matches it; switch with
+%                                       openminds.version(N).
 %       ControlledInstanceIdentity (string) : Which identifier a controlled
 %                                       instance downloaded from the KG
 %                                       carries. "openminds" (default): its

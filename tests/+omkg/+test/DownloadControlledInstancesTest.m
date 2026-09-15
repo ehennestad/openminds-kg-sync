@@ -16,6 +16,7 @@ classdef DownloadControlledInstancesTest < matlab.unittest.TestCase
     methods (TestMethodSetup)
         function isolate(testCase)
             import matlab.unittest.fixtures.TemporaryFolderFixture
+            testCase.applyFixture(omkg.test.fixtures.KgOpenMindsVersionFixture());
             testCase.applyFixture(omkg.test.fixtures.PreferencesFixture());
             tempFolder = testCase.applyFixture(TemporaryFolderFixture);
             testCase.CacheFile = fullfile(tempFolder.Folder, "cache.json");

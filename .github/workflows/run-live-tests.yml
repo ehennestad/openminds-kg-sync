@@ -37,6 +37,7 @@ jobs:
             matbox.installRequirements('.')
 
             addpath(genpath( "src" ));
+            openminds.version(omkg.getpref("KgOpenMINDSVersion"))
             omkg.internal.checkEnvironment()
 
             setenv('EBRAINS_MATLAB_FORCE_CLIENT_CREDENTIALS_OAUTH_FLOW', 'true')

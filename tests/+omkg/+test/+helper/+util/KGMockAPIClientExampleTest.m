@@ -9,6 +9,7 @@ classdef KGMockAPIClientExampleTest < matlab.unittest.TestCase
 
     methods (TestMethodSetup)
         function setupTest(testCase)
+            testCase.applyFixture(omkg.test.fixtures.KgOpenMindsVersionFixture());
             testCase.MockClient = omkg.test.helper.mock.KGIntancesAPIMockClient();
             testCase.MockClient.setupDefaultResponses();
         end
