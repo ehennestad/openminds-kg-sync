@@ -145,6 +145,19 @@ classdef PreferencesTest < matlab.unittest.TestCase
             testCase.verifyEqual(omkg.getpref("ControlledInstanceCacheFolder"), "/some/folder")
         end
 
+        function testConvertCharDefaultsToFalse(testCase)
+            convertChar = omkg.getpref("ConvertChar");
+
+            testCase.verifyClass(convertChar, 'logical')
+            testCase.verifyFalse(convertChar)
+        end
+
+        function testSetPrefConvertChar(testCase)
+            omkg.setpref("ConvertChar", true);
+
+            testCase.verifyTrue(omkg.getpref("ConvertChar"))
+        end
+
         function testPreferencesSingleton(testCase)
             % Test that preferences behave as a singleton
 

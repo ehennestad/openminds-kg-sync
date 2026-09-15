@@ -129,14 +129,9 @@ classdef KGMetadataStore < openminds.interface.MetadataStore
 
                 else % Create new instance
 
-                    % Assume a blank node identifier with a valid uuid
-                    % portion. Using existing uuid to ensure idempotency if
-                    % possible.
-                    try
-                        uuid = obj.getUuidFromInstance(instance);
-                    catch
-                        uuid = matlab.lang.internal.uuid();
-                    end
+                    % The local blank-node UUID becomes the KG instance id,
+                    % so saving the same local instance twice is idempotent.
+                    uuid = obj.getUuidFromInstance(instance);
 
                     % Determine space to save to
                     if obj.DefaultSpace == "auto"
@@ -187,9 +182,13 @@ classdef KGMetadataStore < openminds.interface.MetadataStore
 
         function uuid = getUuidFromInstance(obj, instance)
             if obj.isBlankNodeIdentifier(instance.id)
-                uuid = extractAfter('_:', instance.id);
+                uuid = extractAfter(instance.id, '_:');
             else
-                error('Unsupported instance identifier.')
+                error('OMKG:KGMetadataStore:UnsupportedIdentifier', ...
+                    ['Cannot create a KG instance from "%s" of type "%s": ', ...
+                    'its identifier "%s" is neither a KG identifier nor a ', ...
+                    'blank node identifier ("_:<uuid>").'], ...
+                    string(instance), class(instance), string(instance.id))
             end
             omkg.validator.mustBeValidUUID(uuid)
         end
