@@ -1,5 +1,25 @@
 function [instances, nextPageFcn] = kglist(type, kgOptions, options)
 % kglist - List instances for a specified type
+%
+% Syntax:
+%   instances = kglist(type)
+%   [instances, nextPageFcn] = kglist(type, Name, Value)
+%
+% Output Arguments:
+%   instances   - Instances of the listed type
+%   nextPageFcn - Function handle that lists the next page with the same
+%                 options (space, stage, filter, server, client). The
+%                 offset advances by the number of instances this page
+%                 held, so a server that caps the page size is paged
+%                 through completely. Returns an empty array once the
+%                 listing is exhausted.
+%
+% Example:
+%   [people, nextPage] = kglist("Person", "space", "common", "size", 20);
+%   while ~isempty(people)
+%       % ... process people ...
+%       people = nextPage();
+%   end
 
     arguments
         type (1,1) openminds.enum.Types
@@ -15,6 +35,14 @@ function [instances, nextPageFcn] = kglist(type, kgOptions, options)
     end
 
     omkg.internal.checkEnvironment()
+
+    % Snapshot the request before filterProperty is expanded to its IRI,
+    % since the next page is requested through kglist again and its
+    % validator expects the plain property name.
+    pageRequest = kgOptions;
+    if ~isfield(pageRequest, "from")
+        pageRequest.from = uint64(0);
+    end
 
     if isfield(kgOptions, "filterProperty")
         mustHaveFilterValue(kgOptions)
@@ -52,13 +80,10 @@ function [instances, nextPageFcn] = kglist(type, kgOptions, options)
         end
     end
 
-    % Create a nextPage function handle
-    if isfield(kgOptions, 'from')
-        nextPageFcn = @() kglist(type, ...
-            'from', kgOptions.from+kgOptions.size, ...
-            'size', kgOptions.size, ...
-            'Client', options.Client);
-    end
+    pageRequest.from = pageRequest.from + numInstances;
+    pageArgs = namedargs2cell(pageRequest);
+    clientArgs = namedargs2cell(options);
+    nextPageFcn = @() kglist(type, pageArgs{:}, clientArgs{:});
 end
 
 function mustBePropertyOfType(propertyName, type)
