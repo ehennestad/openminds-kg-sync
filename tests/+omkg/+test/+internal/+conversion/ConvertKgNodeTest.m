@@ -5,9 +5,8 @@ classdef ConvertKgNodeTest < matlab.unittest.TestCase
     % openMINDS format, including edge cases and error handling.
 
     methods (TestClassSetup)
-        function setupTestEnvironment(testCase) %#ok<MANU>
-            % Ensure openMINDS environment is available
-            omkg.internal.checkEnvironment();
+        function setupTestEnvironment(testCase)
+            testCase.applyFixture(omkg.test.fixtures.KgOpenMindsVersionFixture());
         end
     end
 
