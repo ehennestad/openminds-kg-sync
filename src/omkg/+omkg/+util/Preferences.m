@@ -82,7 +82,7 @@ classdef Preferences < matlab.mixin.CustomDisplay & handle
         end
     end
 
-    methods (Sealed, Hidden) % Overrides subsref
+    methods (Sealed, Hidden) % Overrides subsasgn
 
         function varargout = subsasgn(obj, s, value)
             %subsasgn Override subsasgn to save preferences when they change
@@ -93,11 +93,11 @@ classdef Preferences < matlab.mixin.CustomDisplay & handle
             isPropertyAssigned = strcmp(s(1).type, '.') && ...
                 any( strcmp(properties(obj), s(1).subs) );
 
-            % Use the builtin subsref with appropriate number of outputs
+            % Use the builtin subsasgn with appropriate number of outputs
             if numOutputs > 0
                 [varargout{:}] = builtin('subsasgn', obj, s, value);
             else
-                builtin('subsasgn', obj, s)
+                builtin('subsasgn', obj, s, value)
             end
 
             if isPropertyAssigned
