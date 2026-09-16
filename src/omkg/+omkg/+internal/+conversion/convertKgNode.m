@@ -21,7 +21,11 @@ function omNode = convertKgNode(kgNode, omReferenceNode, options)
 %  Specify options using name-value arguments as Name1=Value1,...,NameN=ValueN,
 %  where Name is the argument name and Value is the corresponding value.
 %
-%  - ParentNode (Type) - Default: []. Parent node for the converted instance or linked node.
+%  - ParentNode - Default: []. The node the converted node is embedded
+%    in, used to describe where a failed conversion sits. Either a
+%    single node, or a cell array of nodes forming the containment
+%    chain, outermost first, which is how the recursion below passes
+%    ancestry down through nested embedded nodes.
 %
 % Output Arguments:
 %   omNode - Converted openMINDS node or an array of openMINDS nodes if
@@ -95,7 +99,9 @@ function omNode = convertKgNode(kgNode, omReferenceNode, options)
                 currentPropertyValue = convertLinkedNodes(currentPropertyValue, ...
                     omDummyNode.(currentPropertyName), controlledInstanceCache);
             elseif isEmbeddedNode(currentPropertyValue)
-                currentPropertyValue = omkg.internal.conversion.convertKgNode(currentPropertyValue, "ParentNode", kgNode);
+                ancestors = [toAncestorChain(options.ParentNode), {kgNode}];
+                currentPropertyValue = omkg.internal.conversion.convertKgNode(...
+                    currentPropertyValue, "ParentNode", ancestors);
             end
         elseif ischar(currentPropertyValue)
             % Todo: Consider if this should be added to user preferences class.
@@ -137,14 +143,8 @@ function omNode = convertKgNode(kgNode, omReferenceNode, options)
                     'Failed to create instance with identifier "%s".', ...
                     identifier);
             else
-                % Todo: will not work for nested embedded instances.
-                [parentIdentifier, parentType] = omkg.internal.conversion.getNodeKeywords(options.ParentNode, "@id", "@type");
-                errorMessage = sprintf(...
-                    ['Failed to create embedded instance of type "%s", ', ...
-                    'embedded in an instance of type "%s" with identifier ', ...
-                    '"%s".'], ...
-                    formatNodeType(type), formatNodeType(parentType), ...
-                    parentIdentifier);
+                errorMessage = embeddedFailureMessage(...
+                    formatNodeType(type), toAncestorChain(options.ParentNode));
             end
 
             ME = MException(errorId, errorMessage);
@@ -214,6 +214,70 @@ function unresolvedNode = createUnresolvedNode(node, expectedObject)
         % an empty node.
         unresolvedNode = feval(class(expectedObject), ...
             'id', node.at_id, 'IsReference', true);
+    end
+end
+
+function ancestors = toAncestorChain(parentNode)
+% toAncestorChain - Normalise the ParentNode option to a cell chain
+%
+%   Outermost node first. A caller may pass a single node, which is a
+%   chain of one; the recursion passes a cell array.
+
+    if isempty(parentNode)
+        ancestors = {};
+    elseif iscell(parentNode)
+        ancestors = reshape(parentNode, 1, []);
+    else
+        ancestors = {parentNode};
+    end
+end
+
+function message = embeddedFailureMessage(embeddedType, ancestors)
+% embeddedFailureMessage - Say what failed and where it sits
+%
+%   An embedded node is stored inline and carries no @id of its own, so it
+%   cannot be named directly. The containment chain is walked from the
+%   innermost node outwards for the nearest ancestor that does carry one:
+%   for a singly embedded node that is its immediate parent, and for a
+%   nested one it is the enclosing instance further out. The types from
+%   that ancestor inwards are reported as a path, so the message locates
+%   the failure however deeply it is nested.
+
+    types = strings(1, numel(ancestors));
+    identifier = "";
+    firstNamed = 1;
+    for i = numel(ancestors):-1:1
+        % This runs while reporting a failure, so it must not raise one of
+        % its own: an ancestor that is not a readable node costs its name
+        % in the message, nothing more.
+        try
+            [thisIdentifier, thisType] = omkg.internal.conversion.getNodeKeywords(...
+                ancestors{i}, "@id", "@type");
+            types(i) = formatNodeType(thisType);
+            thisIdentifier = string(thisIdentifier);
+        catch
+            types(i) = "<unknown type>";
+            thisIdentifier = "";
+        end
+
+        if strlength(identifier) == 0 && isscalar(thisIdentifier) ...
+                && strlength(thisIdentifier) > 0
+            identifier = thisIdentifier;
+            firstNamed = i;
+        end
+    end
+
+    if strlength(identifier) == 0
+        % Nothing in the chain is addressable, e.g. a caller that passed an
+        % embedded node as the parent. The path is still worth reporting.
+        message = sprintf(...
+            'Failed to create embedded instance of type "%s" at "%s".', ...
+            embeddedType, strjoin(types, " > "));
+    else
+        message = sprintf(...
+            ['Failed to create embedded instance of type "%s" at "%s" ', ...
+            'in the instance with identifier "%s".'], ...
+            embeddedType, strjoin(types(firstNamed:end), " > "), identifier);
     end
 end
 

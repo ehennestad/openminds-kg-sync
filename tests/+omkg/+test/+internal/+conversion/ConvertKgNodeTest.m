@@ -385,6 +385,64 @@ classdef ConvertKgNodeTest < matlab.unittest.TestCase
                     'Error message should mention parent context');
             end
         end
+
+        function testEmbeddedFailureNamesEmbeddedType(testCase)
+        % The message must name the type that failed, not just its parent
+            parentNode = struct(...
+                'x_id', 'https://kg.ebrains.eu/api/instances/parent-123', ...
+                'x_type', {{'https://openminds.ebrains.eu/core/Person'}});
+
+            embeddedNode = struct(...
+                'x_type', 'https://openminds.ebrains.eu/core/Affiliation', ...
+                'https___openminds_ebrains_eu_vocab_memberOf', 'Test');
+
+            try
+                omkg.internal.conversion.convertKgNode(embeddedNode, ...
+                    'ParentNode', parentNode);
+                testCase.verifyFail('Should have thrown an error');
+            catch ME
+                testCase.verifyEqual(ME.identifier, ...
+                    'OMKG:ConvertKGNode:ConversionFailed')
+                testCase.verifySubstring(ME.message, 'Affiliation', ...
+                    'Message should name the embedded type that failed')
+                testCase.verifySubstring(ME.message, 'Person', ...
+                    'Message should name the containing type')
+                testCase.verifySubstring(ME.message, 'parent-123', ...
+                    'Message should name the containing instance')
+            end
+        end
+
+        function testNestedEmbeddedFailureNamesIdentifiableAncestor(testCase)
+        % A node embedded inside an embedded node has no addressable parent
+        %
+        %   The immediate parent is itself inline and carries no @id, so the
+        %   message has to reach further out for the enclosing instance, and
+        %   report the containment path down to the failure.
+            rootNode = struct(...
+                'x_id', 'https://kg.ebrains.eu/api/instances/root-456', ...
+                'x_type', {{'https://openminds.ebrains.eu/core/Person'}});
+
+            intermediateNode = struct(...
+                'x_type', 'https://openminds.ebrains.eu/core/Affiliation');
+
+            embeddedNode = struct(...
+                'x_type', 'https://openminds.ebrains.eu/core/Affiliation', ...
+                'https___openminds_ebrains_eu_vocab_memberOf', 'Test');
+
+            try
+                omkg.internal.conversion.convertKgNode(embeddedNode, ...
+                    'ParentNode', {rootNode, intermediateNode});
+                testCase.verifyFail('Should have thrown an error');
+            catch ME
+                testCase.verifyEqual(ME.identifier, ...
+                    'OMKG:ConvertKGNode:ConversionFailed')
+                testCase.verifySubstring(ME.message, 'root-456', ...
+                    ['Message should reach past the inline parent to the ', ...
+                    'nearest ancestor that carries an identifier'])
+                testCase.verifySubstring(ME.message, '>', ...
+                    'Message should report the containment path')
+            end
+        end
     end
 
     methods (Access = private)
