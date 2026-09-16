@@ -98,9 +98,7 @@ function omNode = convertKgNode(kgNode, omReferenceNode, options)
                 currentPropertyValue = omkg.internal.conversion.convertKgNode(currentPropertyValue, "ParentNode", kgNode);
             end
         elseif ischar(currentPropertyValue)
-            % Todo: Consider if this should be added to user preferences class.
-            convertChar = getpref('omkg', 'ConvertChar', false);
-            if convertChar
+            if omkg.getpref("ConvertChar")
                 % If string, text numbers are correctly converted to numerics,
                 % if char they are converted to numeric arrays...
                 currentPropertyValue = string(currentPropertyValue);
