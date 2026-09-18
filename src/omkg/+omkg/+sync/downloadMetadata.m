@@ -206,7 +206,7 @@ function linkIRIs = listControlledInstanceLinks(kgNodes)
         kgNodes = num2cell(kgNodes);
     end
 
-    linkIRIs = string.empty;
+    linkIRIs = strings(1, 0);
     for i = 1:numel(kgNodes)
         node = kgNodes{i};
         [identifier, type] = omkg.internal.conversion.getNodeKeywords(node, "@id", "@type");
@@ -231,7 +231,10 @@ function linkIRIs = listControlledInstanceLinks(kgNodes)
             end
         end
     end
-    linkIRIs = unique(linkIRIs);
+    % unique returns a 0-by-1 array for an empty input, which a caller
+    % cannot append to a row; an embedded node without candidate links
+    % would then break the list of its parent.
+    linkIRIs = reshape(unique(linkIRIs), 1, []);
 end
 
 function tf = isLinkedNode(value)

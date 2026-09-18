@@ -145,6 +145,32 @@ classdef KgpullTest < matlab.unittest.TestCase
                 'The Stage option should be passed to getInstance unchanged');
         end
 
+        function testEmbeddedNodeWithoutControlledLinks(testCase)
+            % A subject state whose age is an embedded quantitative value
+            % without a unit, next to a link to its age category. The
+            % embedded value adds no candidate links for the controlled
+            % instance pre-fetch, and that must not break the candidates
+            % the other properties add.
+            testCase.applyFixture(omkg.test.fixtures.PreferencesFixture());
+            omkg.setpref("ControlledInstanceIdentity", "openminds")
+
+            state = struct();
+            state.x_id = "https://kg.ebrains.eu/api/instances/" + testCase.TestIdentifier;
+            state.x_type = "https://openminds.om-i.org/types/SubjectState";
+            state.https___openminds_om_i_org_props_ageCategory = struct( ...
+                'x_id', "https://kg.ebrains.eu/api/instances/880e8400-e29b-41d4-a716-446655440003");
+            state.https___openminds_om_i_org_props_age = struct( ...
+                'x_type', "https://openminds.om-i.org/types/QuantitativeValue", ...
+                'https___openminds_om_i_org_props_value', 3);
+            testCase.MockClient.setInstanceResponse(state);
+            testCase.MockClient.setBulkResponse({});
+
+            result = kgpull(testCase.TestIdentifier, 'Client', testCase.MockClient);
+
+            testCase.verifyClass(result, 'openminds.core.SubjectState')
+            testCase.verifyEqual(result.age.value, 3)
+        end
+
         function testEmptyResponse(testCase)
             % Test handling of empty response from KG
 
