@@ -139,9 +139,7 @@ classdef KgsaveTest < matlab.unittest.TestCase
             instance = testCase.TestInstances(1);
             instance.id = "https://example.org/people/john-doe";
 
-            saveError = testCase.verifyError(...
-                @() kgsave(instance, 'Client', testCase.MockClient, 'Verbose', false), ...
-                'OMKG:kgsave:SaveFailed');
+            saveError = testCase.verifySaveFails(instance);
 
             testCase.verifyEqual(saveError.cause{1}.identifier, ...
                 'OMKG:KGMetadataStore:UnsupportedIdentifier')
@@ -296,9 +294,7 @@ classdef KgsaveTest < matlab.unittest.TestCase
             apiError = MException('MOCK:APIError', 'Simulated API error');
             testCase.MockClient.setError('createNewInstanceWithId', apiError);
 
-            saveError = testCase.verifyError(...
-                @() kgsave(instance, 'Client', testCase.MockClient, 'Verbose', false), ...
-                'OMKG:kgsave:SaveFailed');
+            saveError = testCase.verifySaveFails(instance);
 
             testCase.verifyNumElements(saveError.cause, 1)
             testCase.verifyEqual(saveError.cause{1}.identifier, 'MOCK:APIError')
@@ -408,8 +404,14 @@ classdef KgsaveTest < matlab.unittest.TestCase
 
         function testLargeInstanceArray(testCase)
             % Test performance with larger number of instances
+            % Distinct instances: repeating one handle would save it once
+            % and then update it, since a save writes the KG id back
             largeInstanceCount = 10;
-            instances = repmat(testCase.TestInstances(1), 1, largeInstanceCount);
+            instances = openminds.core.actors.Person.empty(1, 0);
+            for i = 1:largeInstanceCount
+                instances(i) = openminds.core.actors.Person( ...
+                    'givenName', "Person", 'familyName', string(i));
+            end
 
             ids = kgsave(instances, 'Client', testCase.MockClient, 'Verbose', false);
 
@@ -421,6 +423,18 @@ classdef KgsaveTest < matlab.unittest.TestCase
     end
 
     methods (Access = private)
+
+        function saveError = verifySaveFails(testCase, instance)
+            % Save the instance, verify kgsave fails, and return its error
+            try
+                kgsave(instance, 'Client', testCase.MockClient, 'Verbose', false);
+                saveError = MException.empty();
+            catch saveError
+                % Returned to the caller for inspection
+            end
+            testCase.assertNotEmpty(saveError, 'Expected kgsave to error');
+            testCase.verifyEqual(saveError.identifier, 'OMKG:kgsave:SaveFailed');
+        end
 
         function instances = createTestInstances(~)
             % Create test openMINDS instances for testing
