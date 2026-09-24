@@ -93,13 +93,99 @@ classdef KglistTest < matlab.unittest.TestCase
         end
 
         function testPaginationWithoutFrom(testCase)
-            % Test that pager returns empty function when 'from' is not specified
+            % A listing that starts at the default offset can still be paged
             type = openminds.enum.Types.Person;
 
-            [~, pager] = kglist(type, 'size', uint64(10), 'Client', testCase.MockClient);
+            [instances, pager] = kglist(type, 'size', uint64(10), 'Client', testCase.MockClient);
+            nextPageInstances = pager();
 
-            result = pager();
-            testCase.verifyEmpty(result, 'Pager should return empty when from is not specified');
+            testCase.verifyNotEmpty(nextPageInstances, 'Pager should return the next page');
+            testCase.verifyTrue(testCase.MockClient.wasCalledWithOptionalParam(...
+                'listInstances', 'from', uint64(numel(instances))), ...
+                'Next page should start where the first page ended');
+        end
+
+        function testNextPageKeepsRequestOptions(testCase)
+            % The next page is requested with the same space, stage,
+            % filter, server and client as the first page
+            type = openminds.enum.Types.Person;
+            validProperty = omkg.test.api.KglistTest.getValidPropertyForType(type);
+            expectedProperty = sprintf("%s%s", openminds.constant.PropertyIRIPrefix, validProperty);
+
+            [instances, pager] = kglist(type, ...
+                'space', 'some-space', ...
+                'stage', 'IN_PROGRESS', ...
+                'filterProperty', validProperty, ...
+                'filterValue', 'testValue', ...
+                'Server', ebrains.kg.enum.KGServer.PROD, ...
+                'from', uint64(10), ...
+                'size', uint64(5), ...
+                'Client', testCase.MockClient);
+            testCase.MockClient.clearCalls();
+
+            pager();
+
+            call = testCase.MockClient.getLastCallFor('listInstances');
+            testCase.assertNotEmpty(call, 'Pager should request the next page from the same client');
+            testCase.verifyEqual(call.options.requiredParams.space, "some-space")
+            testCase.verifyEqual(call.options.requiredParams.stage, ebrains.kg.enum.KGStage.IN_PROGRESS)
+            testCase.verifyEqual(call.options.optionalParams.filterProperty, expectedProperty)
+            testCase.verifyEqual(call.options.optionalParams.filterValue, "testValue")
+            testCase.verifyEqual(call.options.optionalParams.from, uint64(10 + numel(instances)))
+            testCase.verifyEqual(call.options.optionalParams.size, uint64(5))
+            testCase.verifyEqual(call.options.serverOptions.Server, ebrains.kg.enum.KGServer.PROD)
+        end
+
+        function testPagingThroughCappedPages(testCase)
+            % The offset advances by what each page held, so a server that
+            % returns fewer instances than asked for is paged through
+            % completely, and the pager returns empty once exhausted
+            type = openminds.enum.Types.Person;
+            pagedClient = omkg.test.helper.mock.KGIntancesAPIMockClient();
+            pagedClient.setPagedListResponse(...
+                omkg.test.api.KglistTest.createSampleKgData(5), 'PageSizeCap', 2);
+
+            [page, pager] = kglist(type, 'size', uint64(4), 'Client', pagedClient);
+            numCollected = 0;
+            numPages = 0;
+            while ~isempty(page)
+                numCollected = numCollected + numel(page);
+                numPages = numPages + 1;
+                [page, pager] = pager();
+            end
+
+            testCase.verifyEqual(numCollected, 5, 'Every instance should be listed exactly once');
+            testCase.verifyEqual(numPages, 3, 'Expected pages of 2, 2 and 1 instances');
+            testCase.verifyEmpty(pager(), 'Pager should stay empty once the listing is exhausted');
+        end
+
+        function testDocumentedPagingLoopListsEveryInstanceOnce(testCase)
+            % The paging loop in the kglist help ends at the first empty
+            % page and lists every instance exactly once
+            type = openminds.enum.Types.Person;
+            numInstances = 5;
+            pagedClient = omkg.test.helper.mock.KGIntancesAPIMockClient();
+            pagedClient.setPagedListResponse(...
+                omkg.test.api.KglistTest.createSampleKgData(numInstances));
+
+            % A pager that returns the same page again would loop for ever,
+            % so the loop is bounded to fail instead of hanging
+            maxPages = numInstances + 1;
+            listedIds = strings(1, 0);
+            numPages = 0;
+
+            [people, nextPage] = kglist(type, 'size', uint64(2), 'Client', pagedClient);
+            while ~isempty(people) && numPages < maxPages
+                listedIds = [listedIds, string({people.id})]; %#ok<AGROW>
+                numPages = numPages + 1;
+                [people, nextPage] = nextPage();
+            end
+
+            testCase.verifyEmpty(people, 'The loop should end at the first empty page');
+            testCase.verifyNumElements(listedIds, numInstances, ...
+                'Every instance should be listed');
+            testCase.verifyNumElements(unique(listedIds), numInstances, ...
+                'No instance should be listed twice');
         end
 
         function testEmptyResponse(testCase)
