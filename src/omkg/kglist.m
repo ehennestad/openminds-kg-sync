@@ -18,7 +18,7 @@ function [instances, nextPageFcn] = kglist(type, kgOptions, options)
 %   [people, nextPage] = kglist("Person", "space", "common", "size", 20);
 %   while ~isempty(people)
 %       % ... process people ...
-%       people = nextPage();
+%       [people, nextPage] = nextPage();
 %   end
 
     arguments
