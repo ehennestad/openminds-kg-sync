@@ -1,10 +1,17 @@
 classdef CheckEnvironmentTest < matlab.unittest.TestCase
 % CheckEnvironmentTest - Unit tests for omkg.internal.checkEnvironment
 %
-%   The active openMINDS version is never changed by these tests: a
-%   mismatch is produced by pinning the preference to a version other than
-%   the active one, which exercises the check without touching the host
-%   session's model version.
+%   The class fixture activates the openMINDS version the preference is
+%   pinned to, so the active version is known whatever the session started
+%   on (a fresh openMINDS_MATLAB session reports "latest"). A mismatch is
+%   then produced by pinning the preference to another version, which
+%   exercises the check without switching the model version again.
+
+    methods (TestClassSetup)
+        function activatePinnedVersion(testCase)
+            testCase.applyFixture(omkg.test.fixtures.KgOpenMindsVersionFixture());
+        end
+    end
 
     methods (TestMethodSetup)
         function isolatePreferences(testCase)
@@ -14,14 +21,12 @@ classdef CheckEnvironmentTest < matlab.unittest.TestCase
 
     methods (Test)
         function testPassesWhenActiveVersionIsPinned(testCase)
-            omkg.setpref("KgOpenMINDSVersion", activeMajorVersion());
-
             testCase.verifyWarningFree(@() omkg.internal.checkEnvironment())
         end
 
         function testErrorsInsteadOfSwitchingVersion(testCase)
             activeVersion = openminds.version();
-            omkg.setpref("KgOpenMINDSVersion", activeMajorVersion() + 1);
+            omkg.setpref("KgOpenMINDSVersion", omkg.getpref("KgOpenMINDSVersion") + 1);
 
             testCase.verifyError(@() omkg.internal.checkEnvironment(), ...
                 'OMKG:checkEnvironment:OpenMindsVersionMismatch')
@@ -30,20 +35,24 @@ classdef CheckEnvironmentTest < matlab.unittest.TestCase
         end
 
         function testErrorNamesBothVersionsAndTheSwitchCall(testCase)
-            pinnedVersion = activeMajorVersion() + 1;
+            activeVersion = openminds.version();
+            pinnedVersion = omkg.getpref("KgOpenMINDSVersion") + 1;
             omkg.setpref("KgOpenMINDSVersion", pinnedVersion);
 
-            ME = testCase.verifyError(@() omkg.internal.checkEnvironment(), ...
-                'OMKG:checkEnvironment:OpenMindsVersionMismatch');
+            try
+                omkg.internal.checkEnvironment()
+                checkError = MException.empty();
+            catch checkError
+                % Inspected below
+            end
 
-            testCase.verifySubstring(ME.message, sprintf("v%d.0", pinnedVersion))
-            testCase.verifySubstring(ME.message, openminds.version())
-            testCase.verifySubstring(ME.message, sprintf("openminds.version(%d)", pinnedVersion))
-            testCase.verifySubstring(ME.message, "clear")
+            testCase.assertNotEmpty(checkError, 'Expected checkEnvironment to error')
+            testCase.verifyEqual(string(checkError.identifier), ...
+                "OMKG:checkEnvironment:OpenMindsVersionMismatch")
+            testCase.verifySubstring(checkError.message, sprintf("v%d.0", pinnedVersion))
+            testCase.verifySubstring(checkError.message, activeVersion)
+            testCase.verifySubstring(checkError.message, sprintf("openminds.version(%d)", pinnedVersion))
+            testCase.verifySubstring(checkError.message, "clear")
         end
     end
-end
-
-function major = activeMajorVersion()
-    major = str2double(extractBetween(openminds.version(), "v", "."));
 end
