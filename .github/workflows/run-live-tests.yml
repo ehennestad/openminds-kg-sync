@@ -35,6 +35,7 @@ jobs:
         with:
           command: |
             matbox.installRequirements('.')
+            openminds.startup()
 
             addpath(genpath( "src" ));
             omkg.internal.checkEnvironment()
