@@ -159,6 +159,35 @@ classdef KglistTest < matlab.unittest.TestCase
             testCase.verifyEmpty(pager(), 'Pager should stay empty once the listing is exhausted');
         end
 
+        function testDocumentedPagingLoopListsEveryInstanceOnce(testCase)
+            % The paging loop in the kglist help ends at the first empty
+            % page and lists every instance exactly once
+            type = openminds.enum.Types.Person;
+            numInstances = 5;
+            pagedClient = omkg.test.helper.mock.KGIntancesAPIMockClient();
+            pagedClient.setPagedListResponse(...
+                omkg.test.api.KglistTest.createSampleKgData(numInstances));
+
+            % A pager that returns the same page again would loop for ever,
+            % so the loop is bounded to fail instead of hanging
+            maxPages = numInstances + 1;
+            listedIds = strings(1, 0);
+            numPages = 0;
+
+            [people, nextPage] = kglist(type, 'size', uint64(2), 'Client', pagedClient);
+            while ~isempty(people) && numPages < maxPages
+                listedIds = [listedIds, string({people.id})]; %#ok<AGROW>
+                numPages = numPages + 1;
+                [people, nextPage] = nextPage();
+            end
+
+            testCase.verifyEmpty(people, 'The loop should end at the first empty page');
+            testCase.verifyNumElements(listedIds, numInstances, ...
+                'Every instance should be listed');
+            testCase.verifyNumElements(unique(listedIds), numInstances, ...
+                'No instance should be listed twice');
+        end
+
         function testEmptyResponse(testCase)
             % Test handling of empty response from API
             type = openminds.enum.Types.Person;
