@@ -5,9 +5,8 @@ classdef KGSerializerTest < matlab.unittest.TestCase
     % filtering and edge cases.
 
     methods (TestClassSetup)
-        function setupTestEnvironment(testCase) %#ok<MANU>
-            % Ensure openMINDS environment is available
-            omkg.internal.checkEnvironment();
+        function setupTestEnvironment(testCase)
+            testCase.applyFixture(omkg.test.fixtures.KgOpenMindsVersionFixture());
         end
     end
 

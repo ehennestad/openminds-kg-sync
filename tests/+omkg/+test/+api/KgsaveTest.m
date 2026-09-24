@@ -30,8 +30,8 @@ classdef KgsaveTest < matlab.unittest.TestCase
     end
 
     methods (TestClassSetup)
-        function setupOnce(testCase) %#ok<MANU>
-            omkg.internal.checkEnvironment()
+        function setupOnce(testCase)
+            testCase.applyFixture(omkg.test.fixtures.KgOpenMindsVersionFixture());
         end
     end
 

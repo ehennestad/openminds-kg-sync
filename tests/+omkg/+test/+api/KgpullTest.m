@@ -30,6 +30,8 @@ classdef KgpullTest < matlab.unittest.TestCase
 
     methods (TestMethodSetup)
         function setupTest(testCase)
+            testCase.applyFixture(omkg.test.fixtures.KgOpenMindsVersionFixture());
+
             % Create mock client (for KG instances api) and test data
             testCase.MockClient = omkg.test.helper.mock.KGIntancesAPIMockClient();
             testCase.TestIdentifier = "550e8400-e29b-41d4-a716-446655440000";
