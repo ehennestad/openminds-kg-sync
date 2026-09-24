@@ -33,12 +33,14 @@
     {
       "@type": "SoftwareApplication",
       "name": "openMINDS MATLAB",
+      "version": "0.12.0",
       "codeRepository": "https://github.com/openMetadataInitiative/openMINDS_MATLAB",
       "installUrl": "https://www.mathworks.com/matlabcentral/fileexchange/134212-openminds-metadata-models-for-matlab"
     },
     {
       "@type": "SoftwareApplication",
       "name": "EBRAINS Services Toolbox",
+      "version": "0.10.0",
       "codeRepository": "https://github.com/ehennestad/EBRAINS-MATLAB",
       "installUrl": "https://www.mathworks.com/matlabcentral/fileexchange/182284-ebrains-services-toolbox"
     }
