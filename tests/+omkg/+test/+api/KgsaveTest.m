@@ -118,6 +118,35 @@ classdef KgsaveTest < matlab.unittest.TestCase
                 'Expected createNewInstance called once per instance');
         end
 
+        function testCreateReusesBlankNodeUuid(testCase)
+            % The local blank-node UUID is sent as the KG instance id, so
+            % saving the same local instance twice does not create two
+            % KG instances
+            uuid = "9b2f1c2e-7d4a-4f0b-8c6d-3a5e1f2b4c7d";
+            instance = testCase.TestInstances(1);
+            instance.id = "_:" + uuid;
+
+            kgsave(instance, 'Client', testCase.MockClient, 'Verbose', false);
+
+            call = testCase.MockClient.getLastCallFor('createNewInstanceWithId');
+            testCase.verifyEqual(string(call.args{1}), uuid, ...
+                'Expected the blank-node UUID to be used as the KG instance id');
+        end
+
+        function testCreateRejectsUnsupportedIdentifier(testCase)
+            % An identifier that is neither a KG nor a blank-node id is
+            % reported rather than silently replaced by a fresh UUID
+            instance = testCase.TestInstances(1);
+            instance.id = "https://example.org/people/john-doe";
+
+            saveError = testCase.verifySaveFails(instance);
+
+            testCase.verifyEqual(saveError.cause{1}.identifier, ...
+                'OMKG:KGMetadataStore:UnsupportedIdentifier')
+            testCase.verifyEqual(testCase.MockClient.getCallCount('createNewInstanceWithId'), 0, ...
+                'Expected no instance to be created');
+        end
+
         function testSaveMode_DefaultIsUpdate(testCase)
             % An existing instance is patched when no SaveMode is given
             instance = testCase.withKgIdentifier(testCase.TestInstances(1), "person-1");
@@ -258,6 +287,20 @@ classdef KgsaveTest < matlab.unittest.TestCase
                 'Expected SaveFailed error when API fails');
         end
 
+        function testApiError_KeepsOriginalErrorAsCause(testCase)
+            % The client's error survives as the cause, so a caller can
+            % branch on what actually failed
+            instance = testCase.TestInstances(1);
+            apiError = MException('MOCK:APIError', 'Simulated API error');
+            testCase.MockClient.setError('createNewInstanceWithId', apiError);
+
+            saveError = testCase.verifySaveFails(instance);
+
+            testCase.verifyNumElements(saveError.cause, 1)
+            testCase.verifyEqual(saveError.cause{1}.identifier, 'MOCK:APIError')
+            testCase.verifyEqual(saveError.cause{1}.message, 'Simulated API error')
+        end
+
         function testApiError_MultipleInstances(testCase)
             % Test error handling when API fails during batch save
             instances = testCase.TestInstances(1:2);
@@ -361,8 +404,14 @@ classdef KgsaveTest < matlab.unittest.TestCase
 
         function testLargeInstanceArray(testCase)
             % Test performance with larger number of instances
+            % Distinct instances: repeating one handle would save it once
+            % and then update it, since a save writes the KG id back
             largeInstanceCount = 10;
-            instances = repmat(testCase.TestInstances(1), 1, largeInstanceCount);
+            instances = openminds.core.actors.Person.empty(1, 0);
+            for i = 1:largeInstanceCount
+                instances(i) = openminds.core.actors.Person( ...
+                    'givenName', "Person", 'familyName', string(i));
+            end
 
             ids = kgsave(instances, 'Client', testCase.MockClient, 'Verbose', false);
 
@@ -374,6 +423,18 @@ classdef KgsaveTest < matlab.unittest.TestCase
     end
 
     methods (Access = private)
+
+        function saveError = verifySaveFails(testCase, instance)
+            % Save the instance, verify kgsave fails, and return its error
+            try
+                kgsave(instance, 'Client', testCase.MockClient, 'Verbose', false);
+                saveError = MException.empty();
+            catch saveError
+                % Returned to the caller for inspection
+            end
+            testCase.assertNotEmpty(saveError, 'Expected kgsave to error');
+            testCase.verifyEqual(saveError.identifier, 'OMKG:kgsave:SaveFailed');
+        end
 
         function instances = createTestInstances(~)
             % Create test openMINDS instances for testing
