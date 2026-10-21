@@ -245,6 +245,47 @@ classdef DownloadMetadataTest < matlab.unittest.TestCase
             testCase.verifyFalse(unit.isReference())
         end
 
+        function testEmbeddedNodeWithoutControlledLinkDoesNotAbortThePull(testCase)
+            % An embedded node need not link to a controlled term at all:
+            % the vendor of a stock number is an organization. The links
+            % found below such a node must combine with those found on its
+            % parent, so that a strain with a species and a stock number
+            % is pulled like any other node.
+            testCase.useIdentityPolicy("openminds");
+            [~, speciesNode, speciesKgIri, speciesOmIri] = testCase.createSubjectWithSpecies();
+            vendorKgIri = "https://kg.ebrains.eu/api/instances/22222222-2222-4222-8222-222222222222";
+
+            strainNode = struct();
+            strainNode.x_id = "https://kg.ebrains.eu/api/instances/" + testCase.TestUUID;
+            strainNode.x_type = "https://openminds.om-i.org/types/Strain";
+            strainNode.name = "C57BL/6J";
+            strainNode.species = struct('x_id', speciesKgIri);
+            strainNode.stockNumber = struct(...
+                'x_type', "https://openminds.om-i.org/types/StockNumber", ...
+                'identifier', "000664", ...
+                'vendor', struct('x_id', vendorKgIri));
+
+            testCase.MockClient.setInstanceResponse(strainNode);
+            testCase.MockClient.setBulkResponse({speciesNode});
+
+            result = omkg.sync.downloadMetadata(testCase.TestUUID, ...
+                'Client', testCase.MockClient, 'NumLinksToResolve', 0);
+
+            testCase.verifyClass(result, 'openminds.core.research.Strain')
+            testCase.verifyEqual(testCase.MockClient.getCallCount('getInstancesBulk'), 1, ...
+                'Only the species should be fetched, before its parent is converted')
+            species = result.species;
+            if openminds.utility.isMixedInstance(species), species = species.Instance; end
+            testCase.verifyEqual(string(species.id), speciesOmIri, ...
+                'The species linked beside the embedded node should take its openMINDS identity')
+            vendor = result.stockNumber.vendor;
+            testCase.verifyClass(vendor, 'openminds.core.actors.Organization')
+            testCase.verifyEqual(string(vendor.id), vendorKgIri, ...
+                'The vendor is not a controlled term and should keep its KG identifier')
+            testCase.verifyTrue(vendor.isReference(), ...
+                'The vendor should be left to resolve later')
+        end
+
         function testMissingSingleControlledCandidateDoesNotAbortThePull(testCase)
             % The API client answers a request for one identifier with an
             % error when the KG has no such instance, where a request for
