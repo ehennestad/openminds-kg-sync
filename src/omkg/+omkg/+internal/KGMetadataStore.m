@@ -68,8 +68,9 @@ classdef KGMetadataStore < openminds.interface.MetadataStore
             % Recursively save linked types
             for i = 1:numel(linkedTypes)
                 currentValue = linkedTypes{i};
-                if openminds.utility.isControlledInstance(currentValue)
-                    % A controlled instance already exists in the KG's
+                if openminds.utility.isControlledInstance(currentValue) ...
+                        && omkg.internal.conversion.isOpenMindsInstanceIRI(string(currentValue.id))
+                    % A library term already exists in the KG's
                     % "controlled" space and is not saved again. The link
                     % to it goes out with the term's openMINDS IRI as @id,
                     % and that is enough: the KG resolves a link's @id
@@ -79,6 +80,12 @@ classdef KGMetadataStore < openminds.interface.MetadataStore
                     % a Subject created with species @id
                     % .../instances/species/musMusculus was stored linking
                     % to the KG UUID of that instance.
+                    %
+                    % The class check alone is not enough: TermSuggestion
+                    % is a controlled-term type but has no library
+                    % instance, so one carrying a blank-node id must be
+                    % saved like any other linked node, or the parent's
+                    % payload goes out with an @id the KG rejects.
                     continue
                 end
                 currentValue.save(obj);
