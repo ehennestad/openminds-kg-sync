@@ -200,7 +200,7 @@ function linkIRIs = listControlledInstanceLinks(kgNodes)
         kgNodes = num2cell(kgNodes);
     end
 
-    linkIRIs = string.empty;
+    linkIRIs = string.empty(1, 0);
     for i = 1:numel(kgNodes)
         node = kgNodes{i};
         [identifier, type] = omkg.internal.conversion.getNodeKeywords(node, "@id", "@type");
@@ -225,7 +225,10 @@ function linkIRIs = listControlledInstanceLinks(kgNodes)
             end
         end
     end
-    linkIRIs = unique(linkIRIs);
+    % The result is concatenated onto the row of a calling level, so it
+    % must stay a row even when nothing was found: unique returns a
+    % column for an empty input.
+    linkIRIs = reshape(unique(linkIRIs), 1, []);
 end
 
 function tf = isLinkedNode(value)
