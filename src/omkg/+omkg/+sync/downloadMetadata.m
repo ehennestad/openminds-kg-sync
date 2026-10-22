@@ -36,9 +36,11 @@ function omNode = downloadMetadata(kgIdentifier, options)
     uuid = omkg.util.getIdentifierUUID(kgIdentifier);
     cache = omkg.internal.ControlledInstanceCache.instance();
 
-    % The same stages serve every lookup of this pull, the instance itself
-    % as well as its links, so that a draft never mixes with the released
-    % copies of the instances it points to.
+    % Every lookup of this pull, the instance itself as well as its links,
+    % uses the same stage preference. With more than one stage, each
+    % instance falls back to the next stage on its own, so a draft can
+    % come with released copies of its links. Only a single stage keeps
+    % the whole pull in one stage.
     kgNode = options.Client.getInstance(uuid, options.Stage, "Server", options.Server);
 
     % A link to a controlled instance takes its openMINDS identity while

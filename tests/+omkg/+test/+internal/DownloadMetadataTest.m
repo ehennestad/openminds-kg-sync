@@ -113,8 +113,8 @@ classdef DownloadMetadataTest < matlab.unittest.TestCase
         end
 
         function testLinkedInstancesAreDownloadedFromTheSameStage(testCase)
-            % The stage chosen for the instance also applies to the linked
-            % instances downloaded with it, so a pull never mixes stages.
+            % The stage preference given for the instance also applies to
+            % the linked instances downloaded with it.
             testCase.useIdentityPolicy("openminds");
 
             linkedNodeId = "123e4567-e89b-12d3-a456-426614174000";
