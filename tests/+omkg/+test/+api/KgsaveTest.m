@@ -120,8 +120,7 @@ classdef KgsaveTest < matlab.unittest.TestCase
 
         function testCreateReusesBlankNodeUuid(testCase)
             % The local blank-node UUID is sent as the KG instance id, so
-            % saving the same local instance twice does not create two
-            % KG instances
+            % every save of the same local instance targets the same KG id
             uuid = "9b2f1c2e-7d4a-4f0b-8c6d-3a5e1f2b4c7d";
             instance = testCase.TestInstances(1);
             instance.id = "_:" + uuid;
@@ -131,6 +130,19 @@ classdef KgsaveTest < matlab.unittest.TestCase
             call = testCase.MockClient.getLastCallFor('createNewInstanceWithId');
             testCase.verifyEqual(string(call.args{1}), uuid, ...
                 'Expected the blank-node UUID to be used as the KG instance id');
+        end
+
+        function testCreateGeneratesUuidForNonUuidBlankNode(testCase)
+            % A blank-node label that is not a UUID cannot be a KG id, so
+            % the instance is created with a newly generated UUID
+            instance = testCase.TestInstances(1);
+            instance.id = "_:john-doe";
+
+            kgsave(instance, 'Client', testCase.MockClient, 'Verbose', false);
+
+            call = testCase.MockClient.getLastCallFor('createNewInstanceWithId');
+            testCase.verifyWarningFree(@() omkg.validator.mustBeValidUUID(string(call.args{1})), ...
+                'Expected a generated UUID as the KG instance id');
         end
 
         function testCreateRejectsUnsupportedIdentifier(testCase)

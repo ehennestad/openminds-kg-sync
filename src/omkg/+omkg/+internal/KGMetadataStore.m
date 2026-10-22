@@ -136,8 +136,6 @@ classdef KGMetadataStore < openminds.interface.MetadataStore
 
                 else % Create new instance
 
-                    % The local blank-node UUID becomes the KG instance id,
-                    % so saving the same local instance twice is idempotent.
                     uuid = obj.getUuidFromInstance(instance);
 
                     % Determine space to save to
@@ -188,16 +186,28 @@ classdef KGMetadataStore < openminds.interface.MetadataStore
         end
 
         function uuid = getUuidFromInstance(obj, instance)
-            if obj.isBlankNodeIdentifier(instance.id)
-                uuid = extractAfter(instance.id, '_:');
-            else
+        % getUuidFromInstance - Choose the KG id for a new instance
+        %
+        %   A blank node labelled with a UUID keeps that UUID as its KG id,
+        %   so every save of the same local instance targets the same KG
+        %   id. Any other blank-node label only names the node within its
+        %   document and is not a valid KG id, so a new UUID is generated.
+
+            if ~obj.isBlankNodeIdentifier(instance.id)
                 error('OMKG:KGMetadataStore:UnsupportedIdentifier', ...
                     ['Cannot create a KG instance from "%s" of type "%s": ', ...
                     'its identifier "%s" is neither a KG identifier nor a ', ...
-                    'blank node identifier ("_:<uuid>").'], ...
+                    'blank node identifier ("_:<label>").'], ...
                     string(instance), class(instance), string(instance.id))
             end
-            omkg.validator.mustBeValidUUID(uuid)
+
+            uuidPattern = "^[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$";
+            label = extractAfter(string(instance.id), "_:");
+            if matches(label, regexpPattern(uuidPattern))
+                uuid = label;
+            else
+                uuid = string(matlab.lang.internal.uuid());
+            end
         end
 
         function space = resolveSpace(obj, instance)
