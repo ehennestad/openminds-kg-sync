@@ -13,10 +13,15 @@ classdef DownloadControlledInstancesTest < matlab.unittest.TestCase
         CacheFile (1,1) string
     end
 
+    methods (TestClassSetup)
+        function setupEnvironment(testCase)
+            testCase.applyFixture(omkg.test.fixtures.KgOpenMindsVersionFixture());
+        end
+    end
+
     methods (TestMethodSetup)
         function isolate(testCase)
             import matlab.unittest.fixtures.TemporaryFolderFixture
-            testCase.applyFixture(omkg.test.fixtures.KgOpenMindsVersionFixture());
             testCase.applyFixture(omkg.test.fixtures.PreferencesFixture());
             tempFolder = testCase.applyFixture(TemporaryFolderFixture);
             testCase.CacheFile = fullfile(tempFolder.Folder, "cache.json");

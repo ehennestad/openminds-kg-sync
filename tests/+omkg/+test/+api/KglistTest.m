@@ -19,10 +19,14 @@ classdef KglistTest < matlab.unittest.TestCase
         OriginalCheckEnvironment
     end
 
+    methods (TestClassSetup)
+        function setupEnvironment(testCase)
+            testCase.applyFixture(omkg.test.fixtures.KgOpenMindsVersionFixture());
+        end
+    end
+
     methods (TestMethodSetup)
         function setupTest(testCase)
-            testCase.applyFixture(omkg.test.fixtures.KgOpenMindsVersionFixture());
-
             % Create a mock client for testing
             testCase.MockClient = testCase.createMockClient();
         end
