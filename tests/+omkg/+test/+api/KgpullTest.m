@@ -28,6 +28,12 @@ classdef KgpullTest < matlab.unittest.TestCase
         MockLinkedNodes
     end
 
+    methods (TestClassSetup)
+        function setupEnvironment(testCase)
+            testCase.applyFixture(omkg.test.fixtures.KgOpenMindsVersionFixture());
+        end
+    end
+
     methods (TestMethodSetup)
         function setupTest(testCase)
             % Create mock client (for KG instances api) and test data

@@ -6,8 +6,8 @@ classdef GetPropertyValuesTest < matlab.unittest.TestCase
 %   unset openMINDS property takes, and the one that isempty gets wrong.
 
     methods (TestClassSetup)
-        function setupEnvironment(~)
-            omkg.internal.checkEnvironment()
+        function setupEnvironment(testCase)
+            testCase.applyFixture(omkg.test.fixtures.KgOpenMindsVersionFixture());
         end
     end
 

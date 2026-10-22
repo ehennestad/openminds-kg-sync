@@ -34,7 +34,7 @@ Preferences for the OpenMINDS-KG-Sync Toolbox:
      DefaultSpace: "myspace"
 ```
 
-Run startup to: a) handle authentication (log in to EBRAINS), b) ensure we are using the right version of openMINDS and c) remind us of our preferences.
+The toolbox never switches the openMINDS version for you. Before creating any openMINDS instances, select the version the Knowledge Graph is pinned to with `openminds.version(omkg.getpref("KgOpenMINDSVersion"))`. Then run startup to: a) handle authentication (log in to EBRAINS), b) check that the active openMINDS version is the pinned one and c) remind us of our preferences.
 
 ```matlab
 omkg.startup()

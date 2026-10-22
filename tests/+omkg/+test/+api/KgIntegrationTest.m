@@ -6,6 +6,7 @@ classdef KgIntegrationTest < matlab.unittest.TestCase
 
     methods (TestClassSetup)
         function setTestPreferences(testCase)
+            testCase.applyFixture(omkg.test.fixtures.KgOpenMindsVersionFixture());
             currentServerPref = omkg.getpref("DefaultServer");
             omkg.setpref("DefaultServer", "PREPROD");
             testCase.addTeardown(@() omkg.setpref("DefaultServer", currentServerPref))

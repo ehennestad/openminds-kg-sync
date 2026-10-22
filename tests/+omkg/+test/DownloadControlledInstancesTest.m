@@ -13,6 +13,12 @@ classdef DownloadControlledInstancesTest < matlab.unittest.TestCase
         CacheFile (1,1) string
     end
 
+    methods (TestClassSetup)
+        function setupEnvironment(testCase)
+            testCase.applyFixture(omkg.test.fixtures.KgOpenMindsVersionFixture());
+        end
+    end
+
     methods (TestMethodSetup)
         function isolate(testCase)
             import matlab.unittest.fixtures.TemporaryFolderFixture
