@@ -90,10 +90,9 @@ function ids = kgsave(openmindsInstance, kgOptions, options)
         try
             ids(i) = openmindsInstance(i).save(metadataStore);
         catch ME
-            % Add context to error and re-throw
-            error('OMKG:kgsave:SaveFailed', ...
-                'Failed to save instance %d of %d: %s', ...
-                i, numInstances, ME.message);
+            saveError = MException('OMKG:kgsave:SaveFailed', ...
+                'Failed to save instance %d of %d.', i, numInstances);
+            throw(saveError.addCause(ME))
         end
     end
 
