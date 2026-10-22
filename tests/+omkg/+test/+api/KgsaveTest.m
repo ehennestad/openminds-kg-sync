@@ -420,6 +420,35 @@ classdef KgsaveTest < matlab.unittest.TestCase
             testCase.verifyEqual(testCase.MockClient.getCallCount('createNewInstanceWithId'), largeInstanceCount, ...
                 'Expected API call for each instance');
         end
+        function testLinkedTermSuggestion_IsCreatedBeforeParent(testCase)
+            % A TermSuggestion is a controlled-term type without a library
+            % instance, so it is created in the KG like any other linked
+            % node and the parent links to it by the id it was given. A
+            % library term is still not created: the KG resolves its
+            % openMINDS IRI itself.
+            suggestion = openminds.controlledterms.TermSuggestion('name', 'perineuronal net');
+            libraryTerm = openminds.instanceFromIRI( ...
+                "https://openminds.om-i.org/instances/experimentalApproach/anatomy");
+            datasetVersion = openminds.core.DatasetVersion( ...
+                'shortName', 'test', ...
+                'studyTarget', suggestion, ...
+                'experimentalApproach', libraryTerm);
+
+            kgsave(datasetVersion, 'Client', testCase.MockClient, 'Verbose', false);
+
+            calls = testCase.MockClient.getCallsFor('createNewInstanceWithId');
+            testCase.assertEqual(numel(calls), 2, ...
+                'Expected the suggestion and the dataset version to be created, and the library term not');
+            testCase.verifyTrue(contains(string(calls(1).args{2}), 'perineuronal net'), ...
+                'Expected the suggestion to be created before its parent');
+            parentPayload = string(calls(2).args{2});
+            testCase.verifyTrue(contains(parentPayload, string(suggestion.id)), ...
+                'Expected the parent to link to the suggestion by its saved id');
+            testCase.verifyFalse(contains(parentPayload, '"_:'), ...
+                'Expected no blank-node id left in the parent payload');
+            testCase.verifyTrue(contains(parentPayload, 'experimentalApproach/anatomy'), ...
+                'Expected the library term to be linked by its openMINDS IRI');
+        end
     end
 
     methods (Access = private)
