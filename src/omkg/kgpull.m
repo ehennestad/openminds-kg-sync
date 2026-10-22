@@ -1,32 +1,57 @@
 function omInstance = kgpull(identifier, options)
-% kgpull - Download an instance from the EBRAINS Knowledge Graph
+% KGPULL Retrieve an openMINDS instance from the EBRAINS Knowledge Graph
 %
 % Syntax:
 %   omInstance = kgpull(identifier)
-%   omInstance = kgpull(identifier, Name, Value)
+%   omInstance = kgpull(identifier, options)
+%
+% Description:
+%   Downloads the instance with the given Knowledge Graph identifier and
+%   returns it as an openMINDS instance. Linked instances are returned as
+%   unresolved references unless NumLinksToResolve is raised.
 %
 % Input Arguments:
-%   identifier (1,1) string - UUID or full KG IRI of the instance
+%   identifier - KG identifier of the instance to retrieve
+%       Type: string
+%       Either a bare UUID or a full KG instance IRI.
 %
 % Name-Value Arguments:
-%   NumLinksToResolve (1,1) double - Number of levels of linked instances
-%       to download and attach (default: 0)
-%   Stage (1,:) ebrains.kg.enum.KGStage - Stages to look in, in order of
-%       preference; the first stage that holds the instance wins
-%       (default: ["RELEASED", "IN_PROGRESS"]). The default returns the
-%       published version of an instance and the draft of one that is not
-%       released yet. To edit an instance that is released, pass
-%       "IN_PROGRESS" to get its draft rather than the published copy.
-%   Server (1,1) ebrains.kg.enum.KGServer - "prod" or "preprod"
-%       (default: the "DefaultServer" preference)
-%   Client ebrains.kg.api.InstancesClient - Client that sends the requests
+%   NumLinksToResolve - How many orders of links to follow and download
+%       Type: double (nonnegative integer)
+%       Default: 0, i.e. links are left as references.
+%
+%   Stage - Stages to look in, in order of preference
+%       Type: ebrains.kg.enum.KGStage vector
+%       Default: ["RELEASED", "IN_PROGRESS"], i.e. the published version
+%       of an instance, or its draft if it is not released yet. The same
+%       preference applies to every linked instance that is downloaded.
+%       To edit an instance that is released, pass "IN_PROGRESS" to get
+%       its draft rather than the published copy.
+%
+%   Server - KG server to download from
+%       Type: ebrains.kg.enum.KGServer
+%       Default: the "DefaultServer" preference.
+%
+%   Client - API client instance
+%       Type: ebrains.kg.api.InstancesClient
+%       Default: a new InstancesClient.
 %
 % Output Arguments:
-%   omInstance - The openMINDS instance corresponding to the identifier
+%   omInstance - The downloaded instance
+%       Type: openminds.Node
+%
+% Examples:
+%   % Retrieve a single instance, leaving its links unresolved
+%   person = kgpull("12345678-1234-5678-9012-123456789012");
+%
+%   % Follow links two levels deep
+%   dataset = kgpull(datasetId, "NumLinksToResolve", 2);
+%
+% See also: kgsave, kglist, kgdelete
 
     arguments
         identifier (1,1) string {omkg.validator.mustBeValidKGIdentifier}
-        options.NumLinksToResolve = 0
+        options.NumLinksToResolve (1,1) double {mustBeNonnegative, mustBeInteger} = 0
         options.Stage (1,:) ebrains.kg.enum.KGStage {mustBeNonempty} = ["RELEASED", "IN_PROGRESS"]
         options.Server (1,1) ebrains.kg.enum.KGServer = omkg.getpref("DefaultServer")
         options.Client ebrains.kg.api.InstancesClient = ebrains.kg.api.InstancesClient()

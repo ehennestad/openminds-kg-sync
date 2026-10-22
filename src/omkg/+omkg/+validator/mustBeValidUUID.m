@@ -6,7 +6,7 @@ function mustBeValidUUID(identifier)
                   "[0-9a-fA-F]{4}-" + ...
                   "[0-9a-fA-F]{12}$";
 
-    if ~contains(identifier, regexpPattern(uuidPattern))
+    if ~matches(identifier, regexpPattern(uuidPattern))
         error("OMKG:validator:InvalidUUID", ...
               "Identifier must be a valid UUID. Got: %s", identifier);
     end

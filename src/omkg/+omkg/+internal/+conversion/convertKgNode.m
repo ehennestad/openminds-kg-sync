@@ -21,7 +21,17 @@ function omNode = convertKgNode(kgNode, omReferenceNode, options)
 %  Specify options using name-value arguments as Name1=Value1,...,NameN=ValueN,
 %  where Name is the argument name and Value is the corresponding value.
 %
-%  - ParentNode (Type) - Default: []. Parent node for the converted instance or linked node.
+%  - Ancestors - Default: []. Where the node sits when it is embedded in
+%    another node, used to describe where a failed conversion sits. A
+%    struct array with one element per enclosing node, outermost first,
+%    with the fields:
+%      ClassName    - The openMINDS class of the enclosing node.
+%      Identifier   - Its @id, or "" if it has none.
+%      PropertyName - The property of it that holds the embedded node.
+%      Index        - The position of the embedded node in that property
+%                     when the property holds a list, otherwise [].
+%    The recursion below extends the chain by one element for every
+%    level of embedding.
 %
 % Output Arguments:
 %   omNode - Converted openMINDS node or an array of openMINDS nodes if
@@ -30,19 +40,24 @@ function omNode = convertKgNode(kgNode, omReferenceNode, options)
     arguments
         kgNode (1,:) {mustBeA(kgNode, ["struct", "cell"])} % Metadata node/instance returned from the instances api endpoint
         omReferenceNode {mustBeA(omReferenceNode, ["double", "openminds.Node"])} = []
-        options.ParentNode = [];
+        options.Ancestors {mustBeA(options.Ancestors, ["double", "struct"])} = [];
     end
 
     % Hand structs to openMINDS in the at_ form it expects for keywords
     kgNode = omkg.internal.conversion.normalizeJsonLdKeywords(kgNode);
-    options.ParentNode = omkg.internal.conversion.normalizeJsonLdKeywords(options.ParentNode);
 
     % Loop through each node if a list is provided
     if numel(kgNode) > 1
         omNode = cell(1, numel(kgNode));
         if ~iscell(kgNode); kgNode = num2cell(kgNode); end
+        ancestors = options.Ancestors;
         for i = 1:numel(kgNode)
-            omNode{i} = omkg.internal.conversion.convertKgNode(kgNode{i}, "ParentNode", options.ParentNode);
+            if ~isempty(ancestors)
+                % The list is the value of the innermost enclosing
+                % property, so the position locates the element within it.
+                ancestors(end).Index = i;
+            end
+            omNode{i} = omkg.internal.conversion.convertKgNode(kgNode{i}, "Ancestors", ancestors);
         end
 
         omNode = omkg.util.concatTypesIfHomogeneous(omNode);
@@ -95,7 +110,13 @@ function omNode = convertKgNode(kgNode, omReferenceNode, options)
                 currentPropertyValue = convertLinkedNodes(currentPropertyValue, ...
                     omDummyNode.(currentPropertyName), controlledInstanceCache);
             elseif isEmbeddedNode(currentPropertyValue)
-                currentPropertyValue = omkg.internal.conversion.convertKgNode(currentPropertyValue, "ParentNode", kgNode);
+                enclosingNode = struct(...
+                    'ClassName', class(omDummyNode), ...
+                    'Identifier', string(identifier), ...
+                    'PropertyName', string(currentPropertyName), ...
+                    'Index', []);
+                currentPropertyValue = omkg.internal.conversion.convertKgNode(...
+                    currentPropertyValue, "Ancestors", [options.Ancestors, enclosingNode]);
             end
         elseif ischar(currentPropertyValue)
             % Todo: Consider if this should be added to user preferences class.
@@ -130,22 +151,8 @@ function omNode = convertKgNode(kgNode, omReferenceNode, options)
             nvPairs = [propertyNames; propertyValues];
             omNode = openminds.fromTypeName(type, identifier, nvPairs(:));
         catch MECause
-            errorId = 'OMKG:ConvertKGNode:ConversionFailed';
-
-            if isempty(options.ParentNode)
-                errorMessage = sprintf(...
-                    'Failed to create instance with identifier "%s".', ...
-                    identifier);
-            else
-                % Todo: will not work for nested embedded instances.
-                [parentIdentifier, parentType] = omkg.internal.conversion.getNodeKeywords(options.ParentNode, "@id", "@type");
-                errorMessage = sprintf(...
-                    ['Failed to create embedded instance for type "%s" with ', ...
-                    'identifier "%s".'], ...
-                    parentType{1}, parentIdentifier);
-            end
-
-            ME = MException(errorId, errorMessage);
+            ME = MException('OMKG:ConvertKGNode:ConversionFailed', '%s', ...
+                failureMessage(class(omDummyNode), identifier, options.Ancestors));
             ME = ME.addCause(MECause);
             throw(ME)
         end
@@ -213,6 +220,53 @@ function unresolvedNode = createUnresolvedNode(node, expectedObject)
         unresolvedNode = feval(class(expectedObject), ...
             'id', node.at_id, 'IsReference', true);
     end
+end
+
+function message = failureMessage(className, identifier, ancestors)
+% failureMessage - Say which instance failed to convert, and where it sits
+%
+%   A Knowledge Graph instance is named by its openMINDS class and its
+%   identifier. An embedded node has no identifier of its own, so it is
+%   located by the property path that leads to it from the outermost
+%   enclosing node, which is a Knowledge Graph instance and can be named.
+%   The path is written the way the value is indexed in MATLAB, e.g.
+%   "propertyValuePair(3).value", so it can be followed in the Knowledge
+%   Graph payload and on the converted instance alike.
+
+    if isempty(ancestors)
+        message = sprintf(...
+            'Failed to create instance of type %s with identifier "%s".', ...
+            className, identifier);
+        return
+    end
+
+    root = ancestors(1);
+    rootDescription = root.ClassName;
+    if ~isempty(root.Identifier) && strlength(root.Identifier) > 0
+        rootDescription = sprintf('%s (%s)', root.ClassName, root.Identifier);
+    end
+
+    message = sprintf(...
+        'Failed to create embedded instance of type %s for property "%s" of %s.', ...
+        className, propertyPath(ancestors), rootDescription);
+end
+
+function path = propertyPath(ancestors)
+% propertyPath - Property path from the outermost ancestor to the node
+%
+%   One segment per level of embedding, e.g. "affiliation(2)" for the
+%   second of a person's affiliations, or "propertyValuePair(3).value" for
+%   the value embedded in the third property-value pair of a property
+%   value list.
+
+    segments = strings(1, numel(ancestors));
+    for i = 1:numel(ancestors)
+        segments(i) = string(ancestors(i).PropertyName);
+        if ~isempty(ancestors(i).Index)
+            segments(i) = segments(i) + "(" + ancestors(i).Index + ")";
+        end
+    end
+    path = strjoin(segments, ".");
 end
 
 function tf = isLinkedNode(node)

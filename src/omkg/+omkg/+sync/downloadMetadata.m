@@ -11,7 +11,8 @@ function omNode = downloadMetadata(kgIdentifier, options)
 %       options.Stage (1,:) ebrains.kg.enum.KGStage - Stages to look in, in order
 %           of preference (default: ["RELEASED", "IN_PROGRESS"]). Applies to the
 %           instance itself and to every linked instance downloaded with it.
-%       options.Server (1,1) string - "prod" (default) or "preprod"
+%       options.Server (1,1) string - KG server to download from
+%           (default: the "DefaultServer" preference)
 %
 % Output Arguments:
 %   metadataInstance - The instance of the metadata corresponding to the identifier
@@ -206,7 +207,7 @@ function linkIRIs = listControlledInstanceLinks(kgNodes)
         kgNodes = num2cell(kgNodes);
     end
 
-    linkIRIs = string.empty;
+    linkIRIs = string.empty(1, 0);
     for i = 1:numel(kgNodes)
         node = kgNodes{i};
         [identifier, type] = omkg.internal.conversion.getNodeKeywords(node, "@id", "@type");
@@ -231,7 +232,10 @@ function linkIRIs = listControlledInstanceLinks(kgNodes)
             end
         end
     end
-    linkIRIs = unique(linkIRIs);
+    % The result is concatenated onto the row of a calling level, so it
+    % must stay a row even when nothing was found: unique returns a
+    % column for an empty input.
+    linkIRIs = reshape(unique(linkIRIs), 1, []);
 end
 
 function tf = isLinkedNode(value)

@@ -7,27 +7,43 @@ The tests are organized in a namespace hierarchy that should mirror the source c
 ```
 tests/
 ├── +omkg/+test/                    # All tests under omkg.test namespace
+│   ├── DownloadControlledInstancesTest.m  # Tests for omkg.downloadControlledInstances()
+│   ├── ToolboxVersionTest.m        # Tests for omkg.toolboxversion()
+│   │
 │   ├── +api/                       # Public API function tests
+│   │   ├── KgIntegrationTest.m    # Live KG tests (tagged LiveIntegration)
+│   │   ├── KgdeleteTest.m         # Tests for kgdelete()
 │   │   ├── KglistTest.m           # Tests for kglist()
-│   │   └── KgpullTest.m           # Tests for kgpull()
+│   │   ├── KgpullTest.m           # Tests for kgpull()
+│   │   └── KgsaveTest.m           # Tests for kgsave()
 │   │
 │   ├── +internal/                  # Internal component tests
+│   │   ├── ControlledInstanceCacheTest.m
 │   │   ├── DownloadMetadataTest.m # Tests for omkg.sync.downloadMetadata()
-│   │   └── +conversion/           # Conversion component tests (empty)
+│   │   ├── GetPropertyValuesTest.m
+│   │   ├── KGResolverTest.m
+│   │   ├── KGSerializerTest.m
+│   │   ├── ResolveLinksTest.m
+│   │   └── +conversion/           # Conversion component tests
 │   │
 │   ├── +util/                      # Utility function tests
 │   │   ├── ConstantsTest.m        # Tests for omkg.constants.*
+│   │   ├── GetOrdinalStringTest.m
+│   │   ├── PreferencesTest.m
+│   │   ├── SpaceConfigurationTest.m
 │   │   └── UUIDExtractionTest.m   # Tests for omkg.util.getIdentifierUUID()
 │   │
 │   ├── +validator/                 # Validator tests
 │   │   └── ValidatorTest.m        # Tests for omkg.validator.*
 │   │
+│   ├── +fixtures/                  # Test fixtures (NOT actual tests)
+│   │   └── PreferencesFixture.m
+│   │
 │   └── +helper/                    # Test helpers (NOT actual tests)
 │       ├── +mock/                  # Mock objects
 │       │   └── KGIntancesAPIMockClient.m
-│       ├── +util/                  # Test utilities
-│       │   └── KGMockAPIClientExampleTest.m  # Examples of mock usage
-│       └── +fixture/               # Test fixtures (empty)
+│       └── +util/                  # Test utilities
+│           └── KGMockAPIClientExampleTest.m  # Examples of mock usage
 │
 └── README.md                       # This documentation
 ```
@@ -65,6 +81,6 @@ The test suite is organized by component type:
 - **Utility tests** (helper functions) → `+util/`
 - **Validator tests** (validation functions) → `+validator/`
 - **Mock objects** (test helpers) → `+helper/+mock/`
-- **Test fixtures** (test data) → `+helper/+fixture/`
+- **Test fixtures** (test data) → `+fixtures/`
 
 Each test class has a single responsibility and focuses on testing specific components. The namespace hierarchy matches the source code structure for easy navigation.

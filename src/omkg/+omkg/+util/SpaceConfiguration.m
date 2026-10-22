@@ -301,7 +301,7 @@ classdef SpaceConfiguration < handle
             if isKey(spaceToGroup, spaceName) && ~strcmp(spaceToGroup(spaceName), groupName)
                 error("OMKG:SpaceConfiguration:SpaceAmbiguity", ...
                     "Space '%s' appears under both '%s' and '%s'.", ...
-                    spaceToGroup(spaceName), groupName, spaceName);
+                    spaceName, spaceToGroup(spaceName), groupName);
             end
         end
 
