@@ -122,6 +122,29 @@ classdef KgpullTest < matlab.unittest.TestCase
             testCase.verifyNotEmpty(result, 'Should accept server option');
         end
 
+        function testStageDefaultsToReleasedThenInProgress(testCase)
+            % The published version is preferred, and an instance that is
+            % not released yet is still found as a draft.
+
+            kgpull(testCase.TestIdentifier, 'Client', testCase.MockClient);
+
+            expected = [ebrains.kg.enum.KGStage.RELEASED, ebrains.kg.enum.KGStage.IN_PROGRESS];
+            call = testCase.MockClient.getLastCallFor('getInstance');
+            testCase.verifyEqual(call.options.stage, expected, ...
+                'The instance should be looked up in RELEASED, then IN_PROGRESS, by default');
+        end
+
+        function testStageOptionIsForwarded(testCase)
+            % The stage reaches the client as given, so a caller who edits a
+            % released instance can ask for its draft.
+
+            kgpull(testCase.TestIdentifier, 'Stage', "IN_PROGRESS", 'Client', testCase.MockClient);
+
+            call = testCase.MockClient.getLastCallFor('getInstance');
+            testCase.verifyEqual(call.options.stage, ebrains.kg.enum.KGStage.IN_PROGRESS, ...
+                'The Stage option should be passed to getInstance unchanged');
+        end
+
         function testEmptyResponse(testCase)
             % Test handling of empty response from KG
 

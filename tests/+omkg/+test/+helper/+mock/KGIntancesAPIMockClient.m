@@ -167,7 +167,7 @@ classdef KGIntancesAPIMockClient < ebrains.kg.api.InstancesClient
             arguments
                 obj (1,1) omkg.test.helper.mock.KGIntancesAPIMockClient
                 identifier string
-                stage (1,1) string { mustBeMember(stage, ["IN_PROGRESS", "RELEASED", "ANY"]) } = "ANY"
+                stage (1,:) ebrains.kg.enum.KGStage {mustBeNonempty} = "RELEASED"
                 optionalParams.?ebrains.kg.query.ReturnOptions
                 optionalParams.returnIncomingLinks logical
                 optionalParams.incomingLinksPageSize int64
@@ -287,7 +287,7 @@ classdef KGIntancesAPIMockClient < ebrains.kg.api.InstancesClient
             arguments
                 obj (1,1) omkg.test.helper.mock.KGIntancesAPIMockClient
                 identifiers (1,:) string
-                stage (1,1) string { mustBeMember(stage,["IN_PROGRESS", "RELEASED", "ANY"]) } = "ANY"
+                stage (1,:) ebrains.kg.enum.KGStage {mustBeNonempty} = "RELEASED"
                 optionalParams.?ebrains.kg.query.ReturnOptions
                 optionalParams.returnIncomingLinks logical
                 optionalParams.incomingLinksPageSize int64

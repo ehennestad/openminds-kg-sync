@@ -20,6 +20,14 @@ function omInstance = kgpull(identifier, options)
 %       Type: double (nonnegative integer)
 %       Default: 0, i.e. links are left as references.
 %
+%   Stage - Stages to look in, in order of preference
+%       Type: ebrains.kg.enum.KGStage vector
+%       Default: ["RELEASED", "IN_PROGRESS"], i.e. the published version
+%       of an instance, or its draft if it is not released yet. The same
+%       preference applies to every linked instance that is downloaded.
+%       To edit an instance that is released, pass "IN_PROGRESS" to get
+%       its draft rather than the published copy.
+%
 %   Server - KG server to download from
 %       Type: ebrains.kg.enum.KGServer
 %       Default: the "DefaultServer" preference.
@@ -44,6 +52,7 @@ function omInstance = kgpull(identifier, options)
     arguments
         identifier (1,1) string {omkg.validator.mustBeValidKGIdentifier}
         options.NumLinksToResolve (1,1) double {mustBeNonnegative, mustBeInteger} = 0
+        options.Stage (1,:) ebrains.kg.enum.KGStage {mustBeNonempty} = ["RELEASED", "IN_PROGRESS"]
         options.Server (1,1) ebrains.kg.enum.KGServer = omkg.getpref("DefaultServer")
         options.Client ebrains.kg.api.InstancesClient = ebrains.kg.api.InstancesClient()
     end
