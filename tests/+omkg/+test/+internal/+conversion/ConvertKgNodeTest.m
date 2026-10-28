@@ -11,6 +11,36 @@ classdef ConvertKgNodeTest < matlab.unittest.TestCase
         end
     end
 
+    %% Date and date-time text
+    methods (Test)
+        function testDateTimeTextWithOffsetIsRead(testCase)
+            % The Knowledge Graph writes timestamps with fractional seconds
+            % and a UTC offset. The value must land in the datetime
+            % property as the instant it names.
+            kgNode = struct(...
+                'x_id', 'https://kg.ebrains.eu/api/instances/validation-1', ...
+                'x_type', {{'https://openminds.om-i.org/types/ModelValidation'}}, ...
+                'https___openminds_om_i_org_props_startTime', '2019-06-20T22:31:29.186210+00:00');
+
+            omNode = omkg.internal.conversion.convertKgNode(kgNode);
+
+            expected = datetime(2019, 6, 20, 22, 31, 29.186210, 'TimeZone', 'UTC');
+            testCase.verifyEqual(seconds(omNode.startTime - expected), 0, 'AbsTol', 1e-3);
+        end
+
+        function testDateTextIsRead(testCase)
+            % A date-only property given a date as text.
+            kgNode = struct(...
+                'x_id', 'https://kg.ebrains.eu/api/instances/dataset-version-1', ...
+                'x_type', {{'https://openminds.om-i.org/types/DatasetVersion'}}, ...
+                'https___openminds_om_i_org_props_releaseDate', '2023-05-05');
+
+            omNode = omkg.internal.conversion.convertKgNode(kgNode);
+
+            testCase.verifyEqual(omNode.releaseDate, datetime(2023, 5, 5));
+        end
+    end
+
     %% Basic Conversion Tests
     methods (Test)
         function testConvertSimpleNode(testCase)
