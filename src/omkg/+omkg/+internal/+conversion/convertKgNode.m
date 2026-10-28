@@ -79,6 +79,11 @@ function omNode = convertKgNode(kgNode, omReferenceNode, options)
 
     omDummyNode = openminds.fromTypeName(type, identifier); % create a dummy to get some info about the class we will create
 
+    % Some properties arrive under a name from before openMINDS v4, and
+    % for a few of them that is the only copy of a required value.
+    typeShortName = string(regexp(class(omDummyNode), '[^.]+$', 'match', 'once'));
+    processedKgNode = omkg.internal.conversion.mapLegacyPropertyNames(processedKgNode, typeShortName);
+
     propertyNames = fieldnames(processedKgNode)';
     propertyValues = cell(size(propertyNames));
     toKeep = true(size(propertyNames));
