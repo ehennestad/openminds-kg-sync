@@ -6,13 +6,17 @@ function [instances, nextPageFcn] = kglist(type, kgOptions, options)
 %   [instances, nextPageFcn] = kglist(type, Name, Value)
 %
 % Output Arguments:
-%   instances   - Instances of the listed type
+%   instances   - Instances of the listed type. An instance the Knowledge
+%                 Graph returned but that could not be converted is left
+%                 out, and every such instance is reported in one warning
+%                 (OMKG:kglist:ConversionFailed) with its identifier and
+%                 the reason, so the array may be shorter than the page.
 %   nextPageFcn - Function handle that lists the next page with the same
 %                 options (space, stage, filter, server, client). The
-%                 offset advances by the number of instances this page
-%                 held, so a server that caps the page size is paged
-%                 through completely. Returns an empty array once the
-%                 listing is exhausted.
+%                 offset advances by the number of instances the Knowledge
+%                 Graph returned for this page, so a server that caps the
+%                 page size is paged through completely. Returns an empty
+%                 array once the listing is exhausted.
 %
 % Example:
 %   [people, nextPage] = kglist("Person", "space", "common", "size", 20);
@@ -70,20 +74,62 @@ function [instances, nextPageFcn] = kglist(type, kgOptions, options)
     end
 
     numInstances = numel(data);
-    instances(numInstances) = feval( type.ClassName );
+    converted = cell(1, numInstances);
+    failed = struct('Identifier', {}, 'Reason', {});
 
     for i = 1:numInstances
         try
-            instances(i) = omkg.internal.conversion.convertKgNode(data{i});
+            converted{i} = omkg.internal.conversion.convertKgNode(data{i});
         catch ME
-            warning('Could not create metadata for instance with id "%s" with following error: %s', data{i}.at_id, ME.message)
+            failed(end+1) = struct( ...
+                'Identifier', nodeIdentifier(data{i}), ...
+                'Reason', deepestCause(ME)); %#ok<AGROW>
         end
     end
+
+    % Only the instances that converted are returned. A placeholder for
+    % a failed one would be a node with a blank identifier and no
+    % content, which a collection could not tell from a real node.
+    converted = converted(~cellfun(@isempty, converted));
+    if ~isempty(converted)
+        instances = [converted{:}];
+    end
+    reportFailedConversions(failed, numInstances)
 
     pageRequest.from = pageRequest.from + numInstances;
     pageArgs = namedargs2cell(pageRequest);
     clientArgs = namedargs2cell(options);
     nextPageFcn = @() kglist(type, pageArgs{:}, clientArgs{:});
+end
+
+function reportFailedConversions(failed, numListed)
+% One warning for the whole page, naming each instance that was left out
+% and why, so a shorter page is never silent.
+    if isempty(failed)
+        return
+    end
+    details = arrayfun(@(entry) sprintf('  %s: %s', entry.Identifier, entry.Reason), ...
+        failed, 'UniformOutput', false);
+    warning('OMKG:kglist:ConversionFailed', ...
+        ['%d of the %d instances the Knowledge Graph returned could not be ', ...
+        'converted and were left out:\n%s'], numel(failed), numListed, strjoin(details, newline))
+end
+
+function reason = deepestCause(ME)
+% The innermost cause names what was wrong with the data; the outer
+% messages only say which instance it was.
+    while ~isempty(ME.cause)
+        ME = ME.cause{1};
+    end
+    reason = string(strtok(ME.message, newline));
+end
+
+function identifier = nodeIdentifier(node)
+    if isfield(node, 'at_id')
+        identifier = string(node.at_id);
+    else
+        identifier = "<node without an identifier>";
+    end
 end
 
 function mustBePropertyOfType(propertyName, type)
