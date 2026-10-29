@@ -1,0 +1,13 @@
+{
+  "_comment": "Properties the Knowledge Graph stores under a name from before openMINDS v4, keyed by openMINDS type, mapped to the v4 name that holds the same value. Each entry is backed by a raw kg-ppd payload and the v4.0 schema. Applied only when the current name is absent from the node.",
+  "Contribution": {"contributionType": "type"},
+  "DeviceType": {"prefferedOntologyIdentifier": "preferredOntologyIdentifier"},
+  "FileRepository": {"repositoryType": "type"},
+  "HardwareSystem": {"version": "versionIdentifier"},
+  "LivePaperSection": {"sectionType": "type"},
+  "LivePaperVersion": {"lastModified": "modificationDate"},
+  "ModelValidation": {"startedAtTime": "startTime"},
+  "ParcellationTerminologyVersion": {"hasEntityVersion": "hasEntity"},
+  "ProtocolExecution": {"preparationType": "preparationDesign"},
+  "ScholarlyArticle": {"datePublished": "publicationDate"}
+}
