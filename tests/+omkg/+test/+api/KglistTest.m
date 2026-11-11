@@ -35,6 +35,37 @@ classdef KglistTest < matlab.unittest.TestCase
             % todo: finish this
         end
 
+        function testFailedConversionIsLeftOutAndReported(testCase)
+            % An instance the Knowledge Graph returns but that cannot be
+            % converted is left out, reported once with its cause, and the
+            % next page still starts where this page ended.
+            type = openminds.enum.Types.DatasetVersion;
+            good = struct(...
+                'x_id', 'https://kg.ebrains.eu/api/instances/dataset-version-good', ...
+                'x_type', 'https://openminds.om-i.org/types/DatasetVersion', ...
+                'https___openminds_om_i_org_props_shortName', 'good');
+            % releaseDate is a date-only property; a timestamp fails its validator
+            bad = struct(...
+                'x_id', 'https://kg.ebrains.eu/api/instances/dataset-version-bad', ...
+                'x_type', 'https://openminds.om-i.org/types/DatasetVersion', ...
+                'https___openminds_om_i_org_props_releaseDate', '2018-02-26T07:00:47+00:00');
+            mockClient = omkg.test.helper.mock.KGIntancesAPIMockClient();
+            mockClient.setListResponse({good, bad});
+
+            [instances, pager] = testCase.verifyWarning(...
+                @() kglist(type, 'from', uint64(0), 'size', uint64(2), 'Client', mockClient), ...
+                'OMKG:kglist:ConversionFailed');
+
+            testCase.assertNumElements(instances, 1);
+            testCase.verifyEqual(string(instances(1).id), string(good.x_id));
+            testCase.verifyTrue(all(startsWith(string(instances.id), "https://")), ...
+                'No placeholder with a blank identifier may be returned');
+
+            pager();
+            testCase.verifyTrue(mockClient.wasCalledWithOptionalParam('listInstances', 'from', uint64(2)), ...
+                'The next page starts after both listed instances');
+        end
+
         function testFilterPropertyValidation(testCase)
             % Test that invalid filter properties are rejected
             type = openminds.enum.Types.Person;
