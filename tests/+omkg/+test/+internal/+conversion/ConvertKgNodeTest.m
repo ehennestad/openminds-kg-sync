@@ -41,6 +41,56 @@ classdef ConvertKgNodeTest < matlab.unittest.TestCase
         end
     end
 
+    %% Legacy property names
+    methods (Test)
+        function testLegacyNameIsReadWhenItIsTheOnlyCopy(testCase)
+            % An embedded Contribution on the Knowledge Graph carries its
+            % required type under the pre-v4 name "contributionType".
+            typeIRI = 'https://openminds.om-i.org/instances/contributionType/acquisition';
+            contribution = struct(...
+                'x_type', {{'https://openminds.om-i.org/types/Contribution'}}, ...
+                'https___openminds_om_i_org_props_contributionType', struct('x_id', typeIRI));
+            kgNode = struct(...
+                'x_id', 'https://kg.ebrains.eu/api/instances/dataset-version-2', ...
+                'x_type', {{'https://openminds.om-i.org/types/DatasetVersion'}}, ...
+                'https___openminds_om_i_org_props_otherContribution', contribution);
+
+            omNode = testCase.verifyWarningFree(@() omkg.internal.conversion.convertKgNode(kgNode));
+
+            testCase.assertNumElements(omNode.otherContribution, 1);
+            testCase.verifyNotEmpty(omNode.otherContribution(1).type);
+        end
+
+        function testCurrentNameWinsWhenBothArePresent(testCase)
+            % A FileRepository on the Knowledge Graph carries the same link
+            % under "repositoryType" and "type". The current name is kept
+            % and the legacy copy is dropped without a warning.
+            typeIRI = 'https://openminds.om-i.org/instances/fileRepositoryType/swift';
+            kgNode = struct(...
+                'x_id', 'https://kg.ebrains.eu/api/instances/repository-1', ...
+                'x_type', {{'https://openminds.om-i.org/types/FileRepository'}}, ...
+                'https___openminds_om_i_org_props_IRI', 'https://data-proxy.ebrains.eu/api/v1/buckets/d-1', ...
+                'https___openminds_om_i_org_props_repositoryType', struct('x_id', typeIRI), ...
+                'https___openminds_om_i_org_props_type', struct('x_id', typeIRI));
+
+            omNode = testCase.verifyWarningFree(@() omkg.internal.conversion.convertKgNode(kgNode));
+
+            testCase.verifyNotEmpty(omNode.type);
+        end
+
+        function testUnmappedLegacyNameIsStillReported(testCase)
+            % A name with no v4 counterpart keeps the unsupported-property
+            % warning, so nothing is dropped in silence.
+            kgNode = struct(...
+                'x_id', 'https://kg.ebrains.eu/api/instances/dataset-version-3', ...
+                'x_type', {{'https://openminds.om-i.org/types/DatasetVersion'}}, ...
+                'https___openminds_om_i_org_props_type', struct('x_id', 'https://kg.ebrains.eu/api/instances/x'));
+
+            testCase.verifyWarning(@() omkg.internal.conversion.convertKgNode(kgNode), ...
+                'OMKG:ConvertKgNode:UnsupportedProperty');
+        end
+    end
+
     %% Basic Conversion Tests
     methods (Test)
         function testConvertSimpleNode(testCase)
