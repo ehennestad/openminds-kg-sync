@@ -118,6 +118,15 @@ function omNode = convertKgNode(kgNode, omReferenceNode, options)
                 currentPropertyValue = omkg.internal.conversion.convertKgNode(...
                     currentPropertyValue, "Ancestors", [options.Ancestors, enclosingNode]);
             end
+        elseif isdatetime(omDummyNode.(currentPropertyName)) && isText(currentPropertyValue)
+            % The Knowledge Graph writes timestamps as ISO 8601 with an
+            % offset and fractional seconds. The generated constructors
+            % validate name-value pairs with MATLAB's implicit datetime
+            % conversion, which reads a plain date but not that form, so
+            % the text is read here with the parser openMINDS uses when it
+            % reads a document.
+            currentPropertyValue = openminds.internal.utility.parseIsoDateTime( ...
+                string(currentPropertyValue));
         elseif ischar(currentPropertyValue)
             % Todo: Consider if this should be added to user preferences class.
             convertChar = getpref('omkg', 'ConvertChar', false);
@@ -267,6 +276,10 @@ function path = propertyPath(ancestors)
         end
     end
     path = strjoin(segments, ".");
+end
+
+function tf = isText(value)
+    tf = ischar(value) || isstring(value) || iscellstr(value);
 end
 
 function tf = isLinkedNode(node)
