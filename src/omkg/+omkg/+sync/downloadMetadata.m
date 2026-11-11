@@ -8,6 +8,9 @@ function omNode = downloadMetadata(kgIdentifier, options)
 %   identifier (1,1) string - The unique identifier for the metadata
 %   options (1,1) struct - Struct containing options for downloading
 %       options.NumLinksToResolve (1,1) double - Number of links to resolve (default: 0)
+%       options.Stage (1,:) ebrains.kg.enum.KGStage - Stages to look in, in order
+%           of preference (default: ["RELEASED", "IN_PROGRESS"]). Applies to the
+%           instance itself and to every linked instance downloaded with it.
 %       options.Server (1,1) string - KG server to download from
 %           (default: the "DefaultServer" preference)
 %
@@ -17,6 +20,7 @@ function omNode = downloadMetadata(kgIdentifier, options)
     arguments
         kgIdentifier (1,1) string {omkg.validator.mustBeValidKGIdentifier}
         options.NumLinksToResolve = 0
+        options.Stage (1,:) ebrains.kg.enum.KGStage {mustBeNonempty} = ["RELEASED", "IN_PROGRESS"]
         options.Server (1,1) ebrains.kg.enum.KGServer = omkg.getpref("DefaultServer")
         options.Client ebrains.kg.api.InstancesClient = ebrains.kg.api.InstancesClient()
         options.Verbose (1,1) logical = false
@@ -32,8 +36,12 @@ function omNode = downloadMetadata(kgIdentifier, options)
     uuid = omkg.util.getIdentifierUUID(kgIdentifier);
     cache = omkg.internal.ControlledInstanceCache.instance();
 
-    % Download instance
-    kgNode = options.Client.getInstance(uuid, "Server", options.Server);
+    % Every lookup of this pull, the instance itself as well as its links,
+    % uses the same stage preference. With more than one stage, each
+    % instance falls back to the next stage on its own, so a draft can
+    % come with released copies of its links. Only a single stage keeps
+    % the whole pull in one stage.
+    kgNode = options.Client.getInstance(uuid, options.Stage, "Server", options.Server);
 
     % A link to a controlled instance takes its openMINDS identity while
     % its parent is converted, so the identifiers of any controlled
@@ -43,7 +51,7 @@ function omNode = downloadMetadata(kgIdentifier, options)
     % resolution below would otherwise download a second time.
     prefetched = emptyPrefetchedNodes();
     prefetched = prefetchControlledInstances(kgNode, cache, ...
-        options.Client, options.Server, prefetched);
+        options.Client, options.Stage, options.Server, prefetched);
 
     kgIRI = omkg.internal.conversion.getNodeKeywords(kgNode, "@id");
     rootNode = omkg.internal.conversion.convertKgNode(kgNode, options.ReferenceNode);
@@ -68,7 +76,8 @@ function omNode = downloadMetadata(kgIdentifier, options)
                         'Please wait while downloading %d new metadata instances...\n'], ...
                         omkg.util.getOrdinalNumberString(i), numel(linkedIRIs));
                 end
-                fetchedNodes = fetchNodes(options.Client, linkedIRIs, options.Server);
+                fetchedNodes = fetchNodes(options.Client, linkedIRIs, ...
+                    options.Stage, options.Server);
                 kgNodes = [kgNodes, fetchedNodes]; %#ok<AGROW>
             end
 
@@ -77,7 +86,7 @@ function omNode = downloadMetadata(kgIdentifier, options)
             end
 
             prefetched = prefetchControlledInstances(kgNodes, cache, ...
-                options.Client, options.Server, prefetched);
+                options.Client, options.Stage, options.Server, prefetched);
             newNodes = omkg.internal.conversion.convertKgNode(kgNodes);
 
             if ~iscell(newNodes)
@@ -115,7 +124,7 @@ function prefetched = emptyPrefetchedNodes()
         'Nodes', {cell(1, 0)});
 end
 
-function prefetched = prefetchControlledInstances(kgNodes, cache, client, server, prefetched)
+function prefetched = prefetchControlledInstances(kgNodes, cache, client, stage, server, prefetched)
 % prefetchControlledInstances - Learn the openMINDS IRIs of unknown controlled links
 %
 %   Only links on properties that can hold a controlled instance are
@@ -138,7 +147,7 @@ function prefetched = prefetchControlledInstances(kgNodes, cache, client, server
         return
     end
 
-    linkedNodes = fetchNodes(client, candidateIRIs, server);
+    linkedNodes = fetchNodes(client, candidateIRIs, stage, server);
     linkedNodes = omkg.internal.conversion.normalizeJsonLdKeywords(linkedNodes);
 
     prefetched.RequestedIRIs = [prefetched.RequestedIRIs, candidateIRIs];
@@ -157,7 +166,7 @@ function prefetched = prefetchControlledInstances(kgNodes, cache, client, server
     cache.record(kgIRIs, openMindsIRIs);
 end
 
-function kgNodes = fetchNodes(client, kgIRIs, server)
+function kgNodes = fetchNodes(client, kgIRIs, stage, server)
 % fetchNodes - Download the given nodes, leaving out any the KG does not return
 %
 %   A request for several identifiers silently leaves out those the
@@ -167,7 +176,7 @@ function kgNodes = fetchNodes(client, kgIRIs, server)
 %   that one dead link does not abort the pull.
 
     try
-        kgNodes = client.getInstancesBulk(kgIRIs, "Server", server);
+        kgNodes = client.getInstancesBulk(kgIRIs, stage, "Server", server);
     catch ME
         if strcmp(ME.identifier, 'EBRAINS:KG_API:getInstance:NotFound')
             warning('OMKG:DownloadMetadata:LinkedInstanceNotFound', ...
